@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FAE Field Operations Portal</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4f0;
+      color: #1a1a1a;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #1c4a1c;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+    }
+    .logo-fae { font-size: 1.9rem; font-weight: 900; letter-spacing: -1px; color: #5dc85d; line-height: 1; }
+    .logo-fae span { color: #fff; font-weight: 300; }
+    .logo-tagline { font-size: 0.75rem; color: #90bc90; letter-spacing: 0.1em; margin-top: 2px; }
+    .logo-tagline em { color: #5dc85d; font-style: normal; }
+    .header-right { margin-left: auto; color: #90bc90; font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; text-align: right; }
+
+    /* ── Layout ── */
+    .page { max-width: 1020px; margin: 0 auto; padding: 24px 18px 60px; }
+
+    .section-label {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.15em; color: #4a724a; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-label::after { content: ''; flex: 1; height: 1px; background: #c8ddc8; }
+
+    /* ── Period Selector ── */
+    .dash-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px; flex-wrap: wrap; gap: 10px;
+    }
+    .period-pills { display: flex; gap: 6px; }
+    .pill {
+      padding: 5px 14px; border-radius: 20px; border: 1.5px solid #3a8a3a;
+      background: #fff; color: #3a6a3a; font-size: 0.75rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s; letter-spacing: 0.03em;
+    }
+    .pill.active { background: #2d7a2d; color: #fff; border-color: #2d7a2d; }
+    .pill:hover:not(.active) { background: #eaf5ea; }
+
+    /* ── Stat Tiles ── */
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .stat-tile {
+      background: #fff; border-radius: 9px; padding: 12px 10px;
+      border-top: 3px solid #3a8a3a; box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+      text-align: center; cursor: default;
+    }
+    .stat-num { font-size: 1.7rem; font-weight: 800; color: #1c4a1c; line-height: 1; }
+    .stat-sub { font-size: 0.6rem; color: #6a8a6a; margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.3; }
+    .stat-tile.no-pbi { border-top-color: #bbb; }
+    .stat-tile.no-pbi .stat-num { color: #999; }
+    .stat-tile.no-pbi .stat-sub { color: #aaa; }
+
+    /* ── Collapsible Charts ── */
+    .collapse-header {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #fff; border-radius: 9px; padding: 11px 16px;
+      cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+      margin-bottom: 0; user-select: none;
+      border: 1.5px solid #d8e8d8;
+    }
+    .collapse-header:hover { background: #f5faf5; }
+    .collapse-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: #3a5a3a; }
+    .collapse-chevron { font-size: 0.75rem; color: #5a8a5a; transition: transform 0.2s; }
+    .collapse-chevron.open { transform: rotate(180deg); }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 10px;
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.35s ease;
+    }
+    .charts-grid.open { max-height: 2000px; }
+
+    .chart-card {
+      background: #fff; border-radius: 9px; padding: 15px 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    }
+    .chart-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #3a5a3a; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .chart-wrap { position: relative; height: 180px; }
+    .chart-card.span2 { grid-column: span 2; }
+
+    /* ── Form Cards ── */
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; }
+    .card {
+      background: #fff; border-radius: 9px; border-left: 4px solid #3a8a3a;
+      padding: 14px 16px; text-decoration: none; color: inherit;
+      display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 5px 14px rgba(0,0,0,0.12); border-color: #5dc85d; }
+    .card-icon { width: 40px; height: 40px; border-radius: 50%; background: #eaf5ea; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.2rem; }
+    .card-name { font-size: 0.88rem; font-weight: 600; line-height: 1.3; }
+    .card-cta { font-size: 0.7rem; color: #3a8a3a; margin-top: 2px; font-weight: 500; }
+
+    footer { text-align: center; color: #8aaa8a; font-size: 0.72rem; margin-top: 36px; padding-top: 16px; border-top: 1px solid #d0e0d0; }
+    .data-note { font-size: 0.65rem; color: #8aaa8a; margin-top: 2px; }
+
+    @media (max-width: 860px) {
+      .stat-row { grid-template-columns: repeat(4, 1fr); }
+      .charts-grid { grid-template-columns: 1fr; }
+      .chart-card.span2 { grid-column: span 1; }
+    }
+    @media (max-width: 580px) {
+      .stat-row { grid-template-columns: repeat(3, 1fr); }
+      .cards { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 380px) {
+      .cards { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo-fae">fae<span>II</span></div>
+    <div class="logo-tagline">forty acres <em>energy</em></div>
+  </div>
+  <div class="header-right">Field Operations Portal</div>
+</header>
+
+<div class="page">
+
+  <!-- DASHBOARD -->
+  <div class="dash-header">
+    <div class="section-label" style="margin-bottom:0;flex:1">Activity Dashboard</div>
+    <div class="period-pills">
+      <button class="pill" data-period="pastweek">Past Week</button>
+      <button class="pill active" data-period="ytd">YTD</button>
+      <button class="pill" data-period="lastyear">Last Year</button>
+    </div>
+  </div>
+
+  <!-- Stat Tiles -->
+  <div class="stat-row">
+    <div class="stat-tile" id="tile-gwi">
+      <div class="stat-num" id="num-gwi">0</div>
+      <div class="stat-sub">Gas Well<br>Inspection</div>
+    </div>
+    <div class="stat-tile" id="tile-wellsite">
+      <div class="stat-num" id="num-wellsite">0</div>
+      <div class="stat-sub">Well Site<br>Inspection</div>
+    </div>
+    <div class="stat-tile" id="tile-facility">
+      <div class="stat-num" id="num-facility">0</div>
+      <div class="stat-sub">Facility<br>Inspection</div>
+    </div>
+    <div class="stat-tile" id="tile-whs">
+      <div class="stat-num" id="num-whs">0</div>
+      <div class="stat-sub">Wellhead<br>Grounding</div>
+    </div>
+    <div class="stat-tile" id="tile-pumpup">
+      <div class="stat-num" id="num-pumpup">0</div>
+      <div class="stat-sub">Pump Up<br>Entry</div>
+    </div>
+    <div class="stat-tile" id="tile-fap">
+      <div class="stat-num" id="num-fap">0</div>
+      <div class="stat-sub">Fluid Levels<br>(FAP)</div>
+    </div>
+    <div class="stat-tile" id="tile-env">
+      <div class="stat-num" id="num-env">0</div>
+      <div class="stat-sub">Environ.<br>Prevention</div>
+    </div>
+  </div>
+
+  <!-- Collapsible Charts -->
+  <div class="collapse-header" id="chartsToggle">
+    <span class="collapse-title">&#9660; Charts by Pumper</span>
+    <span class="collapse-chevron open" id="chevron">▲</span>
+  </div>
+  <div class="charts-grid open" id="chartsGrid">
+
+    <div class="chart-card">
+      <div class="chart-title">
+        <svg width="14" height="14" viewBox="0 0 24 24"><path d="M12 2C10 5 7 7 7 11c0 2.76 2.24 5 5 5s5-2.24 5-5c0-1.5-.6-2.8-1.5-3.8C15 8.5 14 10 12 10c1-2 1.5-5 0-8z" fill="#e67e22"/></svg>
+        Gas Well Inspection
+      </div>
+      <div class="chart-wrap"><canvas id="c-gwi"></canvas></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">🔍 Well Site Inspection</div>
+      <div class="chart-wrap"><canvas id="c-wellsite"></canvas></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">
+        <svg width="14" height="14" viewBox="0 0 24 24"><ellipse cx="12" cy="7" rx="7" ry="3" fill="#5a8fa8"/><rect x="5" y="7" width="14" height="10" fill="#4a7f98"/><ellipse cx="12" cy="17" rx="7" ry="3" fill="#3a6f88"/></svg>
+        Facility Inspection
+      </div>
+      <div class="chart-wrap"><canvas id="c-facility"></canvas></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">⚡ Wellhead Grounding Survey</div>
+      <div class="chart-wrap"><canvas id="c-whs"></canvas></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">
+        <svg width="14" height="14" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="#e8e8e8" stroke="#888" stroke-width="1.2"/><circle cx="12" cy="13" r="6" fill="#fff" stroke="#aaa" stroke-width="0.8"/><line x1="12" y1="7.5" x2="12" y2="9" stroke="#555" stroke-width="1"/><line x1="12" y1="13" x2="15" y2="9" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="13" r="1" fill="#555"/></svg>
+        Pump Up Entry
+      </div>
+      <div class="chart-wrap"><canvas id="c-pumpup"></canvas></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">
+        <svg width="14" height="14" viewBox="0 0 24 24"><rect x="9" y="19" width="6" height="2" rx="0.5" fill="#555"/><rect x="11.2" y="11" width="1.6" height="8" fill="#555"/><polygon points="10,11 14,11 12,6" fill="#666"/><line x1="5" y1="9" x2="19" y2="11" stroke="#444" stroke-width="1.8" stroke-linecap="round"/><path d="M4 9 Q3 7.5 5 7 Q6 6.5 6 8 L5 9Z" fill="#333"/></svg>
+        Fluid Levels (FAP)
+      </div>
+      <div class="chart-wrap"><canvas id="c-fap"></canvas></div>
+    </div>
+
+    <div class="chart-card span2">
+      <div class="chart-title">🌿 Environmental Prevention Submittal</div>
+      <div class="chart-wrap"><canvas id="c-env"></canvas></div>
+    </div>
+
+  </div>
+
+  <!-- FORMS -->
+  <div class="section-label" style="margin-top:24px">Field Forms</div>
+  <div class="cards">
+
+    <a class="card" href="https://docs.google.com/forms/d/e/1FAIpQLSfCoQ4xKJDhmmVBGTMgQjtQ11NgBLk4qMBuVJGHDHkmWbQxgw/viewform?usp=header" target="_blank">
+      <div class="card-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24"><path d="M12 2C10 5 7 7 7 11c0 2.76 2.24 5 5 5s5-2.24 5-5c0-1.5-.6-2.8-1.5-3.8C15 8.5 14 10 12 10c1-2 1.5-5 0-8z" fill="#e67e22"/><path d="M12 13c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" fill="#f39c12"/></svg>
+      </div>
+      <div><div class="card-name">Gas Well Inspection</div><div class="card-cta">Open form →</div></div>
+    </a>
+
+    <a class="card" href="https://docs.google.com/forms/d/e/1FAIpQLSdeTZHweY--OrRffE-AEHPU3IDhQaKkV0txjysX7QquffEVnQ/viewform" target="_blank">
+      <div class="card-icon">🔍</div>
+      <div><div class="card-name">Well Site Inspection</div><div class="card-cta">Open form →</div></div>
+    </a>
+
+    <a class="card" href="https://docs.google.com/forms/d/e/1FAIpQLSeMkwySXY19QXMd4TUiNIYHAC3h4yHwJnn9yap-j-gmyaa46w/viewform" target="_blank">
+      <div class="card-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24"><ellipse cx="12" cy="7" rx="7" ry="3" fill="#5a8fa8"/><rect x="5" y="7" width="14" height="10" fill="#4a7f98"/><ellipse cx="12" cy="17" rx="7" ry="3" fill="#3a6f88"/><line x1="12" y1="17" x2="12" y2="21" stroke="#3a6f88" stroke-width="1.5"/><line x1="9" y1="20" x2="15" y2="20" stroke="#3a6f88" stroke-width="1.5"/></svg>
+      </div>
+      <div><div class="card-name">Facility Inspection</div><div class="card-cta">Open form →</div></div>
+    </a>
+
+    <a class="card" href="https://docs.google.com/forms/d/e/1FAIpQLScfajrcfmHWPTQXIcRwiD4PH0oXe1rcyPMmRF_LIN_k80Ut0Q/viewform" target="_blank">
+      <div class="card-icon">⚡</div>
+      <div><div class="card-name">Wellhead Grounding Survey</div><div class="card-cta">Open form →</div></div>
+    </a>
+
+    <a class="card" href="https://docs.google.com/forms/d/e/1FAIpQLSc366DrGF712zDwzZBy6chnZjqE-d-5XTNUEWcR6pzbEZ3_Nw/viewform" target="_blank">
+      <div class="card-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="#e8e8e8" stroke="#888" stroke-width="1.2"/><circle cx="12" cy="13" r="6" fill="#fff" stroke="#aaa" stroke-width="0.8"/><line x1="12" y1="7.5" x2="12" y2="9" stroke="#555" stroke-width="1"/><line x1="6.5" y1="13" x2="8" y2="13" stroke="#555" stroke-width="1"/><line x1="17.5" y1="13" x2="16" y2="13" stroke="#555" stroke-width="1"/><line x1="8.1" y1="9.1" x2="9.1" y2="10.1" stroke="#555" stroke-width="1"/><line x1="15.9" y1="9.1" x2="14.9" y2="10.1" stroke="#555" stroke-width="1"/><line x1="12" y1="13" x2="15" y2="9" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="13" r="1" fill="#555"/><rect x="10" y="3" width="4" height="2.5" rx="0.5" fill="#888"/></svg>
+      </div>
+      <div><div class="card-name">Pump Up Entry</div><div class="card-cta">Open form →</div></div>
+    </a>
+
+    <a class="card" href="https://docs.google.com/forms/d/e/1FAIpQLSdCcBOip_WpdnCeAu-wqwWIjMK1mTBkr-QLZxAOnzseaJ2dOA/viewform" target="_blank">
+      <div class="card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="9" y="19" width="6" height="2" rx="0.5" fill="#555"/><rect x="11.2" y="11" width="1.6" height="8" fill="#555"/><polygon points="10,11 14,11 12,6" fill="#666"/><line x1="5" y1="9" x2="19" y2="11" stroke="#444" stroke-width="1.8" stroke-linecap="round"/><path d="M4 9 Q3 7.5 5 7 Q6 6.5 6 8 L5 9Z" fill="#333"/><circle cx="18.5" cy="13" r="1.5" fill="none" stroke="#666" stroke-width="1.2"/><line x1="18.5" y1="11.5" x2="18.5" y2="11" stroke="#666" stroke-width="1.2"/></svg>
+      </div>
+      <div><div class="card-name">Fluid Levels (FAP)</div><div class="card-cta">Open form →</div></div>
+    </a>
+
+    <a class="card" href="https://docs.google.com/forms/d/e/1FAIpQLSfJXu_e_NYgIKWuRitcy42fwrpM2_tP0sRu9qeVEZFEn_kkOQ/viewform" target="_blank">
+      <div class="card-icon">🌿</div>
+      <div><div class="card-name">Environmental Prevention</div><div class="card-cta">Open form →</div></div>
+    </a>
+
+  </div>
+
+  <footer>
+    Forty Acres Energy &nbsp;·&nbsp; Field Operations &nbsp;·&nbsp; Internal Use Only
+    <div class="data-note">Dashboard data from Power BI · Forms without PBI integration show 0</div>
+  </footer>
+</div>
+
+<script>
+// ── Data (queried from Power BI 2026-03-19) ────────────────────────────────
+const PUMPERS = ['Shane/Winn','Jason','Andy North','Raul','Armando','Armando - BBS Flood','Armando - BBN Flood','Oswaldo','Henry','Andy South'];
+
+const FORMS = [
+  { key:'gwi',      color:'#2d7a2d' },
+  { key:'wellsite', color:'#2a6ea6' },
+  { key:'facility', color:'#4a7a9a' },
+  { key:'whs',      color:'#7a5aaa' },
+  { key:'pumpup',   color:'#c8860a' },
+  { key:'fap',      color:'#1a8a7a' },
+  { key:'env',      color:'#5a8a3a' },
+];
+
+// Forms NOT yet in Power BI get all zeros
+const ZERO = () => ({ total: 0, byPumper: {} });
+
+const DATA = {
+  pastweek: {
+    gwi:     { total: 12, byPumper: { 'Shane/Winn':10, 'Armando':2 } },
+    wellsite: ZERO(), facility: ZERO(), whs: ZERO(),
+    pumpup:  { total: 0, byPumper: {} },
+    fap:     { total: 6,  byPumper: { 'Armando - BBS Flood':3, 'Armando':1, 'Shane/Winn':1, 'Armando - BBN Flood':1 } },
+    env: ZERO(),
+  },
+  ytd: {
+    gwi:     { total: 23,  byPumper: { 'Shane/Winn':11, 'Jason':4, 'Andy North':3, 'Raul':2, 'Armando':2, 'Oswaldo':1 } },
+    wellsite: ZERO(), facility: ZERO(), whs: ZERO(),
+    pumpup:  { total: 0,   byPumper: {} },
+    fap:     { total: 118, byPumper: { 'Henry':48, 'Jason':23, 'Armando - BBS Flood':20, 'Armando - BBN Flood':10, 'Oswaldo':7, 'Andy South':4, 'Armando':2, 'Andy North':2, 'Shane/Winn':2 } },
+    env: ZERO(),
+  },
+  lastyear: {
+    gwi:     { total: 0, byPumper: {} },
+    wellsite: ZERO(), facility: ZERO(), whs: ZERO(),
+    pumpup:  { total: 1,   byPumper: { 'Oswaldo':1 } },
+    fap:     { total: 415, byPumper: { 'Henry':133, 'Jason':88, 'Oswaldo':67, 'Andy North':41, 'Shane/Winn':27, 'Raul':22, 'Armando - BBN Flood':12, 'Andy South':12, 'Armando - BBS Flood':11, 'Armando':2 } },
+    env: ZERO(),
+  },
+};
+
+// ── Chart instances ────────────────────────────────────────────────────────
+const CHARTS = {};
+const GRID_COLOR = '#eef2ee';
+const TICK_COLOR = '#5a6a5a';
+
+function makeChart(id, color) {
+  const ctx = document.getElementById(id);
+  return new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: PUMPERS,
+      datasets: [{ data: PUMPERS.map(() => 0), backgroundColor: color, borderRadius: 4, barPercentage: 0.6 }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 300 },
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          grid: { color: GRID_COLOR },
+          ticks: { color: TICK_COLOR, font: { size: 10 }, precision: 0 },
+          beginAtZero: true
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: TICK_COLOR, font: { size: 10 } }
+        }
+      }
+    }
+  });
+}
+
+// Build all charts on load
+FORMS.forEach(f => { CHARTS[f.key] = makeChart('c-' + f.key, f.color); });
+
+// ── Update UI for selected period ─────────────────────────────────────────
+function applyPeriod(period) {
+  const d = DATA[period];
+  FORMS.forEach(f => {
+    const fd = d[f.key];
+    // Stat tile
+    document.getElementById('num-' + f.key).textContent = fd.total;
+    const tile = document.getElementById('tile-' + f.key);
+    tile.classList.toggle('no-pbi', fd.total === 0 && f.key !== 'gwi' && f.key !== 'pumpup');
+    // Chart data
+    const vals = PUMPERS.map(p => fd.byPumper[p] || 0);
+    CHARTS[f.key].data.datasets[0].data = vals;
+    CHARTS[f.key].update();
+  });
+}
+
+// ── Period pill clicks ─────────────────────────────────────────────────────
+document.querySelectorAll('.pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyPeriod(btn.dataset.period);
+  });
+});
+
+// ── Collapse toggle ────────────────────────────────────────────────────────
+const toggle   = document.getElementById('chartsToggle');
+const grid     = document.getElementById('chartsGrid');
+const chevron  = document.getElementById('chevron');
+toggle.addEventListener('click', () => {
+  const open = grid.classList.toggle('open');
+  chevron.textContent = open ? '▲' : '▼';
+});
+
+// Init with YTD
+applyPeriod('ytd');
+</script>
+</body>
+</html>
