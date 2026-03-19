@@ -186,7 +186,7 @@
     </div>
     <div class="stat-tile" id="tile-env">
       <div class="stat-num" id="num-env">0</div>
-      <div class="stat-sub">Environ.<br>Prevention</div>
+      <div class="stat-sub">Env<br>Report</div>
     </div>
   </div>
 
@@ -240,7 +240,7 @@
     </div>
 
     <div class="chart-card span2">
-      <div class="chart-title">🌿 Environmental Prevention Submittal</div>
+      <div class="chart-title">🌿 Env Report</div>
       <div class="chart-wrap"><canvas id="c-env"></canvas></div>
     </div>
 
@@ -290,7 +290,7 @@
 
     <a class="card" href="https://docs.google.com/forms/d/e/1FAIpQLSfJXu_e_NYgIKWuRitcy42fwrpM2_tP0sRu9qeVEZFEn_kkOQ/viewform" target="_blank">
       <div class="card-icon">🌿</div>
-      <div><div class="card-name">Environmental Prevention</div><div class="card-cta">Open form →</div></div>
+      <div><div class="card-name">Env Report</div><div class="card-cta">Open form →</div></div>
     </a>
 
   </div>
@@ -303,7 +303,9 @@
 
 <script>
 // ── Data (queried from Power BI 2026-03-19) ────────────────────────────────
-const PUMPERS = ['Shane/Winn','Jason','Andy North','Raul','Armando','Armando - BBS Flood','Armando - BBN Flood','Oswaldo','Henry','Andy South'];
+// Tables: GWI=Gas Well Inspection, WS=Well Insprection, FAC=Facility Insprection,
+//         WHS=Grounding, PU=Pump Up, FAP=FAP (Timestamp), ENV=Env Report (Timestamp)
+const PUMPERS = ['Andy','Armando','Eli','Gary','Henry','Jason','Raul','Rogelio','Waldo','Wynn'];
 
 const FORMS = [
   { key:'gwi',      color:'#2d7a2d' },
@@ -315,30 +317,35 @@ const FORMS = [
   { key:'env',      color:'#5a8a3a' },
 ];
 
-// Forms NOT yet in Power BI get all zeros
 const ZERO = () => ({ total: 0, byPumper: {} });
 
 const DATA = {
   pastweek: {
-    gwi:     { total: 12, byPumper: { 'Shane/Winn':10, 'Armando':2 } },
-    wellsite: ZERO(), facility: ZERO(), whs: ZERO(),
-    pumpup:  { total: 0, byPumper: {} },
-    fap:     { total: 6,  byPumper: { 'Armando - BBS Flood':3, 'Armando':1, 'Shane/Winn':1, 'Armando - BBN Flood':1 } },
-    env: ZERO(),
+    gwi:     { total: 12,  byPumper: { 'Wynn':10, 'Armando':2 } },
+    wellsite: { total: 7,  byPumper: { 'Armando':7 } },
+    facility: ZERO(),
+    whs:      { total: 2,  byPumper: { 'Waldo':2 } },
+    pumpup:   ZERO(),
+    fap:      { total: 6,  byPumper: { 'Jason':4, 'Armando':2 } },
+    env:      ZERO(),
   },
   ytd: {
-    gwi:     { total: 23,  byPumper: { 'Shane/Winn':11, 'Jason':4, 'Andy North':3, 'Raul':2, 'Armando':2, 'Oswaldo':1 } },
-    wellsite: ZERO(), facility: ZERO(), whs: ZERO(),
-    pumpup:  { total: 0,   byPumper: {} },
-    fap:     { total: 118, byPumper: { 'Henry':48, 'Jason':23, 'Armando - BBS Flood':20, 'Armando - BBN Flood':10, 'Oswaldo':7, 'Andy South':4, 'Armando':2, 'Andy North':2, 'Shane/Winn':2 } },
-    env: ZERO(),
+    gwi:     { total: 23,  byPumper: { 'Wynn':11, 'Eli':9, 'Armando':2, 'Waldo':1 } },
+    wellsite: { total: 7,  byPumper: { 'Armando':7 } },
+    facility: { total: 5,  byPumper: { 'Eli':5 } },
+    whs:      { total: 2,  byPumper: { 'Waldo':2 } },
+    pumpup:   ZERO(),
+    fap:      { total: 118, byPumper: { 'Jason':90, 'Henry':23, 'Armando':5 } },
+    env:      ZERO(),
   },
   lastyear: {
-    gwi:     { total: 0, byPumper: {} },
-    wellsite: ZERO(), facility: ZERO(), whs: ZERO(),
-    pumpup:  { total: 1,   byPumper: { 'Oswaldo':1 } },
-    fap:     { total: 415, byPumper: { 'Henry':133, 'Jason':88, 'Oswaldo':67, 'Andy North':41, 'Shane/Winn':27, 'Raul':22, 'Armando - BBN Flood':12, 'Andy South':12, 'Armando - BBS Flood':11, 'Armando':2 } },
-    env: ZERO(),
+    gwi:      ZERO(),
+    wellsite: { total: 8,  byPumper: { 'Rogelio':6, 'Eli':2 } },
+    facility: ZERO(),
+    whs:      ZERO(),
+    pumpup:   { total: 1,  byPumper: { 'Waldo':1 } },
+    fap:      { total: 415, byPumper: { 'Jason':190, 'Henry':118, 'Waldo':75, 'Andy':16, 'Armando':7, 'Raul':5, 'Wynn':3, 'Gary':1 } },
+    env:      ZERO(),
   },
 };
 
@@ -387,7 +394,7 @@ function applyPeriod(period) {
     // Stat tile
     document.getElementById('num-' + f.key).textContent = fd.total;
     const tile = document.getElementById('tile-' + f.key);
-    tile.classList.toggle('no-pbi', fd.total === 0 && f.key !== 'gwi' && f.key !== 'pumpup');
+    // all forms are now in Power BI — no graying needed
     // Chart data
     const vals = PUMPERS.map(p => fd.byPumper[p] || 0);
     CHARTS[f.key].data.datasets[0].data = vals;
