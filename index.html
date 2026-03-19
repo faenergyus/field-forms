@@ -304,7 +304,7 @@
 <script>
 // ── Data (queried from Power BI 2026-03-19) ────────────────────────────────
 // Tables: GWI=Gas Well Inspection, WS=Well Insprection, FAC=Facility Insprection,
-//         WHS=Grounding, PU=Pump Up, FAP=FAP (Timestamp), ENV=Env Report (Timestamp)
+//         WHS=Grounding (Timestamp — InspDate has 2027/2028 typos), PU=Pump Up, FAP=FAP (Timestamp), ENV=Env Report (Timestamp)
 const PUMPERS = ['Andy','Armando','Eli','Gary','Henry','Jason','Raul','Rogelio','Waldo','Wynn'];
 
 const FORMS = [
@@ -324,7 +324,7 @@ const DATA = {
     gwi:     { total: 12,  byPumper: { 'Wynn':10, 'Armando':2 } },
     wellsite: { total: 7,  byPumper: { 'Armando':7 } },
     facility: ZERO(),
-    whs:      { total: 2,  byPumper: { 'Waldo':2 } },
+    whs:      ZERO(),
     pumpup:   ZERO(),
     fap:      { total: 6,  byPumper: { 'Jason':4, 'Armando':2 } },
     env:      ZERO(),
@@ -333,7 +333,7 @@ const DATA = {
     gwi:     { total: 23,  byPumper: { 'Wynn':11, 'Eli':9, 'Armando':2, 'Waldo':1 } },
     wellsite: { total: 7,  byPumper: { 'Armando':7 } },
     facility: { total: 5,  byPumper: { 'Eli':5 } },
-    whs:      { total: 2,  byPumper: { 'Waldo':2 } },
+    whs:      ZERO(),
     pumpup:   ZERO(),
     fap:      { total: 118, byPumper: { 'Jason':90, 'Henry':23, 'Armando':5 } },
     env:      ZERO(),
