@@ -152,8 +152,8 @@
   <div class="dash-header">
     <div class="section-label" style="margin-bottom:0;flex:1">Activity Dashboard</div>
     <div class="period-pills">
-      <button class="pill" data-period="pastweek">Past Week</button>
-      <button class="pill active" data-period="ytd">YTD</button>
+      <button class="pill active" data-period="pastweek">Past Week</button>
+      <button class="pill" data-period="ytd">YTD</button>
       <button class="pill" data-period="lastyear">Last Year</button>
     </div>
   </div>
@@ -431,7 +431,7 @@ toggle.addEventListener('click', () => {
 window.addEventListener('resize', resizeAll);
 
 // Init with YTD
-applyPeriod('ytd');
+applyPeriod('pastweek');
 
 // Defer initial resize one frame so the grid has painted
 requestAnimationFrame(resizeAll);
