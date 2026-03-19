@@ -100,7 +100,7 @@
       box-shadow: 0 1px 4px rgba(0,0,0,0.07);
     }
     .chart-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #3a5a3a; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
-    .chart-wrap { position: relative; height: 180px; width: 100%; }
+    .chart-wrap { position: relative; height: 300px; width: 100%; }
     canvas { display: block; }
     .chart-card.span2 { grid-column: span 2; }
 
@@ -127,7 +127,7 @@
       .chart-card.span2 { grid-column: span 1; }
     }
     @media (max-width: 580px) {
-      .chart-wrap { height: 160px; }
+      .chart-wrap { height: 300px; }
       .stat-row { grid-template-columns: repeat(3, 1fr); }
       .cards { grid-template-columns: 1fr 1fr; }
     }
@@ -376,7 +376,7 @@ function makeChart(id, color) {
         },
         y: {
           grid: { display: false },
-          ticks: { color: TICK_COLOR, font: { size: 10 } }
+          ticks: { color: TICK_COLOR, font: { size: 10 }, autoSkip: false }
         }
       }
     }
