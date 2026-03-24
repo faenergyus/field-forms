@@ -568,7 +568,7 @@ async function handleCredentialResponse(response) {
 function showPortal(session) {
   document.getElementById('login-overlay').style.display = 'none';
   document.getElementById('user-badge').style.display    = 'flex';
-  document.getElementById('user-name').textContent       = session.displayName;
+  document.getElementById('user-name').textContent       = 'Welcome, ' + session.displayName;
   const av = document.getElementById('user-avatar');
   av.src = session.picture || ''; av.style.display = session.picture ? '' : 'none';
 
