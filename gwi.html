@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gas Well Inspection — FAE</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4f0; color: #1a1a1a; min-height: 100vh;
+    }
+    header {
+      background: #1c4a1c; padding: 14px 20px;
+      display: flex; align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+    }
+    .logo-fae { font-size: 1.6rem; font-weight: 900; letter-spacing: -1px; color: #5dc85d; }
+    .logo-fae span { color: #fff; font-weight: 300; }
+    .header-right { margin-left: auto; color: #90bc90; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; }
+
+    .page { max-width: 640px; margin: 0 auto; padding: 16px 14px 80px; }
+
+    .section-header {
+      background: #1c4a1c; color: #5dc85d; font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.14em;
+      padding: 8px 14px; border-radius: 6px; margin: 20px 0 10px;
+    }
+
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block; font-size: 0.82rem; font-weight: 600; color: #2a4a2a;
+      margin-bottom: 4px;
+    }
+    .field label .req { color: #c04040; }
+    .field .hint { font-size: 0.72rem; color: #777; margin-bottom: 4px; }
+
+    input[type="text"], input[type="number"], input[type="date"], select, textarea {
+      width: 100%; padding: 10px 12px; border: 1.5px solid #c0d4c0;
+      border-radius: 6px; font-size: 1rem; background: #fff;
+      -webkit-appearance: none; appearance: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none; border-color: #5dc85d; box-shadow: 0 0 0 2px rgba(93,200,93,0.25);
+    }
+    textarea { resize: vertical; min-height: 70px; }
+
+    /* Searchable dropdown */
+    .search-wrap { position: relative; }
+    .search-wrap input {
+      width: 100%; padding: 10px 12px; border: 1.5px solid #c0d4c0;
+      border-radius: 6px; font-size: 1rem; background: #fff;
+    }
+    .search-wrap .dropdown {
+      display: none; position: absolute; top: 100%; left: 0; right: 0;
+      max-height: 240px; overflow-y: auto; background: #fff;
+      border: 1.5px solid #5dc85d; border-top: none; border-radius: 0 0 6px 6px;
+      z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .search-wrap .dropdown.open { display: block; }
+    .search-wrap .dropdown div {
+      padding: 10px 12px; font-size: 0.92rem; cursor: pointer;
+    }
+    .search-wrap .dropdown div:hover,
+    .search-wrap .dropdown div.active {
+      background: #e8f5e8; color: #1c4a1c;
+    }
+    .search-wrap .dropdown .no-match {
+      padding: 10px 12px; font-size: 0.85rem; color: #999; font-style: italic;
+    }
+    .search-wrap .count {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      font-size: 0.68rem; color: #999; pointer-events: none;
+    }
+
+    /* Radio / checkbox groups */
+    .option-group { display: flex; flex-wrap: wrap; gap: 6px; }
+    .option-group label {
+      display: flex; align-items: center; gap: 5px;
+      font-weight: 400; font-size: 0.9rem; color: #1a1a1a;
+      padding: 6px 12px; border: 1.5px solid #c0d4c0; border-radius: 20px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .option-group input[type="radio"],
+    .option-group input[type="checkbox"] { display: none; }
+    .option-group input:checked + label,
+    .option-group label.checked {
+      background: #1c4a1c; color: #fff; border-color: #1c4a1c;
+    }
+
+    /* Submit */
+    .submit-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #fff; border-top: 2px solid #1c4a1c;
+      padding: 10px 14px; display: flex; gap: 10px; z-index: 50;
+    }
+    .submit-bar button {
+      flex: 1; padding: 12px; border: none; border-radius: 6px;
+      font-size: 1rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-submit { background: #1c4a1c; color: #fff; }
+    .btn-submit:disabled { background: #999; cursor: not-allowed; }
+    .btn-clear { background: #f0f0f0; color: #666; }
+
+    /* Success overlay */
+    #success-overlay {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(28,74,28,0.95);
+      flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    }
+    #success-overlay.show { display: flex; }
+    #success-overlay .check { font-size: 4rem; }
+    #success-overlay .msg { color: #fff; font-size: 1.2rem; font-weight: 600; }
+    #success-overlay .sub { color: #90bc90; font-size: 0.85rem; }
+    #success-overlay button {
+      margin-top: 16px; padding: 10px 28px; background: #5dc85d; color: #fff;
+      border: none; border-radius: 6px; font-size: 1rem; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo-fae">FAE <span>Energy</span></div>
+  </div>
+  <div class="header-right">Gas Well Inspection</div>
+</header>
+
+<div class="page">
+
+  <!-- Inspected By -->
+  <div class="field">
+    <label>Inspected By <span class="req">*</span></label>
+    <select id="f-inspectedBy" required>
+      <option value="">Select...</option>
+      <option>Andy</option><option>Armando</option><option>Eli</option>
+      <option>Henry</option><option>James</option><option>Jason</option>
+      <option>Joe</option><option>Leo</option><option>Raul</option>
+      <option>Rogelio</option><option>Shane</option><option>Waldo</option><option>Wynn</option>
+    </select>
+  </div>
+
+  <!-- Inspection Date -->
+  <div class="field">
+    <label>Inspection Date <span class="req">*</span></label>
+    <input type="date" id="f-date" required />
+  </div>
+
+  <!-- Well Site (searchable) -->
+  <div class="field">
+    <label>Well Site <span class="req">*</span></label>
+    <div class="search-wrap" id="wellsite-wrap">
+      <input type="text" id="f-wellsite" autocomplete="off" placeholder="Type to search..." />
+      <span class="count" id="wellsite-count"></span>
+      <div class="dropdown" id="wellsite-dd"></div>
+    </div>
+    <input type="hidden" id="f-wellsite-val" />
+  </div>
+
+  <!-- Has power -->
+  <div class="field">
+    <label>Has power at location? <span class="req">*</span></label>
+    <div class="option-group" data-field="f-power">
+      <input type="radio" name="f-power" value="Yes" id="pw-y"><label for="pw-y">Yes</label>
+      <input type="radio" name="f-power" value="No" id="pw-n"><label for="pw-n">No</label>
+    </div>
+  </div>
+
+  <div class="section-header">Pumping Unit</div>
+
+  <div class="field">
+    <label>Has pumping unit? <span class="req">*</span></label>
+    <div class="option-group" data-field="f-hasPU">
+      <input type="radio" name="f-hasPU" value="Yes" id="pu-y"><label for="pu-y">Yes</label>
+      <input type="radio" name="f-hasPU" value="No" id="pu-n"><label for="pu-n">No</label>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Will pumping unit run?</label>
+    <div class="option-group" data-field="f-puRun">
+      <input type="radio" name="f-puRun" value="Does" id="pr-d"><label for="pr-d">Does</label>
+      <input type="radio" name="f-puRun" value="Can" id="pr-c"><label for="pr-c">Can</label>
+      <input type="radio" name="f-puRun" value="No" id="pr-n"><label for="pr-n">No</label>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Has rods in wellbore?</label>
+    <div class="option-group" data-field="f-rods">
+      <input type="radio" name="f-rods" value="Yes" id="rd-y"><label for="rd-y">Yes</label>
+      <input type="radio" name="f-rods" value="No" id="rd-n"><label for="rd-n">No</label>
+    </div>
+  </div>
+
+  <div class="section-header">Compressor</div>
+
+  <div class="field">
+    <label>Has compressor? <span class="req">*</span></label>
+    <div class="option-group" data-field="f-hasComp">
+      <input type="radio" name="f-hasComp" value="Actively used" id="hc-a"><label for="hc-a">Actively used</label>
+      <input type="radio" name="f-hasComp" value="Unused" id="hc-u"><label for="hc-u">Unused</label>
+      <input type="radio" name="f-hasComp" value="No" id="hc-n"><label for="hc-n">No</label>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Suction Setpoints, psi</label>
+    <div class="hint">ex. 1-5</div>
+    <input type="text" id="f-suction" inputmode="text" />
+  </div>
+
+  <div class="field">
+    <label>Discharge Setpoint Limits, psi</label>
+    <div class="hint">ex. 20-50</div>
+    <input type="text" id="f-dischLimits" inputmode="text" />
+  </div>
+
+  <div class="field">
+    <label>Discharge pressure while running</label>
+    <div class="hint">ex. 30</div>
+    <input type="text" id="f-dischPressure" inputmode="numeric" />
+  </div>
+
+  <div class="section-header">Tanks</div>
+
+  <div class="field">
+    <label>Has tanks? <span class="req">*</span></label>
+    <div class="option-group" data-field="f-hasTanks">
+      <input type="radio" name="f-hasTanks" value="Yes" id="ht-y"><label for="ht-y">Yes</label>
+      <input type="radio" name="f-hasTanks" value="No" id="ht-n"><label for="ht-n">No</label>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Tanks hooked up?</label>
+    <div class="option-group" data-field="f-tanksHooked">
+      <input type="radio" name="f-tanksHooked" value="Yes" id="th-y"><label for="th-y">Yes</label>
+      <input type="radio" name="f-tanksHooked" value="No" id="th-n"><label for="th-n">No</label>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Describe tank details</label>
+    <div class="hint">including numbers and types</div>
+    <textarea id="f-tankDetails"></textarea>
+  </div>
+
+  <div class="section-header">Separator</div>
+
+  <div class="field">
+    <label>Has separator on site? <span class="req">*</span></label>
+    <div class="option-group" data-field="f-hasSep">
+      <input type="radio" name="f-hasSep" value="2 Phase" id="hs-2"><label for="hs-2">2 Phase</label>
+      <input type="radio" name="f-hasSep" value="3 Phase" id="hs-3"><label for="hs-3">3 Phase</label>
+      <input type="radio" name="f-hasSep" value="None" id="hs-n"><label for="hs-n">None</label>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Liquid in separator?</label>
+    <div class="option-group" data-field="f-liqSep">
+      <input type="radio" name="f-liqSep" value="Yes" id="ls-y"><label for="ls-y">Yes</label>
+      <input type="radio" name="f-liqSep" value="No" id="ls-n"><label for="ls-n">No</label>
+    </div>
+  </div>
+
+  <div class="section-header">Wellhead</div>
+
+  <div class="field">
+    <label>Tubing valve open? <span class="req">*</span></label>
+    <div class="option-group" data-field="f-tubValve">
+      <input type="radio" name="f-tubValve" value="Yes" id="tv-y"><label for="tv-y">Yes</label>
+      <input type="radio" name="f-tubValve" value="Can't" id="tv-c"><label for="tv-c">Can't</label>
+      <input type="radio" name="f-tubValve" value="No" id="tv-n"><label for="tv-n">No</label>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Casing valve open? <span class="req">*</span></label>
+    <div class="option-group" data-field="f-casValve">
+      <input type="radio" name="f-casValve" value="Yes" id="cv-y"><label for="cv-y">Yes</label>
+      <input type="radio" name="f-casValve" value="Can't" id="cv-c"><label for="cv-c">Can't</label>
+      <input type="radio" name="f-casValve" value="No" id="cv-n"><label for="cv-n">No</label>
+    </div>
+  </div>
+
+  <div class="section-header">Flow System (well to meter)</div>
+
+  <div class="field">
+    <label>Describe piping</label>
+    <div class="hint">ex. casing to compressor to meter</div>
+    <textarea id="f-piping"></textarea>
+  </div>
+
+  <div class="field">
+    <label>Leaks found? <span class="req">*</span></label>
+    <div class="option-group" data-field="f-leaks">
+      <input type="radio" name="f-leaks" value="Yes" id="lk-y"><label for="lk-y">Yes</label>
+      <input type="radio" name="f-leaks" value="No" id="lk-n"><label for="lk-n">No</label>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Inspection Method</label>
+    <div class="option-group" data-field="f-method">
+      <input type="checkbox" name="f-method" value="AVO Only" id="im-a"><label for="im-a">AVO Only</label>
+      <input type="checkbox" name="f-method" value="AVO w/ Sonic Camera" id="im-s"><label for="im-s">AVO w/ Sonic Camera</label>
+      <input type="checkbox" name="f-method" value="None" id="im-n"><label for="im-n">None</label>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Leaks fixed?</label>
+    <div class="option-group" data-field="f-leaksFixed">
+      <input type="radio" name="f-leaksFixed" value="Yes" id="lf-y"><label for="lf-y">Yes</label>
+      <input type="radio" name="f-leaksFixed" value="No" id="lf-n"><label for="lf-n">No</label>
+      <input type="radio" name="f-leaksFixed" value="N/A" id="lf-na"><label for="lf-na">N/A</label>
+    </div>
+  </div>
+
+  <div class="section-header">Status at time of inspection</div>
+
+  <div class="field">
+    <label>Casing pressure, psi <span class="req">*</span></label>
+    <div class="hint">if more than 40, choose 40</div>
+    <select id="f-casingP">
+      <option value="">Select...</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>Tubing pressure, psi <span class="req">*</span></label>
+    <div class="hint">if more than 40, choose 40</div>
+    <select id="f-tubingP">
+      <option value="">Select...</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>Flow Rate, MCFD</label>
+    <div class="hint"># only, ex. 30</div>
+    <input type="text" id="f-flowRate" inputmode="decimal" />
+  </div>
+
+  <div class="field">
+    <label>Static Pressure @ Meter, psi</label>
+    <div class="hint"># only, ex. 38</div>
+    <input type="text" id="f-staticP" inputmode="decimal" />
+  </div>
+
+  <div class="field">
+    <label>How long does well flow? (minutes)</label>
+    <input type="text" id="f-flowTime" inputmode="numeric" />
+  </div>
+
+  <div class="field">
+    <label>How long does well take to build pressure to flow? (minutes)</label>
+    <input type="text" id="f-buildTime" inputmode="numeric" />
+  </div>
+
+  <div class="field">
+    <label>FAP, ft</label>
+    <div class="hint"># only, ex. 247</div>
+    <input type="text" id="f-fap" inputmode="numeric" />
+  </div>
+
+  <!-- Photo upload note -->
+  <div class="field" style="background:#fff8e0; border:1px solid #e0d090; border-radius:6px; padding:10px 12px; margin-top:20px;">
+    <label style="color:#8a7020;">Photos</label>
+    <div style="font-size:0.82rem; color:#666;">Photo upload is not supported through this form. To attach photos, use the <a href="https://docs.google.com/forms/d/e/1FAIpQLSfCoQ4xKJDhmmVBGTMgQjtQ11NgBLk4qMBuVJGHDHkmWbQxgw/viewform" target="_blank" style="color:#1c4a1c;">original Google Form</a>.</div>
+  </div>
+
+</div><!-- .page -->
+
+<div class="submit-bar">
+  <button type="button" class="btn-clear" onclick="clearForm()">Clear</button>
+  <button type="button" class="btn-submit" id="btn-submit" onclick="submitForm()">Submit</button>
+</div>
+
+<div id="success-overlay">
+  <div class="check">&#10003;</div>
+  <div class="msg">Inspection Submitted</div>
+  <div class="sub" id="success-detail"></div>
+  <button onclick="newInspection()">New Inspection</button>
+</div>
+
+<script>
+// ── Well site data (628 gas wells from Power BI) ──
+const WELLS = ["A B REEVES #007","ADELE SOWELL #001","ADELE SOWELL #002","AIRPORT #001","AIRPORT #002","ARNOTT RAMSAY NCT E #012","ARNOTT RAMSAY NCT-B #001","ARNOTT RAMSAY NCT-B #003","ARNOTT RAMSAY NCT-B #004","ARNOTT RAMSAY NCT-B #013","ARNOTT RAMSEY A #005","ARNOTT RAMSEY A #006","ASCARTE C 24 #001","ATLANTIC STATE #002","ATLANTIC STATE #003","B A CHRISTMAS #002","B M JUSTIS #012","B T LANEHART #002","B T LANEHART #003","B T LANEHART #007","BAYLUS CADE FEDERAL #008","BAYLUS CADE FEDERAL #009","BAYLUS CADE FEDERAL #011","BERTIE WHITMIRE #008","BERTIE WHITMIRE #009","BOREN GREER GAS COM #004","BRITT #001","BRITT #004","BRITT #005","BRITT #012","BRITT #015","BRITT A 6 #002","BRITT PHILLIPS #002","BRITT-LAUGHLIN COM #002","BRITT-LAUGHLIN COM #006","BROWNLEE #001","BROWNLEE #002","BYROM WILLIAMS #001","C E LAMUNYON #007","C E LAMUNYON #009","C E LAMUNYON #014","C E LAMUNYON #020","C E LAMUNYON #021","C E LAMUNYON #022","C E LAMUNYON #023","C E LAMUNYON #024","C E LAMUNYON #026","C E LAMUNYON #027","C E LAMUNYON #028","C E LAMUNYON #029","C E LAMUNYON #032","C E LAMUNYON #033","C E LAMUNYON #034","C E LAMUNYON #035","C E LAMUNYON #036","C E LAMUNYON #038","C E LAMUNYON #045","C E LAMUNYON #046","C E LAMUNYON #048","C E LAMUNYON #049","C E LAMUNYON #050","C E LAMUNYON #051","C E LAMUNYON #052","C E LAMUNYON #054","C E LAMUNYON #055","C E LAMUNYON #057","C E LAMUNYON #059","C E LAMUNYON #060","C E LAMUNYON #061","C E LAMUNYON #063Y","C E LAMUNYON #064","C E LAMUNYON #065","C E LAMUNYON #066","C E LAMUNYON #070","C E LAMUNYON #071Y","C E LAMUNYON #072","C E LAMUNYON #076","C E LAMUNYON #077","C E LAMUNYON #078","C E LAMUNYON #081","C E LAMUNYON #083","C E LAMUNYON #085","C E LAMUNYON #087","C E LAMUNYON #088","C E LAMUNYON #090","CAGLE C #005","CAGLE C FEDERAL COM #006","CARLSON #005","CARLSON A #001","CARLSON A #002","CARLSON A FEDERAL #001","CARLSON B FEDERAL #001","CARLSON FEDERAL #002","CARLSON FEDERAL #003","CARTER #001","CARTER EAVES NCT A #003","CHRISTMAS A #001","CHRISTMAS B #001","CHRISTMAS B #002","CITGO AS STATE #002","CITGO AS STATE #003","CITGO AS STATE #004","CITGO SE STATE #001","CITGO SE STATE #002","CITIES THOMAS #003","CLOSSON B FEDERAL #008","CLOSSON B FEDERAL #009","CLOSSON B FEDERAL #014","CLOSSON B FEDERAL #015","CLOSSON B FEDERAL #017","CLOSSON B FEDERAL #022","CLOSSON B FEDERAL #023","CLOSSON B FEDERAL #024","CLOSSON B FEDERAL #025","CLOSSON B FEDERAL #026","CLOSSON B FEDERAL #030","CLOSSON B FEDERAL #032Y","CLOSSON B FEDERAL #039","CLOSSON B FEDERAL #040","CLOSSON C #001","COOPER SR #003","COOPER SR A #001","CORTLAND MYERS C #001","COURTLAND MYERS #009","COURTLAND MYERS #010","COURTLAND MYERS B FEDERAL #001","COURTLAND MYERS B FEDERAL #003","DABBS #003","DABBS #004","DANCIGER A 8 #002","DYER #002","DYER #003","E C HILL A #002","E C HILL A #003","E C HILL A #004","E C HILL A #005","E C HILL B #001","E C HILL B #003","E C HILL B FEDERAL #008","E C HILL B FEDERAL #011","E C HILL B FEDERAL #014","E C HILL B FEDERAL #022","E C HILL C #001","E C HILL C #004","E C HILL D FEDERAL #003","E C HILL D FEDERAL #005","E F KING #001","E F KING #002","E F KING #003","EL PASO TOM FEDERAL #008","ELLIOTT #001","ELLIOTT FEDERAL #001","ELLIOTT FEDERAL #003","EMERY KING NW #004","EMERY KING NW #006","EMERY KING SE #001","EMERY KING SE #003","EMERY KING SE #004","ETZ #004","F M BURLESON WN #002","F M BURLESON WN #003","FANNING A #001","FANNING B #002","FARNSWORTH A FEDERAL #012","FARNSWORTH B FEDERAL #001","FARNSWORTH B FEDERAL #007","FARNSWORTH C #002","FEDERAL 714 #001","FEDERAL 714 #002","FEDERAL 714 #004","FEDERAL A #001","FEDERAL A #002","FEDERAL F #002","FEDERAL F #003","FEDERAL F #004","FEDERAL F #005","FLUOR HARRISON #001","FOWLER STATE #001","G G TRAVIS #002","GILLULLY B FEDERAL RA A #004","GILLULLY B FEDERAL RA A #007","GILLULLY B FEDERAL RA A #015","GULF EDDIE CORRIGAN #001","GULF EDDIE CORRIGAN #002","GUTMAN #001","GUTMAN #002","H S RECORD #009","H T MATTERN #003","HANSEN STATE #004","HANSEN STATE #007","HANSEN STATE #010","HARRISON FEDERAL #003","HENRY HARRISON #001","HODGE #002","HODGE #004","HOLT MEXICO STATE COM #001","HUGHES B-6 #011","HUGHES B-6 #012","HUSKY WOOLWORTH #001","IDA A WHITE #002","J C JOHNSON #001","J C JOHNSON #003","J C JOHNSON #004","J C JOHNSON #005","J C JOHNSON #006","J F JANDA NCT H #002","J F JANDA NCT H #003","J F JANDA NCT-G #002","J K RECTOR #001","J K RECTOR #002","J K RECTOR #005","J K RECTOR #006","J K RECTOR #007","J W SHERRELL #005","J W SHERRELL #009","J W SHERRELL #010","J W SHERRELL #011","JACK A 2O #009","JACK A 2O #010","JACK A 2O #011","JACK FEDERAL #005","JAMES MATTIE #004","JANDA STATE #001","JANDA STATE #002","JOHN WHITTEN #001","JUSTIS STATE #001","JUSTIS STATE #002","L C FOPEANO FEDERAL #005","L W WHITE #001","LANEHART 22 #001","LANGLIE A STATE #003","LANGLIE C FEDERAL #001","LANGLIE JAL FEDERAL #002","LANKFORD #002","LATE THOMAS #002","LATE THOMAS #004","LEGAL #001","LIBERTY ROYALTIES #005","LIBERTY ROYALTIES #006","LOCKHART B 30 #002","LOCKHART B 31 #002","LOCKHART B 31 #003","LOCKHART B 31 #004","LOCKHART B 31 #006","LOCKHART B 31 #009","LYNN A #004","LYNN A #006","LYNN B 1 #001","LYNN B 1 #003","LYNN B 1 #007","LYNN B 1 #017","M K STEWART #009","M S BERRYMAN #002","MANDA NCT C #001","MARALO STATE #001","MARTIN B #001","MARTIN B #003","MARTIN B #004","MATKINS #001","MATKINS #002","MATKINS #003","MATKINS #004","MATKINS #005","MATKINS #006","MAVEETY STATE GAS COM #009","MEXICO E COM #002","MEXICO E COM #003","MEXICO E COM #004","MEXICO E COM #005","MEXICO G #001","MEXICO G #002","MEXICO G #003","MEYER B 23 #001","MEYER B 23 #002","MEYER B 27 #001","MEYER B 27 #002","MEYER B 27 #003","MEYER B 28 A A/C 1 #004","MEYER B 28 A COM AC2 #002","MEYER B 28 A COM AC2 #004","MEYER B 28 A COM AC2 #005","MOBERLY RHODES WF PROJECT #002","MOBERLY RHODES WF PROJECT #004","MOBERLY RHODES WF PROJECT #005","MOBERLY RHODES WF PROJECT #006","MOBERLY RHODES WF PROJECT #010","MOBERLY RHODES WF PROJECT #011","MOBERLY RHODES WF PROJECT #012","MOSLEY #001","MUNN HARRISON #001","MUNN HARRISON B #001","MYERS B #002","MYERS B #003","MYERS B #006","MYERS B #009","MYERS B FEDERAL #001","MYERS B FEDERAL #007","MYERS B FEDERAL #010","MYERS B FEDERAL #031","MYERS B FEDERAL #033","MYERS B FEDERAL #034","NEW MEXICO AA STATE #001","NEW MEXICO AB STATE #005","ODESSA LANGLIE FEDERAL #001","OLSEN BLINEBRY #002","OTIS L JONES #001","OTIS L JONES #002","PRICHARD #001","QUAPAW COM #001","QUAPAW COM #002","R O GREGORY #003","R W COWDEN #001","R W COWDEN B #004","R W COWDEN C #004","R W COWDEN C #010","R W COWDEN C #012","RESLER B #001","RHODES FEDERAL UNIT #041","RHODES FEDERAL UNIT #045","RHODES FEDERAL UNIT #047","RHODES FEDERAL UNIT #051","RHODES FEDERAL UNIT #053","RHODES FEDERAL UNIT #054","RHODES FEDERAL UNIT #056","RHODES FEDERAL UNIT #062","RHODES FEDERAL UNIT #081","RHODES FEDERAL UNIT #083","RHODES FEDERAL UNIT #085","RHODES FEDERAL UNIT #086","RHODES FEDERAL UNIT #093","RHODES FEDERAL UNIT #094","RHODES FEDERAL UNIT #096","RHODES FEDERAL UNIT #097","RHODES FEDERAL UNIT #098","RHODES FEDERAL UNIT #101","RHODES FEDERAL UNIT #102","RHODES FEDERAL UNIT #151","RHODES FEDERAL UNIT #154","RHODES FEDERAL UNIT #155","RHODES FEDERAL UNIT #156","RHODES FEDERAL UNIT #157","RHODES FEDERAL UNIT #158","RHODES FEDERAL UNIT #159Y","RHODES FEDERAL UNIT #171","RHODES FEDERAL UNIT #221","RHODES FEDERAL UNIT #223","RHODES FEDERAL UNIT #263","RHODES FEDERAL UNIT #264","RHODES FEDERAL UNIT #266","RHODES FEDERAL UNIT #272","RHODES FEDERAL UNIT #415","RHODES STATE COM #003","RHODES STATE COM #004","RHODES STATE COM #005","RHODES STATE COM #018","RHODES STATE COM #019","RHODES STATE COM #020","SALTMOUNT #001","SALTMOUNT #005","SHELL A STATE COM #005","SHELL A STATE COM #006","SHELL D STATE COM #012","SHELL E STATE COM #002","SHELL STATE #001","SHELL STATE #002","SHELL STATE #003","SHELL STATE #004","SHELL STATE #005","SHELL STATE #007","SHELL STATE #008","SHELL STATE #009","SHELL STATE #010","SHELL STATE #011","SHOLES A #001","SHOLES A #008","SHOLES B 30 #003","SKELLY M STATE #004","STATE 157 F #004","STATE 157 G #002","STATE 157 G #004","STATE 157 G-A #005","STATE 28 #001","STATE A #006","STATE A #007","STATE A A/C 1 #001","STATE A A/C 1 #002","STATE A A/C 1 #006","STATE A A/C 1 #013","STATE A A/C 1 #015","STATE A A/C 1 #016","STATE A A/C 1 #017","STATE A A/C 1 #018","STATE A A/C 1 #020","STATE A A/C 1 #022","STATE A A/C 1 #023","STATE A A/C 1 #026","STATE A A/C 1 #027","STATE A A/C 1 #028","STATE A A/C 1 #029","STATE A A/C 1 #030","STATE A A/C 1 #031","STATE A A/C 1 #032","STATE A A/C 1 #033","STATE A A/C 1 #034","STATE A A/C 1 #037","STATE A A/C 1 #047","STATE A A/C 1 #049","STATE A A/C 1 #050","STATE A A/C 1 #052","STATE A A/C 1 #053","STATE A A/C 1 #054","STATE A A/C 1 #055","STATE A A/C 1 #057","STATE A A/C 1 #058","STATE A A/C 1 #059","STATE A A/C 1 #060","STATE A A/C 1 #062","STATE A A/C 1 #063","STATE A A/C 1 #066","STATE A A/C 1 #067","STATE A A/C 1 #071","STATE A A/C 1 #074","STATE A A/C 1 #075","STATE A A/C 1 #076","STATE A A/C 1 #077","STATE A A/C 1 #078","STATE A A/C 1 #079","STATE A A/C 1 #082","STATE A A/C 1 #085","STATE A A/C 1 #086","STATE A A/C 1 #090","STATE A A/C 1 #091","STATE A A/C 1 #092","STATE A A/C 1 #093","STATE A A/C 1 #094","STATE A A/C 1 #096","STATE A A/C 1 #097","STATE A A/C 1 #098","STATE A A/C 1 #099","STATE A A/C 1 #103","STATE A A/C 1 #105","STATE A A/C 1 #107","STATE A A/C 1 #108","STATE A A/C 1 #111","STATE A A/C 1 #114","STATE A A/C 1 #115","STATE A A/C 1 #122","STATE A A/C 1 #126","STATE A A/C 1 #127","STATE A A/C 1 #128","STATE A A/C 1 #132","STATE A A/C 1 #133","STATE A A/C 2 #001","STATE A A/C 2 #002","STATE A A/C 2 #003","STATE A A/C 2 #005","STATE A A/C 2 #007","STATE A A/C 2 #014","STATE A A/C 2 #015","STATE A A/C 2 #028","STATE A A/C 2 #029","STATE A A/C 2 #031","STATE A A/C 2 #034","STATE A A/C 2 #038","STATE A A/C 2 #040","STATE A A/C 2 #042","STATE A A/C 2 #043","STATE A A/C 2 #044","STATE A A/C 2 #048","STATE A A/C 2 #052","STATE A A/C 2 #057","STATE A A/C 2 #061","STATE A A/C 2 #062","STATE A A/C 2 #063","STATE A A/C 2 #073","STATE A A/C 2 #075","STATE A A/C 2 #078","STATE A A/C 2 #079","STATE A A/C 2 #081","STATE A A/C 2 #082","STATE A A/C 2 #083","STATE A A/C 2 #084","STATE A A/C 2 #085","STATE A A/C 2 #086","STATE A A/C 2 #087","STATE A A/C 2 #088","STATE A A/C 2 #092","STATE A A/C 3 #007","STATE A A/C 3 #009","STATE A A/C 3 COM A #001","STATE A A/C 3 COM A #002","STATE A A/C 3 COM A #004","STATE A A/C 3 COM A #005","STATE A COM #001","STATE A COM #005","STATE A COM #006","STATE A COM #008","STATE A-20 #001","STATE A-20 #004","STATE AY #001","STATE C #001","STATE C #002","STATE C TR 11 #005","STATE C TR 11 #006","STATE C TR 11 #010","STATE D #001","STATE D #002","STATE D #003","STATE D #004","STATE D #006","STATE D #008","STATE E COM #001","STATE E COM #002","STATE E COM #004","STATE E COM #005","STATE E COM #006","STATE H #002","STATE H #003","STATE H #006","STATE H 17 #002","STATE I COM #002","STATE I COM #003","STATE J #004","STATE J #005","STATE J #006","STATE LMT #005","STATE LMT #008","STATE LMT #009","STATE LMT #010","STATE LMT #011","STATE O #003","STATE O #004","STATE O #005","STATE O #006","STATE OF NEW MEXICO 35 #003","STEELER A #001","STEELER A #003","STEELER A #004","STEVENS A 35 COM #001","STEVENS A 35 COM #002","STEVENS A 35 COM #004","STEVENS A 35 COM #005","STEVENS B #008","STEVENS B #013","STEVENS B 14 #001","TERRA CARLSON B FEDERAL #001","TERRA CARLSON FEDERAL #001","THOMAS A #001","TOBY #003","TOM CLOSSON #001","TOM CLOSSON #003","TOM CLOSSON #004","TOM CLOSSON #005","TOM CLOSSON #006","TURNER STATE #003","TURNER STATE #004","W H ELSON #001","W H HARRISON A WN COM #002","W H KING #001","W H KING #003","W H KING #004","WELLS A #002","WELLS A #008","WELLS B 1 #001","WELLS B 1 #003","WELLS B 5 #001","WELLS B 6 #001","WELLS FEDERAL #015","WELLS FEDERAL #017","WELLS FEDERAL #018","WELLS FEDERAL #019","WELLS FEDERAL #021","WEST EUMONT UNIT #101","WEST EUMONT UNIT #103","WEST EUMONT UNIT #108","WEST EUMONT UNIT #109","WEST EUMONT UNIT #110","WEST EUMONT UNIT #112","WEST EUMONT UNIT #113","WEST EUMONT UNIT #201","WEST EUMONT UNIT #202","WEST EUMONT UNIT #205","WEST EUMONT UNIT #208","WEST EUMONT UNIT #225","WEST EUMONT UNIT #301","WEST EUMONT UNIT #302","WEST EUMONT UNIT #303","WEST EUMONT UNIT #304","WEST EUMONT UNIT #305","WEST EUMONT UNIT #401","WEST EUMONT UNIT #403","WEST EUMONT UNIT #404","WEST EUMONT UNIT #405","WEST EUMONT UNIT #406","WEST EUMONT UNIT #407","WEST EUMONT UNIT #408","WEST EUMONT UNIT #409","WEST EUMONT UNIT #412","WEST EUMONT UNIT #413","WEST EUMONT UNIT #414","WEST EUMONT UNIT #415","WEST EUMONT UNIT #418","WEST EUMONT UNIT #501","WEST EUMONT UNIT #504","WEST EUMONT UNIT #505","WEST EUMONT UNIT #506","WEST EUMONT UNIT #507","WEST EUMONT UNIT #508","WEST EUMONT UNIT #515","WEST EUMONT UNIT #517","WEST EUMONT UNIT #518","WEST EUMONT UNIT #520","WEST EUMONT UNIT #560","WEST EUMONT UNIT #601","WEST EUMONT UNIT #603","WEST EUMONT UNIT #604","WEST EUMONT UNIT #605","WEST EUMONT UNIT #606","WEST EUMONT UNIT #607","WEST EUMONT UNIT #608","WEST EUMONT UNIT #611","WINNINGHAM #008","WINNINGHAM #009","WM H HARRISON D WN COM #007","WOOLWORTH #001","WULFF STATE #002","YATES STATE #001","YATES STATE #002"];
+
+// ── Populate pressure dropdowns ──
+['f-casingP','f-tubingP'].forEach(id => {
+  const sel = document.getElementById(id);
+  for (let i = 0; i <= 40; i++) {
+    const opt = document.createElement('option');
+    opt.value = i; opt.textContent = i;
+    sel.appendChild(opt);
+  }
+});
+
+// ── Google Form endpoint ──
+const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSfCoQ4xKJDhmmVBGTMgQjtQ11NgBLk4qMBuVJGHDHkmWbQxgw/formResponse';
+
+// ── Entry ID map ──
+const E = {
+  inspectedBy:    'entry.422563114',
+  date:           'entry.2090668001',
+  wellSite:       'entry.1780066001',
+  power:          'entry.1472989205',
+  hasPU:          'entry.1524884919',
+  puRun:          'entry.1907704228',
+  rods:           'entry.922602014',
+  hasComp:        'entry.392525147',
+  suction:        'entry.772623079',
+  dischLimits:    'entry.1945323308',
+  dischPressure:  'entry.532219079',
+  hasTanks:       'entry.1170913031',
+  tanksHooked:    'entry.1735293470',
+  tankDetails:    'entry.1384051628',
+  hasSep:         'entry.1912320872',
+  liqSep:         'entry.1012083414',
+  tubValve:       'entry.2138299979',
+  casValve:       'entry.141045717',
+  piping:         'entry.1697854955',
+  leaks:          'entry.1702870418',
+  method:         'entry.273907609',
+  leaksFixed:     'entry.1987844996',
+  casingP:        'entry.1556750364',
+  tubingP:        'entry.71567246',
+  flowRate:       'entry.1559467040',
+  staticP:        'entry.625787921',
+  flowTime:       'entry.1292265876',
+  buildTime:      'entry.1602054405',
+  fap:            'entry.748675123'
+};
+
+// ── Searchable well site dropdown ──
+const wsInput = document.getElementById('f-wellsite');
+const wsHidden = document.getElementById('f-wellsite-val');
+const wsDD = document.getElementById('wellsite-dd');
+const wsCount = document.getElementById('wellsite-count');
+let wsActive = -1;
+
+function renderWells(filter) {
+  const q = (filter || '').toUpperCase();
+  const matches = q ? WELLS.filter(w => w.toUpperCase().includes(q)) : WELLS;
+  wsDD.innerHTML = '';
+  if (matches.length === 0) {
+    wsDD.innerHTML = '<div class="no-match">No matching wells</div>';
+  } else {
+    const show = matches.slice(0, 50);
+    show.forEach((w, i) => {
+      const d = document.createElement('div');
+      d.textContent = w;
+      d.dataset.val = w;
+      d.onclick = () => selectWell(w);
+      wsDD.appendChild(d);
+    });
+    if (matches.length > 50) {
+      const more = document.createElement('div');
+      more.className = 'no-match';
+      more.textContent = (matches.length - 50) + ' more \u2014 keep typing to narrow';
+      wsDD.appendChild(more);
+    }
+  }
+  wsCount.textContent = matches.length + ' / ' + WELLS.length;
+  wsActive = -1;
+}
+
+function selectWell(name) {
+  wsInput.value = name;
+  wsHidden.value = name;
+  wsDD.classList.remove('open');
+  wsInput.style.borderColor = '#5dc85d';
+  wsCount.textContent = '';
+}
+
+wsInput.addEventListener('focus', () => {
+  renderWells(wsInput.value);
+  wsDD.classList.add('open');
+});
+
+wsInput.addEventListener('input', () => {
+  wsHidden.value = '';
+  wsInput.style.borderColor = '#c0d4c0';
+  renderWells(wsInput.value);
+  wsDD.classList.add('open');
+});
+
+wsInput.addEventListener('keydown', (e) => {
+  const items = wsDD.querySelectorAll('div:not(.no-match)');
+  if (e.key === 'ArrowDown') { e.preventDefault(); wsActive = Math.min(wsActive + 1, items.length - 1); highlight(items); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); wsActive = Math.max(wsActive - 1, 0); highlight(items); }
+  else if (e.key === 'Enter') { e.preventDefault(); if (wsActive >= 0 && items[wsActive]) selectWell(items[wsActive].dataset.val); }
+});
+
+function highlight(items) {
+  items.forEach((it, i) => it.classList.toggle('active', i === wsActive));
+  if (items[wsActive]) items[wsActive].scrollIntoView({ block: 'nearest' });
+}
+
+document.addEventListener('click', (e) => {
+  if (!document.getElementById('wellsite-wrap').contains(e.target)) wsDD.classList.remove('open');
+});
+
+// ── Radio/checkbox pill styling ──
+document.querySelectorAll('.option-group input').forEach(inp => {
+  inp.addEventListener('change', () => {
+    const grp = inp.closest('.option-group');
+    if (inp.type === 'radio') {
+      grp.querySelectorAll('label').forEach(l => l.classList.remove('checked'));
+    }
+    const lbl = grp.querySelector('label[for="' + inp.id + '"]');
+    if (inp.checked) lbl.classList.add('checked');
+    else lbl.classList.remove('checked');
+  });
+});
+
+// ── Set today's date ──
+document.getElementById('f-date').valueAsDate = new Date();
+
+// ── Form helpers ──
+function getRadio(name) {
+  const el = document.querySelector('input[name="' + name + '"]:checked');
+  return el ? el.value : '';
+}
+
+function getChecked(name) {
+  return Array.from(document.querySelectorAll('input[name="' + name + '"]:checked')).map(e => e.value);
+}
+
+// ── Submit ──
+function submitForm() {
+  const inspBy = document.getElementById('f-inspectedBy').value;
+  const dateVal = document.getElementById('f-date').value;
+  const wellVal = wsHidden.value;
+  const power = getRadio('f-power');
+  const hasPU = getRadio('f-hasPU');
+  const hasComp = getRadio('f-hasComp');
+  const hasTanks = getRadio('f-hasTanks');
+  const hasSep = getRadio('f-hasSep');
+  const tubValve = getRadio('f-tubValve');
+  const casValve = getRadio('f-casValve');
+  const leaks = getRadio('f-leaks');
+  const casingP = document.getElementById('f-casingP').value;
+  const tubingP = document.getElementById('f-tubingP').value;
+
+  const missing = [];
+  if (!inspBy) missing.push('Inspected By');
+  if (!dateVal) missing.push('Inspection Date');
+  if (!wellVal) missing.push('Well Site');
+  if (!power) missing.push('Has power');
+  if (!hasPU) missing.push('Has pumping unit');
+  if (!hasComp) missing.push('Has compressor');
+  if (!hasTanks) missing.push('Has tanks');
+  if (!hasSep) missing.push('Has separator');
+  if (!tubValve) missing.push('Tubing valve');
+  if (!casValve) missing.push('Casing valve');
+  if (!leaks) missing.push('Leaks found');
+  if (!casingP) missing.push('Casing pressure');
+  if (!tubingP) missing.push('Tubing pressure');
+
+  if (missing.length > 0) {
+    alert('Please fill in: ' + missing.join(', '));
+    return;
+  }
+
+  const dateParts = dateVal.split('-');
+
+  const fd = new URLSearchParams();
+  fd.append(E.inspectedBy, inspBy);
+  fd.append(E.date + '_year', dateParts[0]);
+  fd.append(E.date + '_month', dateParts[1]);
+  fd.append(E.date + '_day', dateParts[2]);
+  fd.append(E.wellSite, wellVal);
+  fd.append(E.power, power);
+  fd.append(E.hasPU, hasPU);
+  fd.append(E.puRun, getRadio('f-puRun'));
+  fd.append(E.rods, getRadio('f-rods'));
+  fd.append(E.hasComp, hasComp);
+  fd.append(E.suction, document.getElementById('f-suction').value);
+  fd.append(E.dischLimits, document.getElementById('f-dischLimits').value);
+  fd.append(E.dischPressure, document.getElementById('f-dischPressure').value);
+  fd.append(E.hasTanks, hasTanks);
+  fd.append(E.tanksHooked, getRadio('f-tanksHooked'));
+  fd.append(E.tankDetails, document.getElementById('f-tankDetails').value);
+  fd.append(E.hasSep, hasSep);
+  fd.append(E.liqSep, getRadio('f-liqSep'));
+  fd.append(E.tubValve, tubValve);
+  fd.append(E.casValve, casValve);
+  fd.append(E.piping, document.getElementById('f-piping').value);
+  fd.append(E.leaks, leaks);
+  getChecked('f-method').forEach(v => fd.append(E.method, v));
+  fd.append(E.leaksFixed, getRadio('f-leaksFixed'));
+  fd.append(E.casingP, casingP);
+  fd.append(E.tubingP, tubingP);
+  fd.append(E.flowRate, document.getElementById('f-flowRate').value);
+  fd.append(E.staticP, document.getElementById('f-staticP').value);
+  fd.append(E.flowTime, document.getElementById('f-flowTime').value);
+  fd.append(E.buildTime, document.getElementById('f-buildTime').value);
+  fd.append(E.fap, document.getElementById('f-fap').value);
+
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+
+  fetch(FORM_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: fd.toString()
+  }).then(() => {
+    btn.disabled = false;
+    btn.textContent = 'Submit';
+    document.getElementById('success-detail').textContent = wellVal + ' \u2014 ' + inspBy;
+    document.getElementById('success-overlay').classList.add('show');
+  }).catch(err => {
+    btn.disabled = false;
+    btn.textContent = 'Submit';
+    alert('Submit failed: ' + err.message);
+  });
+}
+
+function newInspection() {
+  document.getElementById('success-overlay').classList.remove('show');
+  const inspBy = document.getElementById('f-inspectedBy').value;
+  clearForm();
+  document.getElementById('f-inspectedBy').value = inspBy;
+}
+
+function clearForm() {
+  document.querySelectorAll('input[type="text"], input[type="number"], textarea').forEach(el => el.value = '');
+  document.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
+  document.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach(el => el.checked = false);
+  document.querySelectorAll('.option-group label').forEach(l => l.classList.remove('checked'));
+  wsInput.value = '';
+  wsHidden.value = '';
+  wsInput.style.borderColor = '#c0d4c0';
+  wsCount.textContent = '';
+  document.getElementById('f-date').valueAsDate = new Date();
+}
+</script>
+
+</body>
+</html>
