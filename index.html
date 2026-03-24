@@ -520,6 +520,7 @@ requestAnimationFrame(resizeAll);
 <script>
 // ── Auth config ──────────────────────────────────────────────────────────────
 const ACCOUNTS_CSV  = 'https://docs.google.com/spreadsheets/d/146yuHYjs3RF3wtCK3Qj9NXH94DrStwhieTGqPeLQRfA/gviz/tq?tqx=out:csv&sheet=Accounts';
+const TRACKER_URL   = 'https://script.google.com/macros/s/AKfycbxOyZbt18JXuPTvkkJrZ3jJgM_xOMQ035CmQWJDolIuEqVKHFP1hNZfbmlcp6dY32Zprw/exec';
 const SESSION_KEY   = 'fae_portal_user';
 const SESSION_HRS   = 12;  // hours before re-login required
 
@@ -554,6 +555,8 @@ async function handleCredentialResponse(response) {
     const session = { email, displayName: match.displayName, pbiName: match.pbiName,
                       role: match.role, picture, expires: Date.now() + SESSION_HRS * 3600000 };
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    // Fire-and-forget — update Last Signin + Signin Count in the Sheet
+    fetch(TRACKER_URL, { method:'POST', body: JSON.stringify({ email }) }).catch(() => {});
     showPortal(session);
 
   } catch(e) {
