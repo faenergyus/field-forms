@@ -5,7 +5,49 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FAE Field Operations Portal</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
+
+    /* ── Login overlay ── */
+    #login-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: #0d260d;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 24px;
+    }
+    #login-overlay .login-logo {
+      font-size: 2.8rem; font-weight: 900; letter-spacing: -1px; color: #5dc85d;
+    }
+    #login-overlay .login-logo span { color: #fff; font-weight: 300; }
+    #login-overlay .login-tagline {
+      color: #90bc90; font-size: 0.85rem; letter-spacing: 0.12em;
+      text-transform: uppercase; margin-top: -16px;
+    }
+    #login-overlay .login-tagline em { color: #5dc85d; font-style: normal; }
+    #login-overlay .login-title {
+      color: #c8dcc8; font-size: 1rem; margin-bottom: 8px;
+    }
+    #login-overlay .login-error {
+      color: #ff8080; font-size: 0.85rem; display: none;
+      text-align: center; max-width: 280px;
+    }
+
+    /* ── User badge in header ── */
+    .user-badge {
+      display: flex; align-items: center; gap: 8px;
+      margin-left: auto;
+    }
+    .user-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 2px solid #5dc85d;
+    }
+    .user-name { color: #c8dcc8; font-size: 0.82rem; }
+    .user-signout {
+      color: #7a9e7a; font-size: 0.72rem; cursor: pointer;
+      text-decoration: underline; background: none; border: none;
+      padding: 0; margin-left: 4px;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -143,7 +185,11 @@
     <div class="logo-fae">fae<span>II</span></div>
     <div class="logo-tagline">forty acres <em>energy</em></div>
   </div>
-  <div class="header-right">Field Operations Portal</div>
+  <div class="user-badge" id="user-badge" style="display:none">
+    <img class="user-avatar" id="user-avatar" src="" alt="">
+    <span class="user-name" id="user-name"></span>
+    <button class="user-signout" onclick="signOut()">sign out</button>
+  </div>
 </header>
 
 <div class="page">
@@ -435,6 +481,83 @@ applyPeriod('pastweek');
 
 // Defer initial resize one frame so the grid has painted
 requestAnimationFrame(resizeAll);
+</script>
+
+<!-- ── Login overlay ── -->
+<div id="login-overlay">
+  <div>
+    <div class="login-logo">fae<span>II</span></div>
+  </div>
+  <div class="login-tagline">forty acres <em>energy</em> &nbsp;·&nbsp; Field Operations Portal</div>
+  <div class="login-title">Sign in to continue</div>
+  <div id="g_id_onload"
+       data-client_id="629380732564-6vu5ro8gb49pn6a37fjeqv02n63jignd.apps.googleusercontent.com"
+       data-callback="handleCredentialResponse"
+       data-auto_prompt="false">
+  </div>
+  <div class="g_id_signin"
+       data-type="standard"
+       data-size="large"
+       data-theme="filled_blue"
+       data-text="sign_in_with"
+       data-shape="rectangular"
+       data-logo_alignment="left">
+  </div>
+  <div class="login-error" id="login-error"></div>
+</div>
+
+<script>
+// ── Approved users allowlist ─────────────────────────────────────────────────
+// Add each field worker's Google account email here.
+// Tell Ryan to share their Google account email to be added.
+const ALLOWED_EMAILS = [
+  'ryan@faenergyus.com',
+  'texag98@gmail.com',   // Ryan's personal (for testing)
+];
+
+// ── Auth helpers ─────────────────────────────────────────────────────────────
+const SESSION_KEY = 'fae_portal_user';
+
+function handleCredentialResponse(response) {
+  // Decode the JWT — no library needed, just base64
+  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  const email   = payload.email;
+  const name    = payload.name;
+  const picture = payload.picture;
+
+  if (!ALLOWED_EMAILS.includes(email.toLowerCase())) {
+    const el = document.getElementById('login-error');
+    el.style.display = 'block';
+    el.textContent   = `Access denied for ${email}. Contact Ryan Swift to request access.`;
+    return;
+  }
+
+  // Approved — store session and show portal
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ email, name, picture }));
+  showPortal(name, picture);
+}
+
+function showPortal(name, picture) {
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('user-badge').style.display    = 'flex';
+  document.getElementById('user-name').textContent       = name;
+  document.getElementById('user-avatar').src             = picture || '';
+  document.getElementById('user-avatar').style.display   = picture ? '' : 'none';
+}
+
+function signOut() {
+  sessionStorage.removeItem(SESSION_KEY);
+  location.reload();
+}
+
+// Resume session if already signed in this browser session
+(function () {
+  const saved = sessionStorage.getItem(SESSION_KEY);
+  if (saved) {
+    const { name, picture } = JSON.parse(saved);
+    showPortal(name, picture);
+  }
+})();
 </script>
 </body>
 </html>
