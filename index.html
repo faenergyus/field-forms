@@ -297,7 +297,7 @@
 
   <footer>
     Forty Acres Energy &nbsp;·&nbsp; Field Operations &nbsp;·&nbsp; Internal Use Only
-    <div class="data-note">Dashboard data from Power BI · Forms without PBI integration show 0</div>
+    <div class="data-note">Dashboard data from Power BI · Updated 2026-03-24 09:34</div>
   </footer>
 </div>
 
@@ -319,33 +319,33 @@ const FORMS = [
 
 const ZERO = () => ({ total: 0, byPumper: {} });
 
-const DATA = {
+const DATA = {  // auto-refreshed 2026-03-24 09:35
   pastweek: {
-    gwi:     { total: 12,  byPumper: { 'Wynn':10, 'Armando':2 } },
-    wellsite: { total: 7,  byPumper: { 'Armando':7 } },
-    facility: ZERO(),
-    whs:      ZERO(),
-    pumpup:   ZERO(),
-    fap:      { total: 6,  byPumper: { 'Jason':4, 'Armando':2 } },
-    env:      ZERO(),
+    gwi      : { total: 6, byPumper: { 'Wynn': 3, 'Waldo': 1, 'Armando': 2 } },
+    fap      : { total: 4, byPumper: { 'Jason': 4 } },
+    pumpup   : ZERO(),
+    wellsite : ZERO(),
+    facility : ZERO(),
+    whs      : ZERO(),
+    env      : ZERO(),
   },
   ytd: {
-    gwi:     { total: 23,  byPumper: { 'Wynn':11, 'Eli':9, 'Armando':2, 'Waldo':1 } },
-    wellsite: { total: 7,  byPumper: { 'Armando':7 } },
-    facility: { total: 5,  byPumper: { 'Eli':5 } },
-    whs:      ZERO(),
-    pumpup:   ZERO(),
-    fap:      { total: 118, byPumper: { 'Jason':90, 'Henry':23, 'Armando':5 } },
-    env:      ZERO(),
+    gwi      : { total: 24, byPumper: { 'Eli': 9, 'Wynn': 11, 'Waldo': 2, 'Armando': 2 } },
+    fap      : { total: 118, byPumper: { 'Henry': 23, 'Jason': 90, 'Armando': 5 } },
+    pumpup   : ZERO(),
+    wellsite : { total: 7, byPumper: { 'Armando': 7 } },
+    facility : { total: 5, byPumper: { 'Eli': 5 } },
+    whs      : ZERO(),
+    env      : ZERO(),
   },
   lastyear: {
-    gwi:      ZERO(),
-    wellsite: { total: 8,  byPumper: { 'Rogelio':6, 'Eli':2 } },
-    facility: ZERO(),
-    whs:      ZERO(),
-    pumpup:   { total: 1,  byPumper: { 'Waldo':1 } },
-    fap:      { total: 415, byPumper: { 'Jason':190, 'Henry':118, 'Waldo':75, 'Andy':16, 'Armando':7, 'Raul':5, 'Wynn':3, 'Gary':1 } },
-    env:      ZERO(),
+    gwi      : ZERO(),
+    fap      : { total: 415, byPumper: { 'Waldo': 75, 'Henry': 118, 'Jason': 190, 'Armando': 7, 'Wynn': 3, 'Gary': 1, 'Andy': 16, 'Raul': 5 } },
+    pumpup   : { total: 1, byPumper: { 'Waldo': 1 } },
+    wellsite : { total: 8, byPumper: { 'Eli': 2, 'Rogelio': 6 } },
+    facility : ZERO(),
+    whs      : ZERO(),
+    env      : ZERO(),
   },
 };
 
