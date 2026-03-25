@@ -6,72 +6,68 @@
   <title>Gas Well Inspection</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d260d; color: #e0e0e0; min-height: 100vh; }
-    .header { background: #143014; padding: 12px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 2px solid #2a5a2a; position: sticky; top: 0; z-index: 100; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f4f0; color: #1a1a1a; min-height: 100vh; }
+    .header { background: #1c4a1c; padding: 12px 16px; display: flex; align-items: center; gap: 12px; border-bottom: none; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.25); }
     .header h1 { font-size: 1.1rem; color: #5dc85d; font-weight: 700; flex: 1; }
-    .header a { color: #7a9e7a; text-decoration: none; font-size: 0.8rem; }
+    .header a { color: #90bc90; text-decoration: none; font-size: 0.8rem; }
     .container { max-width: 600px; margin: 0 auto; padding: 16px; }
-    .section { background: #1a3a1a; border-radius: 10px; padding: 16px; margin-bottom: 12px; border: 1px solid #2a5a2a; }
-    .section-title { color: #5dc85d; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
-    label { display: block; color: #b0d0b0; font-size: 0.85rem; margin-bottom: 4px; font-weight: 500; }
-    .required::after { content: " *"; color: #ff6b6b; }
-    input[type="text"], input[type="number"], input[type="date"], select, textarea {
-      width: 100%; padding: 10px 12px; background: #0d260d; border: 1px solid #3a6a3a;
-      border-radius: 6px; color: #e0e0e0; font-size: 16px; margin-bottom: 12px;
+    .section { background: #fff; border-radius: 9px; padding: 16px; margin-bottom: 12px; border-left: 4px solid #3a8a3a; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+    .section-title { color: #4a724a; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 12px; }
+    label { display: block; color: #3a5a3a; font-size: 0.85rem; margin-bottom: 4px; font-weight: 500; }
+    .required::after { content: " *"; color: #c0392b; }
+    input[type="text"], input[type="date"], select, textarea {
+      width: 100%; padding: 9px 12px; background: #fff; border: 1.5px solid #c8ddc8;
+      border-radius: 6px; color: #1a1a1a; font-size: 16px; margin-bottom: 12px;
       -webkit-appearance: none;
     }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: #5dc85d; box-shadow: 0 0 0 2px rgba(93,200,93,0.2); }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #3a8a3a; box-shadow: 0 0 0 2px rgba(58,138,58,0.15); }
+    input.input-error { border-color: #c0392b !important; background: #fff5f5; }
+    .field-error { color: #c0392b; font-size: 0.75rem; margin-top: -8px; margin-bottom: 8px; display: none; }
+    .field-error.show { display: block; }
     textarea { min-height: 60px; resize: vertical; }
     .radio-group { display: flex; gap: 8px; margin-bottom: 12px; }
     .radio-btn { flex: 1; }
     .radio-btn input { display: none; }
-    .radio-btn label { display: block; text-align: center; padding: 8px; background: #0d260d; border: 1px solid #3a6a3a; border-radius: 6px; cursor: pointer; color: #90bc90; font-size: 0.9rem; }
-    .radio-btn input:checked + label { background: #2a5a2a; border-color: #5dc85d; color: #5dc85d; font-weight: 600; }
+    .radio-btn label { display: block; text-align: center; padding: 8px; background: #f5faf5; border: 1.5px solid #c8ddc8; border-radius: 6px; cursor: pointer; color: #3a5a3a; font-size: 0.9rem; }
+    .radio-btn input:checked + label { background: #eaf5ea; border-color: #3a8a3a; color: #1c4a1c; font-weight: 600; }
     .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
     .checkbox-btn input { display: none; }
-    .checkbox-btn label { display: block; padding: 8px 12px; background: #0d260d; border: 1px solid #3a6a3a; border-radius: 6px; cursor: pointer; color: #90bc90; font-size: 0.85rem; }
-    .checkbox-btn input:checked + label { background: #2a5a2a; border-color: #5dc85d; color: #5dc85d; font-weight: 600; }
+    .checkbox-btn label { display: block; padding: 8px 12px; background: #f5faf5; border: 1.5px solid #c8ddc8; border-radius: 6px; cursor: pointer; color: #3a5a3a; font-size: 0.85rem; }
+    .checkbox-btn input:checked + label { background: #eaf5ea; border-color: #3a8a3a; color: #1c4a1c; font-weight: 600; }
     .pressure-row { display: flex; gap: 8px; }
     .pressure-row > div { flex: 1; }
-    .submit-btn { width: 100%; padding: 14px; background: #2a7a2a; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 8px; }
-    .submit-btn:active { background: #1a6a1a; }
-    .submit-btn:disabled { background: #3a5a3a; color: #7a9e7a; cursor: not-allowed; }
+    .submit-btn { width: 100%; padding: 14px; background: #2d7a2d; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+    .submit-btn:active { background: #1c5a1c; }
+    .submit-btn:disabled { background: #8aaa8a; cursor: not-allowed; }
 
     /* Autocomplete */
     .autocomplete-wrap { position: relative; }
     .autocomplete-wrap input { margin-bottom: 0; }
-    .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: #1a3a1a; border: 1px solid #3a6a3a; border-top: none; border-radius: 0 0 6px 6px; max-height: 200px; overflow-y: auto; z-index: 50; display: none; }
-    .autocomplete-list div { padding: 10px 12px; cursor: pointer; font-size: 0.9rem; border-bottom: 1px solid #2a4a2a; }
-    .autocomplete-list div:hover, .autocomplete-list div.active { background: #2a5a2a; color: #5dc85d; }
-    .autocomplete-list div mark { background: none; color: #5dc85d; font-weight: 700; }
-    .well-count { font-size: 0.7rem; color: #5a8a5a; margin-top: 4px; margin-bottom: 12px; }
+    .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1.5px solid #3a8a3a; border-top: none; border-radius: 0 0 6px 6px; max-height: 200px; overflow-y: auto; z-index: 50; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .autocomplete-list div { padding: 10px 12px; cursor: pointer; font-size: 0.9rem; border-bottom: 1px solid #eaf5ea; color: #1a1a1a; }
+    .autocomplete-list div:hover, .autocomplete-list div.active { background: #eaf5ea; color: #1c4a1c; }
+    .autocomplete-list div mark { background: none; color: #2d7a2d; font-weight: 700; }
+    .well-count { font-size: 0.7rem; color: #6a8a6a; margin-top: 4px; margin-bottom: 12px; }
 
     /* Success overlay */
-    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
     .overlay.show { display: flex; }
-    .overlay-card { background: #1a3a1a; border: 2px solid #5dc85d; border-radius: 12px; padding: 32px; text-align: center; max-width: 340px; width: 90%; }
-    .overlay-card .checkmark { font-size: 3rem; margin-bottom: 8px; }
-    .overlay-card h2 { color: #5dc85d; margin-bottom: 8px; }
-    .overlay-card p { color: #b0d0b0; font-size: 0.9rem; margin-bottom: 16px; }
+    .overlay-card { background: #fff; border: 2px solid #3a8a3a; border-radius: 12px; padding: 32px; text-align: center; max-width: 340px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+    .overlay-card .checkmark { font-size: 3rem; margin-bottom: 8px; color: #2d7a2d; }
+    .overlay-card h2 { color: #1c4a1c; margin-bottom: 8px; }
+    .overlay-card p { color: #4a724a; font-size: 0.9rem; margin-bottom: 16px; }
     .overlay-btn { padding: 12px 24px; border-radius: 8px; border: none; font-size: 0.95rem; font-weight: 600; cursor: pointer; margin: 4px; }
-    .btn-photo { background: #2a5a8a; color: #fff; }
-    .btn-photo:active { background: #1a4a7a; }
-    .btn-new { background: #2a5a2a; color: #fff; }
-    .btn-new:active { background: #1a4a1a; }
+    .btn-new { background: #2d7a2d; color: #fff; }
+    .btn-new:active { background: #1c5a1c; }
 
-    /* Photo upload panel */
-    .photo-panel { display: none; }
-    .photo-panel.show { display: block; }
-    .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
-    .photo-thumb { position: relative; aspect-ratio: 1; border-radius: 6px; overflow: hidden; border: 1px solid #3a6a3a; }
+    /* Photo upload */
+    .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0 12px; }
+    .photo-thumb { position: relative; aspect-ratio: 1; border-radius: 6px; overflow: hidden; border: 1.5px solid #c8ddc8; }
     .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .photo-thumb .remove { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.7); color: #ff6b6b; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 14px; cursor: pointer; line-height: 22px; text-align: center; }
-    .photo-add { aspect-ratio: 1; border: 2px dashed #3a6a3a; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #5a8a5a; font-size: 2rem; }
-    .photo-add:active { background: #1a3a1a; }
-    .upload-btn { width: 100%; padding: 12px; background: #2a5a8a; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
-    .upload-btn:disabled { background: #3a5a5a; color: #7a9e9e; }
-    .upload-progress { margin-top: 8px; color: #7ab0d0; font-size: 0.85rem; text-align: center; }
-    .photo-done { color: #5dc85d; text-align: center; padding: 12px; font-weight: 600; }
+    .photo-thumb .remove { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.55); color: #fff; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 14px; cursor: pointer; line-height: 22px; text-align: center; }
+    .photo-add { aspect-ratio: 1; border: 2px dashed #c8ddc8; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #8aaa8a; font-size: 2rem; background: #f5faf5; }
+    .photo-add:active { background: #eaf5ea; }
+    .upload-progress { margin-top: 4px; color: #4a724a; font-size: 0.82rem; text-align: center; }
   </style>
 </head>
 <body>
@@ -136,7 +132,8 @@
         <label>Discharge Setpoint Limits, psi (ex. 20-50)</label>
         <input type="text" id="dischargeLimits" placeholder="e.g. 20-50">
         <label>Discharge pressure while running</label>
-        <input type="text" id="dischargePressure" placeholder="e.g. 30">
+        <input type="text" id="dischargePressure" inputmode="decimal" placeholder="e.g. 30" class="num-field">
+        <div class="field-error" id="err-dischargePressure">Numbers only</div>
       </div>
 
       <div class="section">
@@ -300,15 +297,20 @@
           </div>
         </div>
         <label>Flow Rate, MCFD</label>
-        <input type="text" id="flowRate" inputmode="decimal" placeholder="e.g. 30">
+        <input type="text" id="flowRate" inputmode="decimal" placeholder="e.g. 30" class="num-field">
+        <div class="field-error" id="err-flowRate">Numbers only</div>
         <label>Static Pressure @ Meter, psi</label>
-        <input type="text" id="staticPressure" inputmode="decimal" placeholder="e.g. 38">
+        <input type="text" id="staticPressure" inputmode="decimal" placeholder="e.g. 38" class="num-field">
+        <div class="field-error" id="err-staticPressure">Numbers only</div>
         <label>How long does well flow? (minutes)</label>
-        <input type="text" id="flowTime" inputmode="decimal">
+        <input type="text" id="flowTime" inputmode="decimal" class="num-field">
+        <div class="field-error" id="err-flowTime">Numbers only</div>
         <label>How long to build pressure to flow? (minutes)</label>
-        <input type="text" id="buildTime" inputmode="decimal">
+        <input type="text" id="buildTime" inputmode="decimal" class="num-field">
+        <div class="field-error" id="err-buildTime">Numbers only</div>
         <label>FAP, ft</label>
-        <input type="text" id="fap" inputmode="decimal" placeholder="e.g. 247">
+        <input type="text" id="fap" inputmode="decimal" placeholder="e.g. 247" class="num-field">
+        <div class="field-error" id="err-fap">Numbers only</div>
       </div>
 
       <!-- Photo upload section -->
@@ -431,10 +433,38 @@ document.addEventListener('click', function(e) {
   if (!e.target.closest('.autocomplete-wrap')) wellListEl.style.display = 'none';
 });
 
+// Numeric field validation — strip non-numeric on input, flag on submit
+const NUM_FIELDS = ['flowRate','staticPressure','flowTime','buildTime','fap','dischargePressure'];
+document.querySelectorAll('.num-field').forEach(inp => {
+  inp.addEventListener('input', function() {
+    // Allow digits and one decimal point only
+    const cleaned = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+    if (this.value !== cleaned) this.value = cleaned;
+    const errEl = document.getElementById('err-' + this.id);
+    if (errEl) { errEl.classList.remove('show'); this.classList.remove('input-error'); }
+  });
+});
+
+function validateNums() {
+  let ok = true;
+  NUM_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el || !el.value) return;
+    if (!/^[0-9]*[.]?[0-9]*$/.test(el.value)) {
+      el.classList.add('input-error');
+      const errEl = document.getElementById('err-' + id);
+      if (errEl) errEl.classList.add('show');
+      ok = false;
+    }
+  });
+  return ok;
+}
+
 // Form submission
 document.getElementById('gwi-form').addEventListener('submit', function(e) {
   e.preventDefault();
-  if (!selectedWell) { wellInput.focus(); wellInput.style.borderColor = '#ff6b6b'; return; }
+  if (!selectedWell) { wellInput.focus(); wellInput.style.borderColor = '#c0392b'; return; }
+  if (!validateNums()) { document.querySelector('.input-error').scrollIntoView({behavior:'smooth',block:'center'}); return; }
 
   const btn = document.getElementById('submitBtn');
   btn.disabled = true;
