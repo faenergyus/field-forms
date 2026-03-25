@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Pump Up Entry</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f4f0; color: #1a1a1a; min-height: 100vh; }
+    .header { background: #1c4a1c; padding: 12px 16px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.25); }
+    .header h1 { font-size: 1.1rem; color: #5dc85d; font-weight: 700; flex: 1; }
+    .header a { color: #90bc90; text-decoration: none; font-size: 0.8rem; }
+    .container { max-width: 600px; margin: 0 auto; padding: 16px; }
+    .section { background: #fff; border-radius: 9px; padding: 16px; margin-bottom: 12px; border-left: 4px solid #3a8a3a; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+    .section-title { color: #4a724a; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 12px; }
+    label { display: block; color: #3a5a3a; font-size: 0.85rem; margin-bottom: 4px; font-weight: 500; }
+    .required::after { content: " *"; color: #c0392b; }
+    input[type="text"], input[type="date"], input[type="number"], select, textarea {
+      width: 100%; padding: 9px 12px; background: #fff; border: 1.5px solid #c8ddc8;
+      border-radius: 6px; color: #1a1a1a; font-size: 16px; margin-bottom: 12px;
+      -webkit-appearance: none;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #3a8a3a; box-shadow: 0 0 0 2px rgba(58,138,58,0.15); }
+    input.input-error { border-color: #c0392b !important; background: #fff5f5; }
+    .field-error { color: #c0392b; font-size: 0.75rem; margin-top: -8px; margin-bottom: 8px; display: none; }
+    .field-error.show { display: block; }
+    textarea { min-height: 60px; resize: vertical; }
+    .radio-group { display: flex; gap: 8px; margin-bottom: 12px; }
+    .radio-btn { flex: 1; }
+    .radio-btn input { display: none; }
+    .radio-btn label { display: block; text-align: center; padding: 8px; background: #f5faf5; border: 1.5px solid #c8ddc8; border-radius: 6px; cursor: pointer; color: #3a5a3a; font-size: 0.9rem; }
+    .radio-btn input:checked + label { background: #eaf5ea; border-color: #3a8a3a; color: #1c4a1c; font-weight: 600; }
+
+    /* Autocomplete */
+    .autocomplete-wrap { position: relative; }
+    .autocomplete-wrap input { margin-bottom: 0; }
+    .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1.5px solid #3a8a3a; border-top: none; border-radius: 0 0 6px 6px; max-height: 200px; overflow-y: auto; z-index: 50; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .autocomplete-list div { padding: 10px 12px; cursor: pointer; font-size: 0.9rem; border-bottom: 1px solid #eaf5ea; color: #1a1a1a; }
+    .autocomplete-list div:hover, .autocomplete-list div.active { background: #eaf5ea; color: #1c4a1c; }
+    .autocomplete-list div mark { background: none; color: #2d7a2d; font-weight: 700; }
+    .well-count { font-size: 0.7rem; color: #6a8a6a; margin-top: 4px; margin-bottom: 12px; }
+
+    /* Photo grid */
+    .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+    .photo-thumb { position: relative; aspect-ratio: 1; background: #f5faf5; border-radius: 6px; overflow: hidden; border: 1.5px solid #c8ddc8; }
+    .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-thumb .remove { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: #fff; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .photo-add { aspect-ratio: 1; background: #f5faf5; border: 2px dashed #c8ddc8; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #8aaa8a; cursor: pointer; }
+    .photo-add:hover { background: #eaf5ea; border-color: #3a8a3a; color: #3a8a3a; }
+    .upload-progress { font-size: 0.85rem; color: #3a5a3a; margin-top: 8px; display: none; }
+
+    .submit-btn { width: 100%; padding: 14px; background: #2d7a2d; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+    .submit-btn:active { background: #1c5a1c; }
+    .submit-btn:disabled { background: #8aaa8a; cursor: not-allowed; }
+
+    /* Success overlay */
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+    .overlay.show { display: flex; }
+    .overlay-card { background: #fff; border: 2px solid #3a8a3a; border-radius: 12px; padding: 32px; text-align: center; max-width: 340px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+    .overlay-card .checkmark { font-size: 3rem; margin-bottom: 8px; color: #2d7a2d; }
+    .overlay-card h2 { color: #1c4a1c; font-size: 1.2rem; margin-bottom: 4px; }
+    .overlay-card p { color: #4a724a; font-size: 0.9rem; margin-bottom: 16px; }
+    .overlay-btn { padding: 10px 24px; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+    .btn-new { background: #2d7a2d; color: #fff; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⛽ Pump Up Entry</h1>
+  <a href="index.html">← Portal</a>
+</div>
+
+<div class="container">
+  <form id="pumpup-form">
+
+    <!-- Inspector Info -->
+    <div class="section">
+      <div class="section-title">Test Info</div>
+
+      <label class="required" for="testPerformedBy">Test Performed By</label>
+      <select id="testPerformedBy" required>
+        <option value="">Select inspector...</option>
+        <option>Andy</option>
+        <option>Armando</option>
+        <option>Henry</option>
+        <option>Jason</option>
+        <option>Joe</option>
+        <option>Larry</option>
+        <option>Raul</option>
+        <option>Waldo</option>
+        <option>Wynn</option>
+      </select>
+
+      <label class="required" for="testDate">Test Date</label>
+      <input type="date" id="testDate" required>
+
+      <label class="required" for="wellName">Well Name</label>
+      <div class="autocomplete-wrap">
+        <input type="text" id="wellName" placeholder="Type to search oil wells..." autocomplete="off" required>
+        <div class="autocomplete-list" id="wellList"></div>
+      </div>
+      <div class="well-count" id="wellCount"></div>
+    </div>
+
+    <!-- Test Results -->
+    <div class="section">
+      <div class="section-title">Test Results</div>
+
+      <label for="runTimePct">Run Time %</label>
+      <input type="text" id="runTimePct" class="num-field" inputmode="decimal" placeholder="0–100">
+      <div class="field-error" id="err-runTimePct">Enter a number (e.g. 85)</div>
+
+      <label for="strokesTo500"># of Strokes to 500 psi</label>
+      <input type="text" id="strokesTo500" class="num-field" inputmode="numeric" placeholder="e.g. 12">
+      <div class="field-error" id="err-strokesTo500">Enter a whole number</div>
+
+      <label>Does it hold 500 psi for 2 minutes?</label>
+      <div class="radio-group">
+        <div class="radio-btn"><input type="radio" name="holds500" id="holds500-yes" value="Yes"><label for="holds500-yes">Yes</label></div>
+        <div class="radio-btn"><input type="radio" name="holds500" id="holds500-no" value="No"><label for="holds500-no">No</label></div>
+        <div class="radio-btn"><input type="radio" name="holds500" id="holds500-na" value="N/A"><label for="holds500-na">N/A</label></div>
+      </div>
+    </div>
+
+    <!-- Pressure -->
+    <div class="section">
+      <div class="section-title">Pressure Check</div>
+
+      <label for="pumpingPressure">Pumping Pressure Range, psi</label>
+      <input type="text" id="pumpingPressure" class="range-field" inputmode="decimal" placeholder="e.g. 50-150">
+      <div class="field-error" id="err-pumpingPressure">Enter a range (e.g. 50-150) or single number</div>
+
+      <label>Tagging?</label>
+      <div class="radio-group">
+        <div class="radio-btn"><input type="radio" name="tagging" id="tagging-yes" value="Yes"><label for="tagging-yes">Yes</label></div>
+        <div class="radio-btn"><input type="radio" name="tagging" id="tagging-no" value="No"><label for="tagging-no">No</label></div>
+        <div class="radio-btn"><input type="radio" name="tagging" id="tagging-na" value="N/A"><label for="tagging-na">N/A</label></div>
+      </div>
+
+      <label for="casingPressure">Casing Pressure, psi</label>
+      <input type="text" id="casingPressure" class="num-field" inputmode="decimal" placeholder="e.g. 120">
+      <div class="field-error" id="err-casingPressure">Enter a number</div>
+
+      <label>Check Valve Holding?</label>
+      <div class="radio-group">
+        <div class="radio-btn"><input type="radio" name="checkValve" id="cv-yes" value="Yes"><label for="cv-yes">Yes</label></div>
+        <div class="radio-btn"><input type="radio" name="checkValve" id="cv-no" value="No"><label for="cv-no">No</label></div>
+        <div class="radio-btn"><input type="radio" name="checkValve" id="cv-na" value="N/A"><label for="cv-na">N/A</label></div>
+      </div>
+    </div>
+
+    <!-- Production -->
+    <div class="section">
+      <div class="section-title">Production</div>
+
+      <label for="oilCut">Oil Cut, %</label>
+      <input type="text" id="oilCut" class="num-field" inputmode="decimal" placeholder="0–100">
+      <div class="field-error" id="err-oilCut">Enter a number (e.g. 65)</div>
+
+      <label for="spm">SPM</label>
+      <input type="text" id="spm" class="num-field" inputmode="decimal" placeholder="e.g. 4.5">
+      <div class="field-error" id="err-spm">Enter a number</div>
+    </div>
+
+    <!-- Notes -->
+    <div class="section">
+      <div class="section-title">Notes</div>
+      <label for="notes">Notes</label>
+      <textarea id="notes" placeholder="Any additional observations..."></textarea>
+    </div>
+
+    <!-- Photos -->
+    <div class="section">
+      <div class="section-title">Photos</div>
+      <input type="file" id="photoInput" accept="image/*" multiple style="display:none">
+      <div class="photo-grid" id="photoGrid">
+        <div class="photo-add" id="addPhotoBtn">+</div>
+      </div>
+      <div class="upload-progress" id="uploadProgress"></div>
+    </div>
+
+    <button type="submit" class="submit-btn" id="submitBtn">Submit</button>
+  </form>
+</div>
+
+<!-- Success overlay -->
+<div class="overlay" id="successOverlay">
+  <div class="overlay-card">
+    <div class="checkmark">✓</div>
+    <h2>Submitted!</h2>
+    <p id="successMsg"></p>
+    <div id="uploadProgress2" style="font-size:0.85rem;color:#3a5a3a;margin-bottom:12px;display:none;"></div>
+    <button class="overlay-btn btn-new" id="newEntryBtn" style="display:none;">New Entry</button>
+  </div>
+</div>
+
+<script>
+const FORM_ACTION = 'https://docs.google.com/forms/d/e/1FAIpQLSc366DrGF712zDwzZBy6chnZjqE-d-5XTNUEWcR6pzbEZ3_Nw/formResponse';
+const PHOTO_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwOXsEqPyzT4PrIqQK0pJ4wgynFFbdA1EsJQNfmdglrRQXqWtycYlPtZVgqZHTJgU6o/exec';
+
+const ENTRY = {
+  testPerformedBy: 'entry.259274684',
+  testDate:        'entry.1047488386',
+  wellName:        'entry.62739910',
+  runTimePct:      'entry.1380210357',
+  strokesTo500:    'entry.1157762164',
+  holds500:        'entry.666316702',
+  pumpingPressure: 'entry.502845222',
+  tagging:         'entry.1787060220',
+  casingPressure:  'entry.2021631614',
+  checkValve:      'entry.671821103',
+  oilCut:          'entry.933783649',
+  spm:             'entry.1976493259',
+  notes:           'entry.1987412898',
+};
+
+const WELLS = ["A B COATES B #001", "ARNOTT RAMSAY NCT-B #006", "ARNOTT RAMSAY NCT-B #008", "ARNOTT RAMSAY NCT-B #009", "ARNOTT RAMSAY NCT-B #010", "ARNOTT RAMSAY NCT-B #012", "ARNOTT RAMSAY NCT-B #020", "ARNOTT RAMSAY NCT-B #021", "B DAVIS #003", "BAYLUS CADE FEDERAL #002", "BAYLUS CADE FEDERAL #004", "BAYLUS CADE FEDERAL #006", "BAYLUS CADE FEDERAL #007", "BRITT A 6 #005", "BRITT B 8 #002", "C D WOOLWORTH #004", "C D WOOLWORTH #005", "C D WOOLWORTH #006", "C D WOOLWORTH #007", "C D WOOLWORTH #008", "C D WOOLWORTH #010", "C E LAMUNYON #025", "C E LAMUNYON #030", "C E LAMUNYON #037", "C E LAMUNYON #040", "C E LAMUNYON #042", "C E LAMUNYON #044", "C E LAMUNYON #053", "C E LAMUNYON #056", "C E LAMUNYON #062", "C E LAMUNYON #068", "C E LAMUNYON #073", "C E LAMUNYON #074", "C E LAMUNYON #075", "C E LAMUNYON #080", "C T BATES #001", "C T BATES #003", "C T BATES #004", "CARLSON-HARRISON FEDERAL COM #004", "CARTER EAVES NCT A #002", "CHRISTMAS A #003", "CHRISTMAS A #004", "CITIES THOMAS #004", "CLOSSON B FEDERAL #012", "CLOSSON B FEDERAL #013", "CLOWER STATE #001", "COOPER FEDERAL #001", "CURRIE #001", "DANCIGER #001", "E C HILL A #007", "E C HILL B #005", "E C HILL B FEDERAL #015", "E C HILL B FEDERAL #017", "E C HILL B FEDERAL #018", "E C HILL B FEDERAL #020", "E C HILL B FEDERAL #023", "ELLIOTT #002", "ELLIOTT B 20 #001", "ELLIOTT B 20 #002", "ELLIOTT B 20 #003", "ELLIOTT B 6 #002", "ELLIOTT FEDERAL #006", "EMERY KING NW #001", "EVA E BLINEBRY FEDERAL #004", "EVA E BLINEBRY FEDERAL #008", "EVA E BLINEBRY FEDERAL #009", "EVA E BLINEBRY FEDERAL #010", "FANNING B #001", "FARNSWORTH 4 #002", "FARNSWORTH 4 #003", "FARNSWORTH 4 #010", "FARNSWORTH B FEDERAL #005", "FARNSWORTH FEDERAL #001", "FEDERAL 714 #003", "G G TRAVIS #003", "G G TRAVIS #004", "G H MATTIX FEDERAL #001", "G H MATTIX FEDERAL #003", "G H MATTIX FEDERAL #008", "GILLULLY B FEDERAL RA A #010", "GILLULLY B FEDERAL RA A #018", "GREGORY B #001", "H G MOBERLY A FEDERAL #001", "H G MOBERLY A FEDERAL #003", "HENRY #001", "HENRY #003", "HENRY #004", "HI TOP FEE #001", "J F JANDA NCT-J #005", "J HIRAM MOORE STATE #001", "J W COOPER A #004", "JACK B 30 #001", "JACK B 30 #002", "JACK B 30 #003", "KIMMY #003", "KIMMY #004", "KIMMY K #001", "LANEHART #001Y", "LANGLIE A FEDERAL #001", "LANGLIE A FEDERAL #002", "LINDLEY #001", "LINDLEY #002", "LOCKHART B 31 #005", "LOCKHART B 31 #008", "M K STEWART #002", "M K STEWART #005", "MCQUATTERS COM #004", "MEYER B 23 #003", "MEYER B 31 A #001", "MEYER B 31 A #002", "MEYER B 31 A #003", "MEYER B 31 A #005", "MEYER B 31 A #006", "MYERS B FEDERAL #011", "NEW MEXICO AA STATE #007", "NEW MEXICO AA STATE #008", "NORTHSHORE WOOLWORTH #006", "POSSH #004", "RHODES FEDERAL UNIT #087", "RHODES FEDERAL UNIT #226", "SALTMOUNT #003", "SEETON #001", "SEETON #002", "SEETON #003", "SEETON #004", "SHELL D STATE COM #013", "SHOLES B 13 #004", "SHOLES B 25 #001", "STATE A A/C 1 #036", "STATE A A/C 1 #043", "STATE A A/C 1 #045", "STATE A A/C 1 #046", "STATE A A/C 1 #048", "STATE A A/C 1 #061", "STATE A A/C 1 #064", "STATE A A/C 1 #065", "STATE A A/C 1 #069", "STATE A A/C 1 #072", "STATE A A/C 1 #073", "STATE A A/C 1 #080", "STATE A A/C 1 #081", "STATE A A/C 1 #084", "STATE A A/C 1 #102", "STATE A A/C 1 #129", "STATE A A/C 2 #004", "STATE A A/C 2 #009", "STATE A A/C 2 #023", "STATE A A/C 2 #024", "STATE A A/C 2 #025", "STATE A A/C 2 #026", "STATE A A/C 2 #027", "STATE A A/C 2 #030", "STATE A A/C 2 #033", "STATE A A/C 2 #046", "STATE A A/C 2 #047", "STATE A A/C 2 #054", "STATE BV #001", "STATE C TR 11 #007", "STATE C TR 11 #008", "STATE C TR 11 #009", "STATE D #005", "STATE D #007", "STATE E #002", "STATE H #005", "STATE OF NEW MEXICO 35 #002", "STEVENS A 35 COM #003", "STEVENS B 15 #003", "STUART 9 #001", "THOMAS A #003", "THOMAS A #004", "TRAVIS #005", "VACUUM 31 #001", "VAN ZANDT #001", "W H ELSON #002", "W T JOYNER #001", "WATKINS #003", "WELLS A #007", "WEST EUMONT UNIT #102", "WEST EUMONT UNIT #104", "WEST EUMONT UNIT #107", "WEST EUMONT UNIT #111", "WEST EUMONT UNIT #130", "WEST EUMONT UNIT #131", "WEST EUMONT UNIT #203", "WEST EUMONT UNIT #204", "WEST EUMONT UNIT #206", "WEST EUMONT UNIT #207", "WEST EUMONT UNIT #209", "WEST EUMONT UNIT #210", "WEST EUMONT UNIT #215", "WEST EUMONT UNIT #216", "WEST EUMONT UNIT #217", "WEST EUMONT UNIT #220", "WEST EUMONT UNIT #402", "WEST EUMONT UNIT #410", "WEST EUMONT UNIT #411", "WEST EUMONT UNIT #417", "WEST EUMONT UNIT #502", "WEST EUMONT UNIT #509", "WEST EUMONT UNIT #510", "WEST EUMONT UNIT #511", "WEST EUMONT UNIT #512", "WEST EUMONT UNIT #513", "WEST EUMONT UNIT #514", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #519", "WEST EUMONT UNIT #521", "WEST EUMONT UNIT #528", "WEST EUMONT UNIT #610", "ZATTU CUSHING #001", "ZATTU CUSHING #002"];
+
+// Set today's date
+const today = new Date();
+const yyyy = today.getFullYear();
+const mm = String(today.getMonth() + 1).padStart(2, '0');
+const dd = String(today.getDate()).padStart(2, '0');
+document.getElementById('testDate').value = yyyy + '-' + mm + '-' + dd;
+
+// Auto-fill inspector from localStorage (shared across forms)
+const inspSel = document.getElementById('testPerformedBy');
+const savedInspector = localStorage.getItem('fae_inspector');
+if (savedInspector) inspSel.value = savedInspector;
+inspSel.addEventListener('change', function() {
+  if (this.value) localStorage.setItem('fae_inspector', this.value);
+});
+
+// Autocomplete
+const wellInput = document.getElementById('wellName');
+const wellListEl = document.getElementById('wellList');
+const wellCountEl = document.getElementById('wellCount');
+let selectedWell = '';
+let activeIdx = -1;
+
+wellInput.addEventListener('input', function() {
+  const q = this.value.toUpperCase().trim();
+  selectedWell = '';
+  if (q.length < 1) { wellListEl.style.display = 'none'; return; }
+  const matches = WELLS.filter(w => w.toUpperCase().includes(q)).slice(0, 30);
+  if (matches.length === 0) { wellListEl.style.display = 'none'; wellCountEl.textContent = 'No matches'; return; }
+  wellCountEl.textContent = matches.length + (matches.length >= 30 ? '+' : '') + ' matches';
+  activeIdx = -1;
+  wellListEl.innerHTML = matches.map((w, i) => {
+    const idx = w.toUpperCase().indexOf(q);
+    const hl = w.substring(0, idx) + '<mark>' + w.substring(idx, idx + q.length) + '</mark>' + w.substring(idx + q.length);
+    return '<div data-idx="' + i + '" data-val="' + w.replace(/"/g, '&quot;') + '">' + hl + '</div>';
+  }).join('');
+  wellListEl.style.display = 'block';
+});
+
+wellInput.addEventListener('keydown', function(e) {
+  const items = wellListEl.querySelectorAll('div');
+  if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx = Math.min(activeIdx + 1, items.length - 1); updateActive(items); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx = Math.max(activeIdx - 1, 0); updateActive(items); }
+  else if (e.key === 'Enter' && activeIdx >= 0) { e.preventDefault(); selectWell(items[activeIdx].dataset.val); }
+});
+
+function updateActive(items) {
+  items.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
+  if (items[activeIdx]) items[activeIdx].scrollIntoView({ block: 'nearest' });
+}
+
+wellListEl.addEventListener('click', function(e) {
+  const div = e.target.closest('div[data-val]');
+  if (div) selectWell(div.dataset.val);
+});
+
+function selectWell(val) {
+  wellInput.value = val;
+  selectedWell = val;
+  wellListEl.style.display = 'none';
+  wellCountEl.textContent = 'Selected: ' + val;
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.autocomplete-wrap')) wellListEl.style.display = 'none';
+});
+
+// Numeric field validation
+const NUM_FIELDS = ['runTimePct','strokesTo500','casingPressure','oilCut','spm'];
+document.querySelectorAll('.num-field').forEach(inp => {
+  inp.addEventListener('input', function() {
+    const cleaned = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+    if (this.value !== cleaned) this.value = cleaned;
+    const errEl = document.getElementById('err-' + this.id);
+    if (errEl) { errEl.classList.remove('show'); this.classList.remove('input-error'); }
+  });
+});
+
+// Range field validation (e.g. "50-150")
+const RANGE_FIELDS = ['pumpingPressure'];
+document.querySelectorAll('.range-field').forEach(inp => {
+  inp.addEventListener('input', function() {
+    const cleaned = this.value.replace(/[^0-9.-]/g, '');
+    if (this.value !== cleaned) this.value = cleaned;
+    const errEl = document.getElementById('err-' + this.id);
+    if (errEl) { errEl.classList.remove('show'); this.classList.remove('input-error'); }
+  });
+});
+
+function validateNums() {
+  let ok = true;
+  NUM_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el || !el.value) return;
+    if (!/^[0-9]*[.]?[0-9]*$/.test(el.value)) {
+      el.classList.add('input-error');
+      const errEl = document.getElementById('err-' + id);
+      if (errEl) errEl.classList.add('show');
+      ok = false;
+    }
+  });
+  RANGE_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el || !el.value) return;
+    if (!/^[0-9.]+(-[0-9.]+)?$/.test(el.value.trim())) {
+      el.classList.add('input-error');
+      const errEl = document.getElementById('err-' + id);
+      if (errEl) errEl.classList.add('show');
+      ok = false;
+    }
+  });
+  return ok;
+}
+
+// Form submission
+document.getElementById('pumpup-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  if (!selectedWell) { wellInput.focus(); wellInput.style.borderColor = '#c0392b'; return; }
+  if (!validateNums()) { document.querySelector('.input-error').scrollIntoView({behavior:'smooth',block:'center'}); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+
+  const fd = new FormData();
+  fd.append(ENTRY.testPerformedBy, document.getElementById('testPerformedBy').value);
+  const dateParts = document.getElementById('testDate').value.split('-');
+  fd.append(ENTRY.testDate + '_year', dateParts[0]);
+  fd.append(ENTRY.testDate + '_month', dateParts[1]);
+  fd.append(ENTRY.testDate + '_day', dateParts[2]);
+  fd.append(ENTRY.wellName, selectedWell);
+
+  // Radio fields
+  const radios = {holds500:'holds500', tagging:'tagging', checkValve:'checkValve'};
+  for (const [key, name] of Object.entries(radios)) {
+    const checked = document.querySelector('input[name="'+name+'"]:checked');
+    if (checked) fd.append(ENTRY[key], checked.value);
+  }
+
+  // Numeric / text fields
+  const textFields = {runTimePct:'runTimePct', strokesTo500:'strokesTo500',
+    pumpingPressure:'pumpingPressure', casingPressure:'casingPressure',
+    oilCut:'oilCut', spm:'spm', notes:'notes'};
+  for (const [key, id] of Object.entries(textFields)) {
+    const val = document.getElementById(id).value;
+    if (val) fd.append(ENTRY[key], val);
+  }
+
+  fetch(FORM_ACTION, { method: 'POST', body: fd, mode: 'no-cors' })
+    .then(() => showSuccess())
+    .catch(() => showSuccess());
+});
+
+function showSuccess() {
+  const well = selectedWell;
+  const date = document.getElementById('testDate').value;
+  const inspector = document.getElementById('testPerformedBy').value;
+  document.getElementById('successMsg').textContent = well + ' — ' + date;
+  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('submitBtn').textContent = 'Submit';
+  document.getElementById('successOverlay').classList.add('show');
+  if (photoFiles.length > 0) {
+    uploadPhotos(well, date, inspector);
+  } else {
+    document.getElementById('newEntryBtn').style.display = 'inline-block';
+  }
+}
+
+document.getElementById('newEntryBtn').addEventListener('click', function() {
+  document.getElementById('successOverlay').classList.remove('show');
+  resetForm();
+});
+
+// Photo grid
+let photoFiles = [];
+
+document.getElementById('addPhotoBtn').addEventListener('click', function() {
+  document.getElementById('photoInput').click();
+});
+
+document.getElementById('photoInput').addEventListener('change', function() {
+  for (const file of this.files) photoFiles.push(file);
+  this.value = '';
+  renderPhotoGrid();
+});
+
+function renderPhotoGrid() {
+  const grid = document.getElementById('photoGrid');
+  grid.innerHTML = '';
+  photoFiles.forEach((file, i) => {
+    const thumb = document.createElement('div');
+    thumb.className = 'photo-thumb';
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    const rm = document.createElement('button');
+    rm.className = 'remove';
+    rm.textContent = 'x';
+    rm.type = 'button';
+    rm.onclick = () => { photoFiles.splice(i, 1); renderPhotoGrid(); };
+    thumb.appendChild(img);
+    thumb.appendChild(rm);
+    grid.appendChild(thumb);
+  });
+  const addBtn = document.createElement('div');
+  addBtn.className = 'photo-add';
+  addBtn.textContent = '+';
+  addBtn.onclick = () => document.getElementById('photoInput').click();
+  grid.appendChild(addBtn);
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadPhotos(wellSite, date, inspector) {
+  if (photoFiles.length === 0) return;
+  const prog = document.getElementById('uploadProgress2');
+  prog.style.display = 'block';
+  const photos = [];
+  for (let i = 0; i < photoFiles.length; i++) {
+    prog.textContent = 'Uploading photo ' + (i + 1) + ' of ' + photoFiles.length + '...';
+    const b64 = await fileToBase64(photoFiles[i]);
+    photos.push({ name: photoFiles[i].name, base64: b64, mimeType: photoFiles[i].type || 'image/jpeg' });
+  }
+  try {
+    const resp = await fetch(PHOTO_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ wellSite, date, inspector, photos })
+    });
+    const result = await resp.json();
+    if (result.success) {
+      prog.textContent = result.count + ' photo(s) uploaded!';
+    } else {
+      prog.textContent = 'Photo upload error: ' + (result.error || '');
+    }
+  } catch (err) {
+    prog.textContent = 'Photo upload error: ' + err.message;
+  }
+  document.getElementById('newEntryBtn').style.display = 'inline-block';
+}
+
+function resetForm() {
+  document.getElementById('pumpup-form').reset();
+  selectedWell = '';
+  wellCountEl.textContent = '';
+  photoFiles = [];
+  renderPhotoGrid();
+  document.getElementById('uploadProgress').style.display = 'none';
+  document.getElementById('uploadProgress2').style.display = 'none';
+  document.getElementById('newEntryBtn').style.display = 'none';
+  // Restore inspector from localStorage
+  const saved = localStorage.getItem('fae_inspector');
+  if (saved) document.getElementById('testPerformedBy').value = saved;
+  // Restore today's date
+  document.getElementById('testDate').value = yyyy + '-' + mm + '-' + dd;
+}
+</script>
+</body>
+</html>
