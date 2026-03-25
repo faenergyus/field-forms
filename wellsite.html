@@ -194,6 +194,14 @@ const mm = String(today.getMonth() + 1).padStart(2, '0');
 const dd = String(today.getDate()).padStart(2, '0');
 document.getElementById('inspDate').value = yyyy + '-' + mm + '-' + dd;
 
+// Auto-fill inspector from localStorage (shared across forms)
+const inspSel = document.getElementById('inspectedBy');
+const savedInspector = localStorage.getItem('fae_inspector');
+if (savedInspector) inspSel.value = savedInspector;
+inspSel.addEventListener('change', function() {
+  if (this.value) localStorage.setItem('fae_inspector', this.value);
+});
+
 // Autocomplete
 const wellInput = document.getElementById('wellSite');
 const wellListEl = document.getElementById('wellList');
@@ -405,6 +413,8 @@ async function uploadPhotos(wellSite, date, inspector) {
 function resetForm() {
   document.getElementById('wsi-form').reset();
   document.getElementById('inspDate').value = yyyy + '-' + mm + '-' + dd;
+  const saved = localStorage.getItem('fae_inspector');
+  if (saved) document.getElementById('inspectedBy').value = saved;
   selectedWell = '';
   wellInput.value = '';
   wellCountEl.textContent = '959 wells';
