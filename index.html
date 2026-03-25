@@ -163,6 +163,29 @@
     footer { text-align: center; color: #8aaa8a; font-size: 0.72rem; margin-top: 36px; padding-top: 16px; border-top: 1px solid #d0e0d0; }
     .data-note { font-size: 0.65rem; color: #8aaa8a; margin-top: 2px; }
 
+    /* ── Reports section ── */
+    .reports-body {
+      overflow: hidden; max-height: 0;
+      transition: max-height 0.35s ease;
+      margin-top: 10px;
+    }
+    .reports-body.open { max-height: 8000px; }
+    .report-card {
+      background: #fff; border-radius: 9px; padding: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    }
+    .report-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #3a5a3a; margin-bottom: 12px; }
+    .report-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .report-table th { text-align: left; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: #6a8a6a; font-weight: 700; border-bottom: 1.5px solid #e0ece0; padding: 6px 8px; }
+    .report-table td { padding: 8px 8px; border-bottom: 1px solid #f0f4f0; vertical-align: middle; }
+    .report-table tr:last-child td { border-bottom: none; }
+    .report-table tr:hover td { background: #f8fbf8; }
+    .report-thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 5px; cursor: pointer; border: 1.5px solid #e0ece0; display: block; }
+    .report-thumb-none { width: 64px; height: 64px; background: #f0f4f0; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: #bbb; font-size: 1.4rem; }
+    .maps-link { color: #2d7a2d; text-decoration: none; font-weight: 500; white-space: nowrap; }
+    .maps-link:hover { text-decoration: underline; }
+    .report-loading { color: #6a8a6a; font-size: 0.82rem; padding: 16px; text-align: center; }
+
     @media (max-width: 860px) {
       .stat-row { grid-template-columns: repeat(4, 1fr); }
       .charts-grid { grid-template-columns: 1fr; }
@@ -353,6 +376,18 @@
 
   </div>
 
+  <!-- REPORTS -->
+  <div class="collapse-header" id="reportsToggle" style="margin-top:24px">
+    <span class="collapse-title">📋 Reports</span>
+    <span class="collapse-chevron" id="reportsChevron">▼</span>
+  </div>
+  <div class="reports-body" id="reportsBody">
+    <div class="report-card">
+      <div class="report-title">🛢 Spare Vessels</div>
+      <div id="spare-vessels-report"><div class="report-loading">Open to load report…</div></div>
+    </div>
+  </div>
+
   <footer>
     Forty Acres Energy &nbsp;·&nbsp; Field Operations &nbsp;·&nbsp; Internal Use Only
     <div class="data-note">Dashboard data from Power BI · Updated 2026-03-25 18:00</div>
@@ -503,6 +538,59 @@ applyPeriod('pastweek');
 
 // Defer initial resize one frame so the grid has painted
 requestAnimationFrame(resizeAll);
+
+// ── Reports collapse toggle ────────────────────────────────────────────────
+const rToggle  = document.getElementById('reportsToggle');
+const rBody    = document.getElementById('reportsBody');
+const rChevron = document.getElementById('reportsChevron');
+let reportLoaded = false;
+rToggle.addEventListener('click', () => {
+  const open = rBody.classList.toggle('open');
+  rChevron.textContent = open ? '▲' : '▼';
+  if (open && !reportLoaded) {
+    reportLoaded = true;
+    loadSpareVesselsReport();
+  }
+});
+
+// ── Spare Vessels report ───────────────────────────────────────────────────
+const REPORT_API = 'https://script.google.com/macros/s/AKfycbwOXsEqPyzT4PrIqQK0pJ4wgynFFbdA1EsJQNfmdglrRQXqWtycYlPtZVgqZHTJgU6o/exec';
+
+function loadSpareVesselsReport() {
+  const el = document.getElementById('spare-vessels-report');
+  el.innerHTML = '<div class="report-loading">Loading…</div>';
+  fetch(REPORT_API + '?report=spareVessels')
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) { el.innerHTML = '<div class="report-loading">Error: ' + data.error + '</div>'; return; }
+      renderSpareVessels(data.rows);
+    })
+    .catch(() => { el.innerHTML = '<div class="report-loading">Failed to load. Check connection and try again.</div>'; });
+}
+
+function renderSpareVessels(rows) {
+  const el = document.getElementById('spare-vessels-report');
+  if (!rows || !rows.length) { el.innerHTML = '<div class="report-loading">No entries yet.</div>'; return; }
+  let html = '<div style="overflow-x:auto"><table class="report-table"><thead><tr>'
+    + '<th>Photo</th><th>Location</th><th>Size</th><th>Coordinates</th><th>Reporter</th><th>Date</th>'
+    + '</tr></thead><tbody>';
+  rows.forEach(r => {
+    const thumb = r.thumbUrl
+      ? `<a href="${r.photoUrl}" target="_blank"><img class="report-thumb" src="${r.thumbUrl}" alt="photo" loading="lazy" onerror="this.closest('a').outerHTML='<div class=report-thumb-none>📷</div>'"></a>`
+      : `<div class="report-thumb-none">📷</div>`;
+    let coords = '—';
+    if (r.lat && r.lng) {
+      const latF = parseFloat(r.lat).toFixed(5);
+      const lngF = parseFloat(r.lng).toFixed(5);
+      coords = `<a class="maps-link" href="https://maps.google.com/?q=${r.lat},${r.lng}" target="_blank">📍 ${latF}, ${lngF}</a>`;
+    }
+    const size = [r.height ? r.height + ' ft' : '', r.diameter ? r.diameter + ' in' : ''].filter(Boolean).join(' × ') || '—';
+    const reporter = r.email ? r.email.replace(/@.*/, '') : '—';
+    html += `<tr><td>${thumb}</td><td>${r.location || '—'}</td><td>${size}</td><td>${coords}</td><td>${reporter}</td><td>${r.timestamp}</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
 </script>
 
 <!-- ── Login overlay ── -->
