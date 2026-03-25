@@ -1,33 +1,40 @@
-"""Generate wellsite.html — Well Site Inspection form with photo upload."""
+"""Generate facility.html — Facility Inspection form with photo upload."""
 import json, sys
 
 sys.path.insert(0, r"C:\Users\RSwift\.claude\skills\powerbi-query")
 from pbi_helpers import get_delegated_token, execute_dax
 
-print("Querying Operations for all wells...")
+print("Querying Operations for facilities (TBorSP)...")
 token = get_delegated_token()
 rows = execute_dax(token, """
 EVALUATE
-VALUES('Pumper Data'[Well Name])
-ORDER BY 'Pumper Data'[Well Name]
+CALCULATETABLE(
+    VALUES('Pumper Data'[TBorSP]),
+    'Pumper Data'[TBorSP] <> "",
+    'Pumper Data'[TBorSP] <> "Inactive",
+    'Pumper Data'[TBorSP] <> "Plugged",
+    'Pumper Data'[TBorSP] <> "New"
+)
+ORDER BY 'Pumper Data'[TBorSP]
 """)
-wells = sorted(set(r['Well Name'] for r in rows if r.get('Well Name')))
-print(f"  {len(wells)} wells loaded from Operations")
+facilities = sorted(set(r['TBorSP'] for r in rows if r.get('TBorSP')))
+print(f"  {len(facilities)} facilities loaded from Operations")
 
-wells_js = json.dumps(wells)
+facilities_js = json.dumps(facilities)
+
+oos_opts = ''.join(f'              <option value="{i}">{i}</option>\n' for i in range(11))
 
 html = f'''<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Well Site Inspection</title>
+  <title>Facility Inspection</title>
   <style>
     * {{ box-sizing: border-box; margin: 0; padding: 0; }}
     body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f4f0; color: #1a1a1a; min-height: 100vh; }}
-    .header {{ background: #1c4a1c; padding: 12px 16px; display: flex; align-items: center; gap: 12px; border-bottom: none; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.25); }}
+    .header {{ background: #1c4a1c; padding: 12px 16px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.25); }}
     .header h1 {{ font-size: 1.1rem; color: #5dc85d; font-weight: 700; flex: 1; }}
-    .header a {{ color: #90bc90; text-decoration: none; font-size: 0.8rem; }}
     .container {{ max-width: 600px; margin: 0 auto; padding: 16px; }}
     .section {{ background: #fff; border-radius: 9px; padding: 16px; margin-bottom: 12px; border-left: 4px solid #3a8a3a; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }}
     .section-title {{ color: #4a724a; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 12px; }}
@@ -42,11 +49,11 @@ html = f'''<!DOCTYPE html>
     input.input-error {{ border-color: #c0392b !important; background: #fff5f5; }}
     .field-error {{ color: #c0392b; font-size: 0.75rem; margin-top: -8px; margin-bottom: 8px; display: none; }}
     .field-error.show {{ display: block; }}
-    textarea {{ min-height: 80px; resize: vertical; }}
-    .radio-group {{ display: flex; gap: 8px; margin-bottom: 12px; }}
-    .radio-btn {{ flex: 1; }}
+    textarea {{ min-height: 70px; resize: vertical; }}
+    .radio-group {{ display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }}
+    .radio-btn {{ flex: 1; min-width: 60px; }}
     .radio-btn input {{ display: none; }}
-    .radio-btn label {{ display: block; text-align: center; padding: 8px; background: #f5faf5; border: 1.5px solid #c8ddc8; border-radius: 6px; cursor: pointer; color: #3a5a3a; font-size: 0.9rem; }}
+    .radio-btn label {{ display: block; text-align: center; padding: 8px 4px; background: #f5faf5; border: 1.5px solid #c8ddc8; border-radius: 6px; cursor: pointer; color: #3a5a3a; font-size: 0.9rem; }}
     .radio-btn input:checked + label {{ background: #eaf5ea; border-color: #3a8a3a; color: #1c4a1c; font-weight: 600; }}
     .submit-btn {{ width: 100%; padding: 14px; background: #2d7a2d; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }}
     .submit-btn:active {{ background: #1c5a1c; }}
@@ -59,7 +66,7 @@ html = f'''<!DOCTYPE html>
     .autocomplete-list div {{ padding: 10px 12px; cursor: pointer; font-size: 0.9rem; border-bottom: 1px solid #eaf5ea; color: #1a1a1a; }}
     .autocomplete-list div:hover, .autocomplete-list div.active {{ background: #eaf5ea; color: #1c4a1c; }}
     .autocomplete-list div mark {{ background: none; color: #2d7a2d; font-weight: 700; }}
-    .well-count {{ font-size: 0.7rem; color: #6a8a6a; margin-top: 4px; margin-bottom: 12px; }}
+    .facility-count {{ font-size: 0.7rem; color: #6a8a6a; margin-top: 4px; margin-bottom: 12px; }}
 
     /* Success overlay */
     .overlay {{ display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }}
@@ -84,13 +91,14 @@ html = f'''<!DOCTYPE html>
 </head>
 <body>
   <div class="header">
-    <h1>Well Site Inspection</h1>
+    <h1>Facility Inspection</h1>
     <button onclick="window.close()" style="background:none;border:none;color:#90bc90;font-size:1.3rem;cursor:pointer;padding:4px 8px;line-height:1;" title="Close">&#x2715;</button>
   </div>
 
   <div class="container">
-    <form id="wsi-form" autocomplete="off">
+    <form id="fac-form" autocomplete="off">
 
+      <!-- Inspector Info -->
       <div class="section">
         <div class="section-title">Inspector Info</div>
         <label class="required">Inspected By</label>
@@ -100,74 +108,144 @@ html = f'''<!DOCTYPE html>
           <option>James</option><option>Jason</option><option>Joe</option><option>Leo</option>
           <option>Raul</option><option>Waldo</option><option>Wynn</option>
         </select>
-
         <label class="required">Inspection Date</label>
         <input type="date" id="inspDate" required>
-
-        <label class="required">Well Site</label>
+        <label class="required">Facility Name</label>
         <div class="autocomplete-wrap">
-          <input type="text" id="wellSite" placeholder="Start typing well name..." required autocomplete="off">
-          <div class="autocomplete-list" id="wellList"></div>
+          <input type="text" id="facilityName" placeholder="Start typing facility name..." required autocomplete="off">
+          <div class="autocomplete-list" id="facilityList"></div>
         </div>
-        <div class="well-count" id="wellCount">{len(wells)} wells</div>
+        <div class="facility-count" id="facilityCount">{len(facilities)} facilities</div>
       </div>
 
+      <!-- Site Condition -->
       <div class="section">
         <div class="section-title">Site Condition</div>
-
         <label>Stained Pad?</label>
         <div class="radio-group">
           <div class="radio-btn"><input type="radio" name="stainedPad" id="sp_yes" value="Yes"><label for="sp_yes">Yes</label></div>
           <div class="radio-btn"><input type="radio" name="stainedPad" id="sp_no" value="No"><label for="sp_no">No</label></div>
         </div>
-
+        <label># of "Out of Service" Tanks</label>
+        <select id="oostanks">
+          <option value="">--</option>
+{oos_opts}        </select>
+        <label>Wind Sock?</label>
+        <div class="radio-group">
+          <div class="radio-btn"><input type="radio" name="windSock" id="ws_yes" value="Yes"><label for="ws_yes">Yes</label></div>
+          <div class="radio-btn"><input type="radio" name="windSock" id="ws_no" value="No"><label for="ws_no">No</label></div>
+        </div>
+        <label>Sign?</label>
+        <div class="radio-group">
+          <div class="radio-btn"><input type="radio" name="sign" id="sign_yes" value="Yes"><label for="sign_yes">Yes</label></div>
+          <div class="radio-btn"><input type="radio" name="sign" id="sign_no" value="No"><label for="sign_no">No</label></div>
+          <div class="radio-btn"><input type="radio" name="sign" id="sign_na" value="N/A"><label for="sign_na">N/A</label></div>
+        </div>
+        <label>Sign Comments</label>
+        <textarea id="signComments" placeholder="Any sign issues..."></textarea>
         <label>Trash and/or unused rods, tubing, or tanks on location?</label>
         <div class="radio-group">
           <div class="radio-btn"><input type="radio" name="trash" id="tr_yes" value="Yes"><label for="tr_yes">Yes</label></div>
           <div class="radio-btn"><input type="radio" name="trash" id="tr_no" value="No"><label for="tr_no">No</label></div>
+          <div class="radio-btn"><input type="radio" name="trash" id="tr_na" value="N/A"><label for="tr_na">N/A</label></div>
         </div>
+        <label>Trash Comments</label>
+        <textarea id="trashComments" placeholder="Describe trash or unused equipment..."></textarea>
+      </div>
 
-        <label>Belt Guard Installed?</label>
+      <!-- Firewall & Containment -->
+      <div class="section">
+        <div class="section-title">Firewall &amp; Containment</div>
+        <label>Has Firewall?</label>
         <div class="radio-group">
-          <div class="radio-btn"><input type="radio" name="beltGuard" id="bg_yes" value="Yes"><label for="bg_yes">Yes</label></div>
-          <div class="radio-btn"><input type="radio" name="beltGuard" id="bg_no" value="No"><label for="bg_no">No</label></div>
+          <div class="radio-btn"><input type="radio" name="firewall" id="fw_yes" value="Yes"><label for="fw_yes">Yes</label></div>
+          <div class="radio-btn"><input type="radio" name="firewall" id="fw_no" value="No"><label for="fw_no">No</label></div>
         </div>
-
-        <label>Well Sign Present &amp; Correct?</label>
+        <label>Firewall Comments</label>
+        <textarea id="firewallComments" placeholder="Describe firewall condition..."></textarea>
+        <label>Transfer &amp; Circulation Pumps in Own Containment?</label>
         <div class="radio-group">
-          <div class="radio-btn"><input type="radio" name="wellSign" id="ws_yes" value="Yes"><label for="ws_yes">Yes</label></div>
-          <div class="radio-btn"><input type="radio" name="wellSign" id="ws_no" value="No"><label for="ws_no">No</label></div>
+          <div class="radio-btn"><input type="radio" name="pumpContain" id="pc_yes" value="Yes"><label for="pc_yes">Yes</label></div>
+          <div class="radio-btn"><input type="radio" name="pumpContain" id="pc_no" value="No"><label for="pc_no">No</label></div>
+          <div class="radio-btn"><input type="radio" name="pumpContain" id="pc_na" value="N/A"><label for="pc_na">N/A</label></div>
         </div>
-
-        <label>Pad Clear of Brush?</label>
+        <label>Pump Containment Empty?</label>
         <div class="radio-group">
-          <div class="radio-btn"><input type="radio" name="padBrush" id="pb_yes" value="Yes"><label for="pb_yes">Yes</label></div>
-          <div class="radio-btn"><input type="radio" name="padBrush" id="pb_no" value="No"><label for="pb_no">No</label></div>
+          <div class="radio-btn"><input type="radio" name="pumpEmpty" id="pe_yes" value="Yes"><label for="pe_yes">Yes</label></div>
+          <div class="radio-btn"><input type="radio" name="pumpEmpty" id="pe_no" value="No"><label for="pe_no">No</label></div>
+          <div class="radio-btn"><input type="radio" name="pumpEmpty" id="pe_na" value="N/A"><label for="pe_na">N/A</label></div>
         </div>
-
-        <label>Unused Chemical Drum or Other Equipment on Location?</label>
+        <label>Thief Hatch Seal Functional?</label>
         <div class="radio-group">
-          <div class="radio-btn"><input type="radio" name="unusedEquip" id="ue_yes" value="Yes"><label for="ue_yes">Yes</label></div>
-          <div class="radio-btn"><input type="radio" name="unusedEquip" id="ue_no" value="No"><label for="ue_no">No</label></div>
+          <div class="radio-btn"><input type="radio" name="thiefHatch" id="th_yes" value="Yes"><label for="th_yes">Yes</label></div>
+          <div class="radio-btn"><input type="radio" name="thiefHatch" id="th_no" value="No"><label for="th_no">No</label></div>
+          <div class="radio-btn"><input type="radio" name="thiefHatch" id="th_na" value="N/A"><label for="th_na">N/A</label></div>
         </div>
+      </div>
 
+      <!-- Tank Integrity -->
+      <div class="section">
+        <div class="section-title">Tank Integrity</div>
+        <label>Darts and Seals on All Valves?</label>
+        <div class="radio-group">
+          <div class="radio-btn"><input type="radio" name="dartsSeals" id="ds_yes" value="Yes"><label for="ds_yes">Yes</label></div>
+          <div class="radio-btn"><input type="radio" name="dartsSeals" id="ds_no" value="No"><label for="ds_no">No</label></div>
+          <div class="radio-btn"><input type="radio" name="dartsSeals" id="ds_na" value="N/A"><label for="ds_na">N/A</label></div>
+        </div>
+        <label>Oil Tanks Stencilled/Painted w/ Reference Height?</label>
+        <div class="radio-group">
+          <div class="radio-btn"><input type="radio" name="stencilled" id="st_yes" value="Yes"><label for="st_yes">Yes</label></div>
+          <div class="radio-btn"><input type="radio" name="stencilled" id="st_no" value="No"><label for="st_no">No</label></div>
+          <div class="radio-btn"><input type="radio" name="stencilled" id="st_na" value="N/A"><label for="st_na">N/A</label></div>
+        </div>
+      </div>
+
+      <!-- Leak Inspection -->
+      <div class="section">
+        <div class="section-title">Leak Inspection</div>
+        <label>Inspection Method</label>
+        <div class="radio-group">
+          <div class="radio-btn"><input type="radio" name="leakMethod" id="lm_avo" value="AVO Only"><label for="lm_avo">AVO Only</label></div>
+          <div class="radio-btn"><input type="radio" name="leakMethod" id="lm_sonic" value="AVO w/ Sonic Camera"><label for="lm_sonic">AVO w/ Sonic</label></div>
+          <div class="radio-btn"><input type="radio" name="leakMethod" id="lm_none" value="None"><label for="lm_none">None</label></div>
+        </div>
+        <label>Leaks Found?</label>
+        <div class="radio-group">
+          <div class="radio-btn"><input type="radio" name="leaksFound" id="lf_yes" value="Yes"><label for="lf_yes">Yes</label></div>
+          <div class="radio-btn"><input type="radio" name="leaksFound" id="lf_no" value="No"><label for="lf_no">No</label></div>
+        </div>
+        <label>Leaks Fixed?</label>
+        <div class="radio-group">
+          <div class="radio-btn"><input type="radio" name="leaksFixed1" id="lf1_yes" value="Yes"><label for="lf1_yes">Yes</label></div>
+          <div class="radio-btn"><input type="radio" name="leaksFixed1" id="lf1_no" value="No"><label for="lf1_no">No</label></div>
+          <div class="radio-btn"><input type="radio" name="leaksFixed1" id="lf1_na" value="N/A"><label for="lf1_na">N/A</label></div>
+        </div>
+        <label>Leaks Fixed? (2)</label>
+        <div class="radio-group">
+          <div class="radio-btn"><input type="radio" name="leaksFixed2" id="lf2_yes" value="Yes"><label for="lf2_yes">Yes</label></div>
+          <div class="radio-btn"><input type="radio" name="leaksFixed2" id="lf2_no" value="No"><label for="lf2_no">No</label></div>
+          <div class="radio-btn"><input type="radio" name="leaksFixed2" id="lf2_na" value="N/A"><label for="lf2_na">N/A</label></div>
+        </div>
+        <label>Note on any valves, plugs, etc. that need to be replaced</label>
+        <textarea id="valveNote" placeholder="Describe any items needing replacement..."></textarea>
+      </div>
+
+      <!-- Safety -->
+      <div class="section">
+        <div class="section-title">Safety</div>
         <label>Oxygen Reading, PPM</label>
         <input type="text" id="oxygenPPM" inputmode="decimal" placeholder="e.g. 20.9" class="num-field">
         <div class="field-error" id="err-oxygenPPM">Numbers only</div>
       </div>
 
+      <!-- Environmental Concerns -->
       <div class="section">
         <div class="section-title">Environmental Concerns</div>
         <label>Environmental Concerns</label>
         <textarea id="envConcerns" placeholder="Describe any environmental concerns observed..."></textarea>
       </div>
 
-      <div class="section">
-        <div class="section-title">Notes</div>
-        <label>Comment</label>
-        <textarea id="comment" placeholder="Any additional observations..."></textarea>
-      </div>
-
+      <!-- Photos -->
       <div class="section">
         <div class="section-title">Upload Photos</div>
         <div class="photo-grid" id="photoGrid">
@@ -192,25 +270,37 @@ html = f'''<!DOCTYPE html>
   </div>
 
 <script>
-const FORM_ACTION = 'https://docs.google.com/forms/d/e/1FAIpQLSdeTZHweY--OrRffE-AEHPU3IDhQaKkV0txjysX7QquffEVnQ/formResponse';
+const FORM_ACTION = 'https://docs.google.com/forms/d/e/1FAIpQLSeMkwySXY19QXMd4TUiNIYHAC3h4yHwJnn9yap-j-gmyaa46w/formResponse';
 const PHOTO_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwOXsEqPyzT4PrIqQK0pJ4wgynFFbdA1EsJQNfmdglrRQXqWtycYlPtZVgqZHTJgU6o/exec';
 
 const ENTRY = {{
-  inspectedBy: 'entry.109500594',
-  inspDate:    'entry.1438637833',
-  wellSite:    'entry.1048153591',
-  stainedPad:  'entry.708629745',
-  trash:       'entry.567539993',
-  beltGuard:   'entry.1203416970',
-  wellSign:    'entry.1210983860',
-  padBrush:    'entry.1193233659',
-  unusedEquip: 'entry.854011300',
-  oxygenPPM:   'entry.744612491',
-  comment:     'entry.626688334',
-  envConcerns: null, // TODO: add entry ID once form question (col N) is created
+  inspectedBy:    'entry.477301310',
+  inspDate:       'entry.264275726',
+  facilityName:   'entry.175632849',
+  stainedPad:     'entry.1161142953',
+  oosTanks:       'entry.2071144565',
+  windSock:       'entry.768746787',
+  firewall:       'entry.761471305',
+  firewallComments:'entry.727729726',
+  pumpContain:    'entry.1548790234',
+  pumpEmpty:      'entry.833303432',
+  sign:           'entry.497562928',
+  signComments:   'entry.1867967117',
+  thiefHatch:     'entry.790287668',
+  trash:          'entry.549761890',
+  trashComments:  'entry.1709910118',
+  dartsSeals:     'entry.392667862',
+  stencilled:     'entry.1334427109',
+  leakMethod:     'entry.170235322',
+  leaksFound:     'entry.1392298293',
+  leaksFixed1:    'entry.1606330293',
+  leaksFixed2:    'entry.418177253',
+  valveNote:      'entry.1389443121',
+  oxygenPPM:      'entry.141500299',
+  envConcerns:    null, // TODO: add entry ID once form question (col AA) is created
 }};
 
-const WELLS = {wells_js};
+const FACILITIES = {facilities_js};
 
 // Set today
 const today = new Date();
@@ -219,7 +309,7 @@ const mm = String(today.getMonth() + 1).padStart(2, '0');
 const dd = String(today.getDate()).padStart(2, '0');
 document.getElementById('inspDate').value = yyyy + '-' + mm + '-' + dd;
 
-// Auto-fill inspector from localStorage (shared across forms)
+// Auto-fill inspector from localStorage
 const inspSel = document.getElementById('inspectedBy');
 const savedInspector = localStorage.getItem('fae_inspector');
 if (savedInspector) inspSel.value = savedInspector;
@@ -228,33 +318,33 @@ inspSel.addEventListener('change', function() {{
 }});
 
 // Autocomplete
-const wellInput = document.getElementById('wellSite');
-const wellListEl = document.getElementById('wellList');
-const wellCountEl = document.getElementById('wellCount');
-let selectedWell = '';
+const facInput = document.getElementById('facilityName');
+const facListEl = document.getElementById('facilityList');
+const facCountEl = document.getElementById('facilityCount');
+let selectedFacility = '';
 let activeIdx = -1;
 
-wellInput.addEventListener('input', function() {{
+facInput.addEventListener('input', function() {{
   const q = this.value.toUpperCase().trim();
-  selectedWell = '';
-  if (q.length < 1) {{ wellListEl.style.display = 'none'; return; }}
-  const matches = WELLS.filter(w => w.toUpperCase().includes(q)).slice(0, 30);
-  if (matches.length === 0) {{ wellListEl.style.display = 'none'; wellCountEl.textContent = 'No matches'; return; }}
-  wellCountEl.textContent = matches.length + (matches.length >= 30 ? '+' : '') + ' matches';
+  selectedFacility = '';
+  if (q.length < 1) {{ facListEl.style.display = 'none'; return; }}
+  const matches = FACILITIES.filter(f => f.toUpperCase().includes(q)).slice(0, 30);
+  if (matches.length === 0) {{ facListEl.style.display = 'none'; facCountEl.textContent = 'No matches'; return; }}
+  facCountEl.textContent = matches.length + (matches.length >= 30 ? '+' : '') + ' matches';
   activeIdx = -1;
-  wellListEl.innerHTML = matches.map((w, i) => {{
-    const idx = w.toUpperCase().indexOf(q);
-    const hl = w.substring(0, idx) + '<mark>' + w.substring(idx, idx + q.length) + '</mark>' + w.substring(idx + q.length);
-    return '<div data-idx="' + i + '" data-val="' + w.replace(/"/g, '&quot;') + '">' + hl + '</div>';
+  facListEl.innerHTML = matches.map((f, i) => {{
+    const idx = f.toUpperCase().indexOf(q);
+    const hl = f.substring(0, idx) + '<mark>' + f.substring(idx, idx + q.length) + '</mark>' + f.substring(idx + q.length);
+    return '<div data-idx="' + i + '" data-val="' + f.replace(/"/g, '&quot;') + '">' + hl + '</div>';
   }}).join('');
-  wellListEl.style.display = 'block';
+  facListEl.style.display = 'block';
 }});
 
-wellInput.addEventListener('keydown', function(e) {{
-  const items = wellListEl.querySelectorAll('div');
+facInput.addEventListener('keydown', function(e) {{
+  const items = facListEl.querySelectorAll('div');
   if (e.key === 'ArrowDown') {{ e.preventDefault(); activeIdx = Math.min(activeIdx + 1, items.length - 1); updateActive(items); }}
   else if (e.key === 'ArrowUp') {{ e.preventDefault(); activeIdx = Math.max(activeIdx - 1, 0); updateActive(items); }}
-  else if (e.key === 'Enter' && activeIdx >= 0) {{ e.preventDefault(); selectWell(items[activeIdx].dataset.val); }}
+  else if (e.key === 'Enter' && activeIdx >= 0) {{ e.preventDefault(); selectFacility(items[activeIdx].dataset.val); }}
 }});
 
 function updateActive(items) {{
@@ -262,23 +352,23 @@ function updateActive(items) {{
   if (items[activeIdx]) items[activeIdx].scrollIntoView({{ block: 'nearest' }});
 }}
 
-wellListEl.addEventListener('click', function(e) {{
+facListEl.addEventListener('click', function(e) {{
   const div = e.target.closest('div[data-val]');
-  if (div) selectWell(div.dataset.val);
+  if (div) selectFacility(div.dataset.val);
 }});
 
-function selectWell(val) {{
-  wellInput.value = val;
-  selectedWell = val;
-  wellListEl.style.display = 'none';
-  wellCountEl.textContent = 'Selected: ' + val;
+function selectFacility(val) {{
+  facInput.value = val;
+  selectedFacility = val;
+  facListEl.style.display = 'none';
+  facCountEl.textContent = 'Selected: ' + val;
 }}
 
 document.addEventListener('click', function(e) {{
-  if (!e.target.closest('.autocomplete-wrap')) wellListEl.style.display = 'none';
+  if (!e.target.closest('.autocomplete-wrap')) facListEl.style.display = 'none';
 }});
 
-// Numeric field validation
+// Numeric validation
 document.querySelectorAll('.num-field').forEach(inp => {{
   inp.addEventListener('input', function() {{
     const cleaned = this.value.replace(/[^0-9.]/g, '').replace(/(\\..*)\\./g, '$1');
@@ -304,9 +394,9 @@ function validateNums() {{
 }}
 
 // Form submission
-document.getElementById('wsi-form').addEventListener('submit', function(e) {{
+document.getElementById('fac-form').addEventListener('submit', function(e) {{
   e.preventDefault();
-  if (!selectedWell) {{ wellInput.focus(); wellInput.style.borderColor = '#c0392b'; return; }}
+  if (!selectedFacility) {{ facInput.focus(); facInput.style.borderColor = '#c0392b'; return; }}
   if (!validateNums()) {{ document.querySelector('.input-error').scrollIntoView({{behavior:'smooth',block:'center'}}); return; }}
 
   const btn = document.getElementById('submitBtn');
@@ -319,25 +409,35 @@ document.getElementById('wsi-form').addEventListener('submit', function(e) {{
   fd.append(ENTRY.inspDate + '_year',  dateParts[0]);
   fd.append(ENTRY.inspDate + '_month', dateParts[1]);
   fd.append(ENTRY.inspDate + '_day',   dateParts[2]);
-  fd.append(ENTRY.wellSite, selectedWell);
+  fd.append(ENTRY.facilityName, selectedFacility);
 
-  const radios = {{
-    stainedPad: 'stainedPad', trash: 'trash', beltGuard: 'beltGuard',
-    wellSign: 'wellSign', padBrush: 'padBrush', unusedEquip: 'unusedEquip'
+  // Radio fields
+  const radioMap = {{
+    stainedPad:'stainedPad', windSock:'windSock', firewall:'firewall',
+    pumpContain:'pumpContain', pumpEmpty:'pumpEmpty', sign:'sign',
+    thiefHatch:'thiefHatch', trash:'trash', dartsSeals:'dartsSeals',
+    stencilled:'stencilled', leakMethod:'leakMethod', leaksFound:'leaksFound',
+    leaksFixed1:'leaksFixed1', leaksFixed2:'leaksFixed2'
   }};
-  for (const [key, name] of Object.entries(radios)) {{
+  for (const [key, name] of Object.entries(radioMap)) {{
     const checked = document.querySelector('input[name="' + name + '"]:checked');
     if (checked) fd.append(ENTRY[key], checked.value);
   }}
 
-  const oxy = document.getElementById('oxygenPPM').value;
-  if (oxy) fd.append(ENTRY.oxygenPPM, oxy);
+  // Select field (# OoS Tanks)
+  const ooVal = document.getElementById('oostanks').value;
+  if (ooVal !== '') fd.append(ENTRY.oosTanks, ooVal);
 
-  const env = document.getElementById('envConcerns').value;
-  if (env && ENTRY.envConcerns) fd.append(ENTRY.envConcerns, env);
-
-  const cmt = document.getElementById('comment').value;
-  if (cmt) fd.append(ENTRY.comment, cmt);
+  // Text/textarea fields
+  const textMap = {{
+    firewallComments:'firewallComments', signComments:'signComments',
+    trashComments:'trashComments', valveNote:'valveNote', oxygenPPM:'oxygenPPM',
+    envConcerns:'envConcerns'
+  }};
+  for (const [key, id] of Object.entries(textMap)) {{
+    const val = document.getElementById(id).value.trim();
+    if (val && ENTRY[key]) fd.append(ENTRY[key], val);
+  }}
 
   fetch(FORM_ACTION, {{ method: 'POST', body: fd, mode: 'no-cors' }})
     .then(() => showSuccess())
@@ -345,15 +445,15 @@ document.getElementById('wsi-form').addEventListener('submit', function(e) {{
 }});
 
 function showSuccess() {{
-  const well = selectedWell;
+  const facility = selectedFacility;
   const date = document.getElementById('inspDate').value;
   const inspector = document.getElementById('inspectedBy').value;
-  document.getElementById('successMsg').textContent = well + ' \u2014 ' + date;
+  document.getElementById('successMsg').textContent = facility + ' \u2014 ' + date;
   document.getElementById('submitBtn').disabled = false;
   document.getElementById('submitBtn').textContent = 'Submit Inspection';
   document.getElementById('successOverlay').classList.add('show');
   if (photoFiles.length > 0) {{
-    uploadPhotos(well, date, inspector);
+    uploadPhotos(facility, date, inspector);
   }} else {{
     setTimeout(() => window.close(), 1500);
     document.getElementById('newInspBtn').style.display = 'inline-block';
@@ -390,8 +490,7 @@ function renderPhotoGrid() {{
     rm.className = 'remove';
     rm.textContent = 'x';
     rm.onclick = () => {{ photoFiles.splice(i, 1); renderPhotoGrid(); }};
-    thumb.appendChild(img);
-    thumb.appendChild(rm);
+    thumb.appendChild(img); thumb.appendChild(rm);
     grid.appendChild(thumb);
   }});
   const addBtn = document.createElement('div');
@@ -402,50 +501,44 @@ function renderPhotoGrid() {{
 }}
 
 function fileToBase64(file) {{
-  return new Promise((resolve) => {{
+  return new Promise(resolve => {{
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result.split(',')[1]);
     reader.readAsDataURL(file);
   }});
 }}
 
-async function uploadPhotos(wellSite, date, inspector) {{
-  if (photoFiles.length === 0) return;
+async function uploadPhotos(facility, date, inspector) {{
   const prog = document.getElementById('uploadProgress');
   prog.style.display = 'block';
   const photos = [];
   for (let i = 0; i < photoFiles.length; i++) {{
     prog.textContent = 'Uploading photo ' + (i + 1) + ' of ' + photoFiles.length + '...';
-    const b64 = await fileToBase64(photoFiles[i]);
-    photos.push({{ name: photoFiles[i].name, base64: b64, mimeType: photoFiles[i].type || 'image/jpeg' }});
+    photos.push({{ name: photoFiles[i].name, base64: await fileToBase64(photoFiles[i]), mimeType: photoFiles[i].type || 'image/jpeg' }});
   }}
   try {{
     const resp = await fetch(PHOTO_ENDPOINT, {{
       method: 'POST',
       headers: {{ 'Content-Type': 'text/plain' }},
-      body: JSON.stringify({{ wellSite, date, inspector, photos }})
+      body: JSON.stringify({{ wellSite: facility, date, inspector, photos }})
     }});
     const result = await resp.json();
-    if (result.success) {{
-      prog.textContent = result.count + ' photo(s) uploaded!';
-      setTimeout(() => window.close(), 1500);
-    }} else {{
-      prog.textContent = 'Photo upload error: ' + (result.error || '');
-    }}
+    prog.textContent = result.success ? result.count + ' photo(s) uploaded!' : 'Upload error: ' + (result.error || '');
+    setTimeout(() => window.close(), 1500);
   }} catch (err) {{
-    prog.textContent = 'Photo upload error: ' + err.message;
+    prog.textContent = 'Upload error: ' + err.message;
   }}
   document.getElementById('newInspBtn').style.display = 'inline-block';
 }}
 
 function resetForm() {{
-  document.getElementById('wsi-form').reset();
+  document.getElementById('fac-form').reset();
   document.getElementById('inspDate').value = yyyy + '-' + mm + '-' + dd;
   const saved = localStorage.getItem('fae_inspector');
   if (saved) document.getElementById('inspectedBy').value = saved;
-  selectedWell = '';
-  wellInput.value = '';
-  wellCountEl.textContent = '{len(wells)} wells';
+  selectedFacility = '';
+  facInput.value = '';
+  facCountEl.textContent = '{len(facilities)} facilities';
   photoFiles = [];
   renderPhotoGrid();
   window.scrollTo(0, 0);
@@ -454,7 +547,7 @@ function resetForm() {{
 </body>
 </html>'''
 
-with open('wellsite.html', 'w', encoding='utf-8') as f:
+with open('facility.html', 'w', encoding='utf-8') as f:
     f.write(html)
 
-print(f'wellsite.html written: {len(html)} bytes')
+print(f'facility.html written: {len(html)} bytes')

@@ -230,10 +230,6 @@
       <div class="stat-num" id="num-whs">0</div>
       <div class="stat-sub">Wellhead<br>Grounding</div>
     </div>
-    <div class="stat-tile" id="tile-env">
-      <div class="stat-num" id="num-env">0</div>
-      <div class="stat-sub">Env<br>Report</div>
-    </div>
   </div>
 
   <!-- Collapsible Charts -->
@@ -285,11 +281,6 @@
       <div class="chart-wrap"><canvas id="c-whs"></canvas></div>
     </div>
 
-    <div class="chart-card span2">
-      <div class="chart-title">🌿 Env Report</div>
-      <div class="chart-wrap"><canvas id="c-env"></canvas></div>
-    </div>
-
   </div>
 
   <!-- FORMS -->
@@ -322,7 +313,7 @@
       <div><div class="card-name">Well Site Inspection</div><div class="card-cta">Open form →</div></div>
     </a>
 
-    <a class="card" href="https://docs.google.com/forms/d/e/1FAIpQLSeMkwySXY19QXMd4TUiNIYHAC3h4yHwJnn9yap-j-gmyaa46w/viewform" target="_blank">
+    <a class="card" href="facility.html" target="_blank">
       <div class="card-icon">
         <svg width="22" height="22" viewBox="0 0 24 24"><ellipse cx="12" cy="7" rx="7" ry="3" fill="#5a8fa8"/><rect x="5" y="7" width="14" height="10" fill="#4a7f98"/><ellipse cx="12" cy="17" rx="7" ry="3" fill="#3a6f88"/><line x1="12" y1="17" x2="12" y2="21" stroke="#3a6f88" stroke-width="1.5"/><line x1="9" y1="20" x2="15" y2="20" stroke="#3a6f88" stroke-width="1.5"/></svg>
       </div>
@@ -381,7 +372,6 @@ const FORMS = [
   { key:'wellsite', color:'#2a6ea6' },
   { key:'facility', color:'#4a7a9a' },
   { key:'whs',      color:'#7a5aaa' },
-  { key:'env',      color:'#5a8a3a' },
 ];
 
 const ZERO = () => ({ total: 0, byPumper: {} });
@@ -394,7 +384,6 @@ const DATA = {  // auto-refreshed 2026-03-25 16:00
     wellsite : { total: 1, byPumper: { 'Armando': 1 } },
     facility : ZERO(),
     whs      : ZERO(),
-    env      : ZERO(),
   },
   ytd: {
     gwi      : { total: 26, byPumper: { 'Andy': 1, 'Eli': 9, 'Wynn': 11, 'Waldo': 2, 'Armando': 3 } },
@@ -403,7 +392,6 @@ const DATA = {  // auto-refreshed 2026-03-25 16:00
     wellsite : { total: 8, byPumper: { 'Armando': 8 } },
     facility : { total: 5, byPumper: { 'Eli': 5 } },
     whs      : ZERO(),
-    env      : ZERO(),
   },
   lastyear: {
     gwi      : ZERO(),
@@ -412,7 +400,6 @@ const DATA = {  // auto-refreshed 2026-03-25 16:00
     wellsite : { total: 8, byPumper: { 'Eli': 2, 'Rogelio': 6 } },
     facility : ZERO(),
     whs      : ZERO(),
-    env      : ZERO(),
   },
 };
 
