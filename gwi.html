@@ -73,7 +73,7 @@
 <body>
   <div class="header">
     <h1>Gas Well Inspection</h1>
-    <a href="index.html">Portal</a>
+    <button onclick="window.close()" style="background:none;border:none;color:#90bc90;font-size:1.3rem;cursor:pointer;padding:4px 8px;line-height:1;" title="Close">&#x2715;</button>
   </div>
 
   <div class="container">
@@ -512,13 +512,15 @@ function showSuccess() {
   const well = selectedWell;
   const date = document.getElementById('inspDate').value;
   const inspector = document.getElementById('inspectedBy').value;
-  document.getElementById('successMsg').textContent = well + ' \u2014 ' + date;
+  document.getElementById('successMsg').textContent = well + ' — ' + date;
   document.getElementById('submitBtn').disabled = false;
   document.getElementById('submitBtn').textContent = 'Submit Inspection';
   document.getElementById('successOverlay').classList.add('show');
   if (photoFiles.length > 0) {
     uploadPhotos(well, date, inspector);
   } else {
+    // No photos — close after a brief moment
+    setTimeout(() => window.close(), 1500);
     document.getElementById('newInspBtn').style.display = 'inline-block';
   }
 }
@@ -589,7 +591,12 @@ async function uploadPhotos(wellSite, date, inspector) {
       body: JSON.stringify({ wellSite, date, inspector, photos })
     });
     const result = await resp.json();
-    prog.textContent = result.success ? result.count + ' photo(s) uploaded!' : 'Photo upload error: ' + (result.error || '');
+    if (result.success) {
+      prog.textContent = result.count + ' photo(s) uploaded!';
+      setTimeout(() => window.close(), 1500);
+    } else {
+      prog.textContent = 'Photo upload error: ' + (result.error || '');
+    }
   } catch (err) {
     prog.textContent = 'Photo upload error: ' + err.message;
   }
