@@ -152,9 +152,11 @@ html = f'''<!DOCTYPE html>
           <div class="radio-btn"><input type="radio" name="compressor" id="comp_no" value="No"><label for="comp_no">No</label></div>
         </div>
         <label>Suction Setpoints, psi (ex. 1-5)</label>
-        <input type="text" id="suction" placeholder="e.g. 1-5">
+        <input type="text" id="suction" inputmode="decimal" placeholder="e.g. 1-5" class="range-field">
+        <div class="field-error" id="err-suction">Use format: 1-5</div>
         <label>Discharge Setpoint Limits, psi (ex. 20-50)</label>
-        <input type="text" id="dischargeLimits" placeholder="e.g. 20-50">
+        <input type="text" id="dischargeLimits" inputmode="decimal" placeholder="e.g. 20-50" class="range-field">
+        <div class="field-error" id="err-dischargeLimits">Use format: 20-50</div>
         <label>Discharge pressure while running</label>
         <input type="text" id="dischargePressure" inputmode="decimal" placeholder="e.g. 30" class="num-field">
         <div class="field-error" id="err-dischargePressure">Numbers only</div>
@@ -387,8 +389,18 @@ document.addEventListener('click', function(e) {{
 const NUM_FIELDS = ['flowRate','staticPressure','flowTime','buildTime','fap','dischargePressure'];
 document.querySelectorAll('.num-field').forEach(inp => {{
   inp.addEventListener('input', function() {{
-    // Allow digits and one decimal point only
-    const cleaned = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+    const cleaned = this.value.replace(/[^0-9.]/g, '').replace(/(\\..*)\\./g, '$1');
+    if (this.value !== cleaned) this.value = cleaned;
+    const errEl = document.getElementById('err-' + this.id);
+    if (errEl) {{ errEl.classList.remove('show'); this.classList.remove('input-error'); }}
+  }});
+}});
+
+// Range field validation (e.g. "1-5") — digits, decimals, hyphen only
+const RANGE_FIELDS = ['suction','dischargeLimits'];
+document.querySelectorAll('.range-field').forEach(inp => {{
+  inp.addEventListener('input', function() {{
+    const cleaned = this.value.replace(/[^0-9.-]/g, '');
     if (this.value !== cleaned) this.value = cleaned;
     const errEl = document.getElementById('err-' + this.id);
     if (errEl) {{ errEl.classList.remove('show'); this.classList.remove('input-error'); }}
@@ -401,6 +413,16 @@ function validateNums() {{
     const el = document.getElementById(id);
     if (!el || !el.value) return;
     if (!/^[0-9]*[.]?[0-9]*$/.test(el.value)) {{
+      el.classList.add('input-error');
+      const errEl = document.getElementById('err-' + id);
+      if (errEl) errEl.classList.add('show');
+      ok = false;
+    }}
+  }});
+  RANGE_FIELDS.forEach(id => {{
+    const el = document.getElementById(id);
+    if (!el || !el.value) return;
+    if (!/^[0-9.]+(-[0-9.]+)?$/.test(el.value.trim())) {{
       el.classList.add('input-error');
       const errEl = document.getElementById('err-' + id);
       if (errEl) errEl.classList.add('show');

@@ -78,6 +78,9 @@ html = f'''<!DOCTYPE html>
     .photo-add:active {{ background: #eaf5ea; }}
     .upload-progress {{ margin-top: 4px; color: #4a724a; font-size: 0.82rem; text-align: center; }}
     .photo-label {{ font-size: 0.78rem; color: #5a7a5a; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.08em; }}
+    .photo-cols {{ display: flex; gap: 12px; }}
+    .photo-col {{ flex: 1; min-width: 0; }}
+    .photo-col .photo-grid {{ grid-template-columns: repeat(2, 1fr); }}
   </style>
 </head>
 <body>
@@ -131,17 +134,22 @@ html = f'''<!DOCTYPE html>
 
       <div class="section">
         <div class="section-title">Photos</div>
-        <div class="photo-label">Results</div>
-        <div class="photo-grid" id="resultsPhotoGrid">
-          <div class="photo-add" id="addResultsBtn">+</div>
+        <div class="photo-cols">
+          <div class="photo-col">
+            <div class="photo-label">Results</div>
+            <div class="photo-grid" id="resultsPhotoGrid">
+              <div class="photo-add" id="addResultsBtn">+</div>
+            </div>
+            <input type="file" id="resultsPhotoInput" accept="image/*" multiple style="display:none">
+          </div>
+          <div class="photo-col">
+            <div class="photo-label">Wave Photo</div>
+            <div class="photo-grid" id="wavePhotoGrid">
+              <div class="photo-add" id="addWaveBtn">+</div>
+            </div>
+            <input type="file" id="wavePhotoInput" accept="image/*" multiple style="display:none">
+          </div>
         </div>
-        <input type="file" id="resultsPhotoInput" accept="image/*" multiple style="display:none">
-
-        <div class="photo-label" style="margin-top:8px;">Wave Photo</div>
-        <div class="photo-grid" id="wavePhotoGrid">
-          <div class="photo-add" id="addWaveBtn">+</div>
-        </div>
-        <input type="file" id="wavePhotoInput" accept="image/*" multiple style="display:none">
       </div>
 
       <button type="submit" class="submit-btn" id="submitBtn">Submit FAP</button>
