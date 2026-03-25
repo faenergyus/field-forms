@@ -311,36 +311,27 @@
         <input type="text" id="fap" inputmode="decimal" placeholder="e.g. 247">
       </div>
 
-      <button type="submit" class="submit-btn" id="submitBtn">Submit Inspection</button>
-    </form>
-
-    <!-- Photo upload panel -->
-    <div class="photo-panel" id="photoPanel">
+      <!-- Photo upload section -->
       <div class="section">
         <div class="section-title">Upload Photos</div>
-        <p style="color:#90bc90;font-size:0.85rem;margin-bottom:12px;">
-          For: <strong id="photoWell"></strong> &mdash; <span id="photoDate"></span>
-        </p>
         <div class="photo-grid" id="photoGrid">
           <div class="photo-add" id="addPhotoBtn">+</div>
         </div>
         <input type="file" id="photoInput" accept="image/*" multiple style="display:none">
-        <button class="upload-btn" id="uploadBtn" disabled>Upload Photos</button>
-        <div class="upload-progress" id="uploadProgress"></div>
-        <div class="photo-done" id="photoDone" style="display:none"></div>
-        <button class="submit-btn btn-new" id="newAfterPhoto" style="margin-top:12px;">New Inspection</button>
       </div>
-    </div>
+
+      <button type="submit" class="submit-btn" id="submitBtn">Submit Inspection</button>
+    </form>
   </div>
 
   <!-- Success overlay -->
   <div class="overlay" id="successOverlay">
     <div class="overlay-card">
       <div class="checkmark">&#10003;</div>
-      <h2>Inspection Submitted</h2>
+      <h2>Submitted!</h2>
       <p id="successMsg"></p>
-      <button class="overlay-btn btn-photo" id="addPhotosBtn">Add Photos</button>
-      <button class="overlay-btn btn-new" id="newInspBtn">New Inspection</button>
+      <div class="upload-progress" id="uploadProgress" style="margin-bottom:8px;"></div>
+      <button class="overlay-btn btn-new" id="newInspBtn" style="display:none;">New Inspection</button>
     </div>
   </div>
 
@@ -483,40 +474,32 @@ document.getElementById('gwi-form').addEventListener('submit', function(e) {
   if (tp) fd.append(ENTRY.tubingPressure, tp);
 
   fetch(FORM_ACTION, { method: 'POST', body: fd, mode: 'no-cors' })
-    .then(() => { btn.textContent = 'Submit Inspection'; btn.disabled = false; showSuccess(); })
-    .catch(() => { btn.textContent = 'Submit Inspection'; btn.disabled = false; showSuccess(); });
+    .then(() => showSuccess())
+    .catch(() => showSuccess());
 });
 
 function showSuccess() {
-  document.getElementById('successMsg').textContent = selectedWell + ' \u2014 ' + document.getElementById('inspDate').value;
+  const well = selectedWell;
+  const date = document.getElementById('inspDate').value;
+  const inspector = document.getElementById('inspectedBy').value;
+  document.getElementById('successMsg').textContent = well + ' \u2014 ' + date;
+  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('submitBtn').textContent = 'Submit Inspection';
   document.getElementById('successOverlay').classList.add('show');
+  if (photoFiles.length > 0) {
+    uploadPhotos(well, date, inspector);
+  } else {
+    document.getElementById('newInspBtn').style.display = 'inline-block';
+  }
 }
-
-document.getElementById('addPhotosBtn').addEventListener('click', function() {
-  document.getElementById('successOverlay').classList.remove('show');
-  showPhotoPanel();
-});
 
 document.getElementById('newInspBtn').addEventListener('click', function() {
   document.getElementById('successOverlay').classList.remove('show');
   resetForm();
 });
 
-// Photo upload
+// Photo grid
 let photoFiles = [];
-
-function showPhotoPanel() {
-  document.getElementById('gwi-form').style.display = 'none';
-  const panel = document.getElementById('photoPanel');
-  panel.classList.add('show');
-  document.getElementById('photoWell').textContent = selectedWell;
-  document.getElementById('photoDate').textContent = document.getElementById('inspDate').value;
-  document.getElementById('photoDone').style.display = 'none';
-  document.getElementById('uploadProgress').textContent = '';
-  photoFiles = [];
-  renderPhotoGrid();
-  window.scrollTo(0, 0);
-}
 
 document.getElementById('addPhotoBtn').addEventListener('click', function() {
   document.getElementById('photoInput').click();
@@ -549,49 +532,7 @@ function renderPhotoGrid() {
   addBtn.textContent = '+';
   addBtn.onclick = () => document.getElementById('photoInput').click();
   grid.appendChild(addBtn);
-  document.getElementById('uploadBtn').disabled = photoFiles.length === 0;
 }
-
-document.getElementById('uploadBtn').addEventListener('click', async function() {
-  if (photoFiles.length === 0) return;
-  this.disabled = true;
-  const prog = document.getElementById('uploadProgress');
-  prog.textContent = 'Reading photos...';
-
-  const photos = [];
-  for (let i = 0; i < photoFiles.length; i++) {
-    prog.textContent = 'Reading photo ' + (i + 1) + ' of ' + photoFiles.length + '...';
-    const b64 = await fileToBase64(photoFiles[i]);
-    photos.push({ name: photoFiles[i].name, base64: b64, mimeType: photoFiles[i].type || 'image/jpeg' });
-  }
-
-  prog.textContent = 'Uploading ' + photos.length + ' photo(s)...';
-
-  try {
-    const resp = await fetch(PHOTO_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({
-        wellSite: document.getElementById('photoWell').textContent,
-        date: document.getElementById('photoDate').textContent,
-        inspector: document.getElementById('inspectedBy').value,
-        photos: photos
-      })
-    });
-    const result = await resp.json();
-    if (result.success) {
-      prog.textContent = '';
-      document.getElementById('photoDone').style.display = 'block';
-      document.getElementById('photoDone').textContent = result.count + ' photo(s) uploaded!';
-    } else {
-      prog.textContent = 'Error: ' + (result.error || 'Upload failed');
-      this.disabled = false;
-    }
-  } catch (err) {
-    prog.textContent = 'Error: ' + err.message;
-    this.disabled = false;
-  }
-});
 
 function fileToBase64(file) {
   return new Promise((resolve) => {
@@ -601,17 +542,38 @@ function fileToBase64(file) {
   });
 }
 
-document.getElementById('newAfterPhoto').addEventListener('click', resetForm);
+async function uploadPhotos(wellSite, date, inspector) {
+  if (photoFiles.length === 0) return;
+  const prog = document.getElementById('uploadProgress');
+  prog.style.display = 'block';
+  const photos = [];
+  for (let i = 0; i < photoFiles.length; i++) {
+    prog.textContent = 'Uploading photo ' + (i + 1) + ' of ' + photoFiles.length + '...';
+    const b64 = await fileToBase64(photoFiles[i]);
+    photos.push({ name: photoFiles[i].name, base64: b64, mimeType: photoFiles[i].type || 'image/jpeg' });
+  }
+  try {
+    const resp = await fetch(PHOTO_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ wellSite, date, inspector, photos })
+    });
+    const result = await resp.json();
+    prog.textContent = result.success ? result.count + ' photo(s) uploaded!' : 'Photo upload error: ' + (result.error || '');
+  } catch (err) {
+    prog.textContent = 'Photo upload error: ' + err.message;
+  }
+  document.getElementById('newInspBtn').style.display = 'inline-block';
+}
 
 function resetForm() {
-  document.getElementById('gwi-form').style.display = 'block';
-  document.getElementById('photoPanel').classList.remove('show');
   document.getElementById('gwi-form').reset();
   document.getElementById('inspDate').value = yyyy + '-' + mm + '-' + dd;
   selectedWell = '';
   wellInput.value = '';
   wellCountEl.textContent = '628 gas wells';
   photoFiles = [];
+  renderPhotoGrid();
   window.scrollTo(0, 0);
 }
 </script>
