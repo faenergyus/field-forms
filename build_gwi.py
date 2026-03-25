@@ -110,7 +110,7 @@ html = f'''<!DOCTYPE html>
           <option value="">Select...</option>
           <option>Andy</option><option>Armando</option><option>Eli</option><option>Henry</option>
           <option>James</option><option>Jason</option><option>Joe</option><option>Leo</option>
-          <option>Raul</option><option>Rogelio</option><option>Shane</option><option>Waldo</option><option>Wynn</option>
+          <option>Raul</option><option>Shane</option><option>Waldo</option><option>Wynn</option>
         </select>
 
         <label class="required">Inspection Date</label>
