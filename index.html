@@ -164,7 +164,9 @@
     .data-note { font-size: 0.65rem; color: #8aaa8a; margin-top: 2px; }
 
     /* ── Reports section ── */
-    .reports-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; margin-top: 0; }
+    .reports-body { overflow: hidden; max-height: 0; transition: max-height 0.35s ease; margin-top: 10px; }
+    .reports-body.open { max-height: 800px; }
+    .reports-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; }
     .report-link-card {
       background: #fff; border-radius: 9px; border-left: 4px solid #4a7a9a;
       padding: 14px 16px; text-decoration: none; color: inherit;
@@ -368,7 +370,11 @@
   </div>
 
   <!-- REPORTS -->
-  <div class="section-label" style="margin-top:24px">Reports</div>
+  <div class="collapse-header" id="reportsToggle" style="margin-top:24px">
+    <span class="collapse-title">📋 Reports</span>
+    <span class="collapse-chevron" id="reportsChevron">▼</span>
+  </div>
+  <div class="reports-body" id="reportsBody">
   <div class="reports-grid">
     <a class="report-link-card" href="spare-vessels.html">
       <div class="report-link-icon">
@@ -387,6 +393,7 @@
       </div>
       <div><div class="report-link-name">Spare Vessels</div><div class="report-link-cta">View report →</div></div>
     </a>
+  </div>
   </div>
 
   <footer>
@@ -539,6 +546,15 @@ applyPeriod('pastweek');
 
 // Defer initial resize one frame so the grid has painted
 requestAnimationFrame(resizeAll);
+
+// ── Reports collapse toggle ────────────────────────────────────────────────
+const rToggle  = document.getElementById('reportsToggle');
+const rBody    = document.getElementById('reportsBody');
+const rChevron = document.getElementById('reportsChevron');
+rToggle.addEventListener('click', () => {
+  const open = rBody.classList.toggle('open');
+  rChevron.textContent = open ? '▲' : '▼';
+});
 
 </script>
 

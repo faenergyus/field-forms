@@ -70,19 +70,18 @@
       letter-spacing: 0.04em;
     }
 
-    /* ── Load button ── */
-    .load-btn {
+    /* ── Refresh button ── */
+    .refresh-btn {
       display: inline-flex; align-items: center; gap: 8px;
       background: #2d7a2d; color: #fff;
       border: none; border-radius: 8px;
-      padding: 11px 24px; font-size: 0.88rem; font-weight: 600;
+      padding: 8px 18px; font-size: 0.82rem; font-weight: 600;
       cursor: pointer; letter-spacing: 0.03em;
       transition: background 0.15s, transform 0.1s;
-      box-shadow: 0 2px 8px rgba(45,122,45,0.25);
     }
-    .load-btn:hover { background: #236a23; transform: translateY(-1px); }
-    .load-btn:active { transform: translateY(0); }
-    .load-btn:disabled { background: #7aaa7a; cursor: default; transform: none; }
+    .refresh-btn:hover { background: #236a23; transform: translateY(-1px); }
+    .refresh-btn:active { transform: translateY(0); }
+    .refresh-btn:disabled { background: #7aaa7a; cursor: default; transform: none; }
 
     /* ── Report container ── */
     .report-container {
@@ -205,16 +204,15 @@
   </div>
   <div class="page-subtitle">Inventory of spare tanks, vessels, and separators in the field</div>
 
-  <button class="load-btn" id="loadBtn" onclick="loadReport()">
-    Load Report
-  </button>
-
-  <div class="report-container" id="reportContainer" style="display:none">
+  <div class="report-container" id="reportContainer">
     <div class="report-header">
       <div class="report-title">🛢 Spare Vessels</div>
-      <div class="report-count" id="reportCount"></div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="report-count" id="reportCount"></span>
+        <button class="refresh-btn" id="refreshBtn" onclick="loadReport()" style="display:none">↻ Refresh</button>
+      </div>
     </div>
-    <div id="report-output"></div>
+    <div id="report-output"><div class="report-loading">Loading…</div></div>
   </div>
 
   <footer>
@@ -270,6 +268,7 @@ function showPortal(session) {
   document.getElementById('user-name').textContent       = 'Welcome, ' + session.displayName;
   const av = document.getElementById('user-avatar');
   av.src = session.picture || ''; av.style.display = session.picture ? '' : 'none';
+  if (window._autoLoad) { window._autoLoad = false; loadReport(); }
 }
 
 function signOut() {
@@ -292,34 +291,43 @@ function signOut() {
 const REPORT_API = 'https://script.google.com/macros/s/AKfycbwOXsEqPyzT4PrIqQK0pJ4wgynFFbdA1EsJQNfmdglrRQXqWtycYlPtZVgqZHTJgU6o/exec';
 
 function loadReport() {
-  const btn = document.getElementById('loadBtn');
-  const container = document.getElementById('reportContainer');
+  const btn    = document.getElementById('refreshBtn');
   const output = document.getElementById('report-output');
+  const countEl = document.getElementById('reportCount');
 
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Loading…';
-  container.style.display = 'block';
-  output.innerHTML = '<div class="report-loading">Fetching data…</div>';
+  if (btn) btn.disabled = true;
+  output.innerHTML = '<div class="report-loading">Loading…</div>';
+  countEl.textContent = '';
 
   fetch(REPORT_API + '?report=spareVessels')
     .then(r => r.json())
     .then(data => {
       if (data.error) {
         output.innerHTML = '<div class="report-error">Error: ' + data.error + '</div>';
-        btn.disabled = false;
-        btn.textContent = 'Retry';
+        if (btn) { btn.style.display = 'inline-flex'; btn.disabled = false; btn.textContent = '↻ Retry'; }
         return;
       }
       renderTable(data.rows);
-      btn.innerHTML = '↻ Refresh';
-      btn.disabled = false;
+      if (btn) { btn.style.display = 'inline-flex'; btn.disabled = false; }
     })
     .catch(() => {
       output.innerHTML = '<div class="report-error">Failed to load. Check your connection and try again.</div>';
-      btn.innerHTML = 'Retry';
-      btn.disabled = false;
+      if (btn) { btn.style.display = 'inline-flex'; btn.disabled = false; btn.textContent = '↻ Retry'; }
     });
 }
+
+// Auto-load when portal session is ready (or immediately if already logged in)
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('fae_portal_user');
+  if (saved) {
+    try {
+      const s = JSON.parse(saved);
+      if (s.expires > Date.now()) { loadReport(); return; }
+    } catch(e) {}
+  }
+  // Not logged in yet — loadReport will be called after showPortal
+  window._autoLoad = true;
+});
 
 function renderTable(rows) {
   const output = document.getElementById('report-output');
