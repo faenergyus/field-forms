@@ -256,6 +256,7 @@ async function handleCredentialResponse(response) {
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
     fetch(TRACKER_URL, { method:'POST', body: JSON.stringify({ email }) }).catch(() => {});
     showPortal(session);
+    loadReport();
   } catch(e) {
     errorEl.style.color = '#ff8080';
     errorEl.textContent = 'Could not verify access. Check your connection and try again.';
@@ -268,7 +269,6 @@ function showPortal(session) {
   document.getElementById('user-name').textContent       = 'Welcome, ' + session.displayName;
   const av = document.getElementById('user-avatar');
   av.src = session.picture || ''; av.style.display = session.picture ? '' : 'none';
-  if (window._autoLoad) { window._autoLoad = false; loadReport(); }
 }
 
 function signOut() {
@@ -281,7 +281,7 @@ function signOut() {
     const saved = localStorage.getItem(SESSION_KEY);
     if (saved) {
       const session = JSON.parse(saved);
-      if (session.expires > Date.now()) { showPortal(session); return; }
+      if (session.expires > Date.now()) { showPortal(session); loadReport(); return; }
       localStorage.removeItem(SESSION_KEY);
     }
   } catch(e) { localStorage.removeItem(SESSION_KEY); }
@@ -315,19 +315,6 @@ function loadReport() {
       if (btn) { btn.style.display = 'inline-flex'; btn.disabled = false; btn.textContent = '↻ Retry'; }
     });
 }
-
-// Auto-load when portal session is ready (or immediately if already logged in)
-document.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('fae_portal_user');
-  if (saved) {
-    try {
-      const s = JSON.parse(saved);
-      if (s.expires > Date.now()) { loadReport(); return; }
-    } catch(e) {}
-  }
-  // Not logged in yet — loadReport will be called after showPortal
-  window._autoLoad = true;
-});
 
 function renderTable(rows) {
   const output = document.getElementById('report-output');
