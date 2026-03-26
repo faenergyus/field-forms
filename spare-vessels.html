@@ -276,17 +276,6 @@ function signOut() {
   location.reload();
 }
 
-(function () {
-  try {
-    const saved = localStorage.getItem(SESSION_KEY);
-    if (saved) {
-      const session = JSON.parse(saved);
-      if (session.expires > Date.now()) { showPortal(session); loadReport(); return; }
-      localStorage.removeItem(SESSION_KEY);
-    }
-  } catch(e) { localStorage.removeItem(SESSION_KEY); }
-})();
-
 // ── Report ────────────────────────────────────────────────────────────────
 const REPORT_API = 'https://script.google.com/macros/s/AKfycbwOXsEqPyzT4PrIqQK0pJ4wgynFFbdA1EsJQNfmdglrRQXqWtycYlPtZVgqZHTJgU6o/exec';
 
@@ -360,6 +349,18 @@ function renderTable(rows) {
   html += '</tbody></table></div>';
   output.innerHTML = html;
 }
+
+// ── Session check (runs last so REPORT_API and all functions are defined) ──
+(function () {
+  try {
+    const saved = localStorage.getItem(SESSION_KEY);
+    if (saved) {
+      const session = JSON.parse(saved);
+      if (session.expires > Date.now()) { showPortal(session); loadReport(); return; }
+      localStorage.removeItem(SESSION_KEY);
+    }
+  } catch(e) { localStorage.removeItem(SESSION_KEY); }
+})();
 </script>
 
 </body>
