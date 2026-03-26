@@ -230,7 +230,7 @@
 const ACCOUNTS_CSV = 'https://docs.google.com/spreadsheets/d/146yuHYjs3RF3wtCK3Qj9NXH94DrStwhieTGqPeLQRfA/gviz/tq?tqx=out:csv&sheet=Accounts';
 const TRACKER_URL  = 'https://script.google.com/macros/s/AKfycbxOyZbt18JXuPTvkkJrZ3jJgM_xOMQ035CmQWJDolIuEqVKHFP1hNZfbmlcp6dY32Zprw/exec';
 const SESSION_KEY  = 'fae_portal_user';
-const SESSION_HRS  = 12;
+const SESSION_HRS  = 720;  // 30 days
 
 function parseAccountsCSV(text) {
   const lines = text.trim().split('\n');
