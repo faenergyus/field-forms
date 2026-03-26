@@ -120,6 +120,11 @@
     .maps-link { color: #2d7a2d; text-decoration: none; font-weight: 500; white-space: nowrap; }
     .maps-link:hover { text-decoration: underline; }
     .no-gps { color: #bbb; font-size: 0.75rem; }
+    .used-cell { text-align: center; }
+    .used-checkbox { width: 20px; height: 20px; cursor: pointer; accent-color: #2d7a2d; }
+    .used-checkbox:disabled { opacity: 0.4; cursor: default; }
+    tr.row-used td { background: #f0fbf0; }
+    tr.row-used:hover td { background: #e8f8e8; }
 
     /* ── States ── */
     .report-loading { color: #6a8a6a; font-size: 0.85rem; padding: 40px; text-align: center; }
@@ -318,7 +323,7 @@ function renderTable(rows) {
   countEl.textContent = rows.length + ' vessel' + (rows.length !== 1 ? 's' : '');
 
   let html = '<div style="overflow-x:auto"><table class="report-table"><thead><tr>'
-    + '<th>Photo</th><th>Location</th><th>Size</th><th>Coordinates</th><th>Reporter</th><th>Date</th>'
+    + '<th>Photo</th><th>Location</th><th>Size</th><th>Coordinates</th><th>Reporter</th><th>Date</th><th>Used</th>'
     + '</tr></thead><tbody>';
 
   rows.forEach(r => {
@@ -336,18 +341,42 @@ function renderTable(rows) {
     const size = [r.height ? r.height + ' ft' : '', r.diameter ? r.diameter + ' in' : ''].filter(Boolean).join(' × ') || '—';
     const reporter = r.email ? r.email.replace(/@.*/, '') : '—';
 
-    html += `<tr>
+    const usedChecked = r.used ? 'checked' : '';
+    const rowClass = r.used ? 'row-used' : '';
+    html += `<tr class="${rowClass}">
       <td>${thumb}</td>
       <td>${r.location || '—'}</td>
       <td>${size}</td>
       <td>${coords}</td>
       <td>${reporter}</td>
       <td>${r.timestamp}</td>
+      <td class="used-cell"><input type="checkbox" class="used-checkbox" ${usedChecked} onchange="toggleUsed(${r.rowNum}, this.checked, this)"></td>
     </tr>`;
   });
 
   html += '</tbody></table></div>';
   output.innerHTML = html;
+}
+
+function toggleUsed(rowNum, checked, el) {
+  el.disabled = true;
+  const row = el.closest('tr');
+  fetch(REPORT_API + '?action=setUsed&row=' + rowNum + '&used=' + (checked ? 1 : 0))
+    .then(r => r.json())
+    .then(data => {
+      el.disabled = false;
+      if (data.error) {
+        el.checked = !checked;
+        alert('Error saving: ' + data.error);
+        return;
+      }
+      if (row) { row.className = checked ? 'row-used' : ''; }
+    })
+    .catch(() => {
+      el.disabled = false;
+      el.checked = !checked;
+      alert('Failed to save. Check your connection.');
+    });
 }
 
 // ── Session check (runs last so REPORT_API and all functions are defined) ──
