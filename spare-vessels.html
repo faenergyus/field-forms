@@ -323,7 +323,7 @@ function renderTable(rows) {
   countEl.textContent = rows.length + ' vessel' + (rows.length !== 1 ? 's' : '');
 
   let html = '<div style="overflow-x:auto"><table class="report-table"><thead><tr>'
-    + '<th>Photo</th><th>Location</th><th>Size</th><th>Coordinates</th><th>Reporter</th><th>Date</th><th>Used</th>'
+    + '<th>Photo</th><th>Location</th><th>Size</th><th>Coordinates</th><th>Reporter</th><th>Date</th><th>Picked Up</th>'
     + '</tr></thead><tbody>';
 
   rows.forEach(r => {
@@ -339,7 +339,7 @@ function renderTable(rows) {
     }
 
     const size = [r.height ? r.height + ' ft' : '', r.diameter ? r.diameter + ' in' : ''].filter(Boolean).join(' × ') || '—';
-    const reporter = r.email ? r.email.replace(/@.*/, '') : '—';
+    const reporter = r.reporter || '—';
 
     const usedChecked = r.used ? 'checked' : '';
     const rowClass = r.used ? 'row-used' : '';
@@ -365,17 +365,12 @@ function toggleUsed(rowNum, checked, el) {
     .then(r => r.json())
     .then(data => {
       el.disabled = false;
-      if (data.error) {
-        el.checked = !checked;
-        alert('Error saving: ' + data.error);
-        return;
-      }
+      if (data.error) { el.checked = !checked; return; }
       if (row) { row.className = checked ? 'row-used' : ''; }
     })
     .catch(() => {
       el.disabled = false;
       el.checked = !checked;
-      alert('Failed to save. Check your connection.');
     });
 }
 
