@@ -398,7 +398,7 @@
 
   <footer>
     Forty Acres Energy &nbsp;·&nbsp; Field Operations &nbsp;·&nbsp; Internal Use Only
-    <div class="data-note">Dashboard data from Power BI · Updated 2026-03-26 15:00</div>
+    <div class="data-note">Dashboard data from Power BI · Updated 2026-03-26 16:00</div>
   </footer>
 </div>
 
@@ -419,20 +419,20 @@ const FORMS = [
 
 const ZERO = () => ({ total: 0, byPumper: {} });
 
-const DATA = {  // auto-refreshed 2026-03-26 15:00
+const DATA = {  // auto-refreshed 2026-03-26 16:00
   pastweek: {
-    gwi      : { total: 3, byPumper: { 'Andy': 1, 'Armando': 1, 'Waldo': 1 } },
+    gwi      : { total: 4, byPumper: { 'Andy': 1, 'Armando': 1, 'Waldo': 1, 'Wynn': 1 } },
     fap      : ZERO(),
-    pumpup   : ZERO(),
+    pumpup   : { total: 1, byPumper: { 'Armando': 1 } },
     wellsite : { total: 1, byPumper: { 'Armando': 1 } },
     facility : ZERO(),
     whs      : ZERO(),
     env      : ZERO(),
   },
   ytd: {
-    gwi      : { total: 26, byPumper: { 'Andy': 1, 'Eli': 9, 'Wynn': 11, 'Waldo': 2, 'Armando': 3 } },
+    gwi      : { total: 27, byPumper: { 'Andy': 1, 'Eli': 9, 'Wynn': 12, 'Waldo': 2, 'Armando': 3 } },
     fap      : { total: 118, byPumper: { 'Henry': 23, 'Jason': 90, 'Armando': 5 } },
-    pumpup   : ZERO(),
+    pumpup   : { total: 1, byPumper: { 'Armando': 1 } },
     wellsite : { total: 8, byPumper: { 'Armando': 8 } },
     facility : { total: 5, byPumper: { 'Eli': 5 } },
     whs      : ZERO(),
@@ -441,7 +441,7 @@ const DATA = {  // auto-refreshed 2026-03-26 15:00
   lastyear: {
     gwi      : ZERO(),
     fap      : { total: 415, byPumper: { 'Waldo': 75, 'Henry': 118, 'Jason': 190, 'Armando': 7, 'Wynn': 3, 'Gary': 1, 'Andy': 16, 'Raul': 5 } },
-    pumpup   : ZERO(),
+    pumpup   : { total: 1, byPumper: { 'Waldo': 1 } },
     wellsite : { total: 8, byPumper: { 'Eli': 2, 'Rogelio': 6 } },
     facility : ZERO(),
     whs      : ZERO(),
