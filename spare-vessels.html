@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spare Vessels — FAE Field Operations</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4f0;
+      color: #1a1a1a;
+      min-height: 100vh;
+    }
+
+    /* ── Login overlay ── */
+    #login-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: #0d260d;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 24px;
+    }
+    #login-overlay .login-logo { font-size: 2.8rem; font-weight: 900; letter-spacing: -1px; color: #5dc85d; }
+    #login-overlay .login-logo span { color: #fff; font-weight: 300; }
+    #login-overlay .login-tagline { color: #90bc90; font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase; margin-top: -16px; }
+    #login-overlay .login-tagline em { color: #5dc85d; font-style: normal; }
+    #login-overlay .login-title { color: #c8dcc8; font-size: 1rem; margin-bottom: 8px; }
+    #login-overlay .login-error { color: #ff8080; font-size: 0.85rem; display: none; text-align: center; max-width: 280px; }
+
+    /* ── Header ── */
+    header {
+      background: #1c4a1c;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+    }
+    .logo-fae { font-size: 1.9rem; font-weight: 900; letter-spacing: -1px; color: #5dc85d; line-height: 1; }
+    .logo-fae span { color: #fff; font-weight: 300; }
+    .logo-tagline { font-size: 0.75rem; color: #90bc90; letter-spacing: 0.1em; margin-top: 2px; }
+    .logo-tagline em { color: #5dc85d; font-style: normal; }
+    .user-badge { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .user-avatar { width: 32px; height: 32px; border-radius: 50%; border: 2px solid #5dc85d; }
+    .user-name { color: #c8dcc8; font-size: 0.82rem; }
+    .user-signout { color: #7a9e7a; font-size: 0.72rem; cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; margin-left: 4px; }
+
+    /* ── Layout ── */
+    .page { max-width: 1020px; margin: 0 auto; padding: 24px 18px 60px; }
+
+    /* ── Back link ── */
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: #3a8a3a; font-size: 0.78rem; font-weight: 600;
+      text-decoration: none; letter-spacing: 0.04em;
+      margin-bottom: 20px;
+    }
+    .back-link:hover { color: #2d7a2d; text-decoration: underline; }
+
+    /* ── Page title ── */
+    .page-title {
+      font-size: 1.3rem; font-weight: 800; color: #1c4a1c;
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 6px;
+    }
+    .page-subtitle {
+      font-size: 0.75rem; color: #6a8a6a; margin-bottom: 24px;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Load button ── */
+    .load-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #2d7a2d; color: #fff;
+      border: none; border-radius: 8px;
+      padding: 11px 24px; font-size: 0.88rem; font-weight: 600;
+      cursor: pointer; letter-spacing: 0.03em;
+      transition: background 0.15s, transform 0.1s;
+      box-shadow: 0 2px 8px rgba(45,122,45,0.25);
+    }
+    .load-btn:hover { background: #236a23; transform: translateY(-1px); }
+    .load-btn:active { transform: translateY(0); }
+    .load-btn:disabled { background: #7aaa7a; cursor: default; transform: none; }
+
+    /* ── Report container ── */
+    .report-container {
+      background: #fff; border-radius: 9px; padding: 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+      margin-top: 20px;
+    }
+    .report-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+    }
+    .report-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #3a5a3a; }
+    .report-count { font-size: 0.7rem; color: #8aaa8a; }
+
+    /* ── Table ── */
+    .report-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .report-table th {
+      text-align: left; font-size: 0.65rem; text-transform: uppercase;
+      letter-spacing: 0.08em; color: #6a8a6a; font-weight: 700;
+      border-bottom: 1.5px solid #e0ece0; padding: 8px 10px;
+    }
+    .report-table td { padding: 10px 10px; border-bottom: 1px solid #f0f4f0; vertical-align: middle; }
+    .report-table tr:last-child td { border-bottom: none; }
+    .report-table tr:hover td { background: #f8fbf8; }
+    .report-thumb {
+      width: 72px; height: 72px; object-fit: cover; border-radius: 6px;
+      cursor: pointer; border: 1.5px solid #e0ece0; display: block;
+      transition: transform 0.15s;
+    }
+    .report-thumb:hover { transform: scale(1.05); }
+    .report-thumb-none {
+      width: 72px; height: 72px; background: #f0f4f0; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      color: #ccc; font-size: 1.6rem;
+    }
+    .maps-link { color: #2d7a2d; text-decoration: none; font-weight: 500; white-space: nowrap; }
+    .maps-link:hover { text-decoration: underline; }
+    .no-gps { color: #bbb; font-size: 0.75rem; }
+
+    /* ── States ── */
+    .report-loading { color: #6a8a6a; font-size: 0.85rem; padding: 40px; text-align: center; }
+    .report-empty { color: #8aaa8a; font-size: 0.85rem; padding: 40px; text-align: center; }
+    .report-error { color: #c0392b; font-size: 0.85rem; padding: 40px; text-align: center; }
+
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid #fff; border-top-color: transparent;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    footer { text-align: center; color: #8aaa8a; font-size: 0.72rem; margin-top: 36px; padding-top: 16px; border-top: 1px solid #d0e0d0; }
+
+    @media (max-width: 620px) {
+      .report-table th:nth-child(3),
+      .report-table td:nth-child(3) { display: none; }
+    }
+    @media (max-width: 440px) {
+      .report-table th:nth-child(5),
+      .report-table td:nth-child(5) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Login overlay ── -->
+<div id="login-overlay">
+  <div>
+    <div class="login-logo">fae<span>II</span></div>
+  </div>
+  <div class="login-tagline">forty acres <em>energy</em> &nbsp;·&nbsp; Field Operations Portal</div>
+  <div class="login-title">Sign in to continue</div>
+  <div id="g_id_onload"
+       data-client_id="629380732564-eh0uasomqjdo3up8o2po685g9ep544iq.apps.googleusercontent.com"
+       data-callback="handleCredentialResponse"
+       data-auto_prompt="false">
+  </div>
+  <div class="g_id_signin"
+       data-type="standard"
+       data-size="large"
+       data-theme="filled_blue"
+       data-text="sign_in_with"
+       data-shape="rectangular"
+       data-logo_alignment="left">
+  </div>
+  <div class="login-error" id="login-error"></div>
+</div>
+
+<header>
+  <div>
+    <div class="logo-fae">fae<span>II</span></div>
+    <div class="logo-tagline">forty acres <em>energy</em></div>
+  </div>
+  <div class="user-badge" id="user-badge" style="display:none">
+    <img class="user-avatar" id="user-avatar" src="" alt="">
+    <span class="user-name" id="user-name"></span>
+    <button class="user-signout" onclick="signOut()">sign out</button>
+  </div>
+</header>
+
+<div class="page">
+
+  <a class="back-link" href="index.html">← Portal Home</a>
+
+  <div class="page-title">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <rect x="2" y="8" width="16" height="8" rx="4" fill="#5a8fa8"/>
+      <ellipse cx="18" cy="12" rx="2" ry="4" fill="#4a7f98"/>
+      <circle cx="4" cy="12" r="2" fill="#c0392b" opacity="0.85"/>
+      <rect x="9" y="4" width="2" height="4" rx="1" fill="#4a7f98"/>
+      <rect x="7.5" y="3" width="5" height="1.5" rx="0.75" fill="#3a6f88"/>
+      <rect x="9" y="16" width="2" height="4" rx="1" fill="#4a7f98"/>
+      <rect x="7.5" y="19.5" width="5" height="1.5" rx="0.75" fill="#3a6f88"/>
+      <rect x="5" y="16" width="1.5" height="3" rx="0.75" fill="#3a6f88"/>
+      <rect x="11" y="16" width="1.5" height="3" rx="0.75" fill="#3a6f88"/>
+      <rect x="14" y="16" width="1.5" height="2.5" rx="0.75" fill="#3a6f88"/>
+    </svg>
+    Spare Vessels
+  </div>
+  <div class="page-subtitle">Inventory of spare tanks, vessels, and separators in the field</div>
+
+  <button class="load-btn" id="loadBtn" onclick="loadReport()">
+    Load Report
+  </button>
+
+  <div class="report-container" id="reportContainer" style="display:none">
+    <div class="report-header">
+      <div class="report-title">🛢 Spare Vessels</div>
+      <div class="report-count" id="reportCount"></div>
+    </div>
+    <div id="report-output"></div>
+  </div>
+
+  <footer>
+    Forty Acres Energy &nbsp;·&nbsp; Field Operations &nbsp;·&nbsp; Internal Use Only
+  </footer>
+</div>
+
+<script>
+// ── Auth ──────────────────────────────────────────────────────────────────
+const ACCOUNTS_CSV = 'https://docs.google.com/spreadsheets/d/146yuHYjs3RF3wtCK3Qj9NXH94DrStwhieTGqPeLQRfA/gviz/tq?tqx=out:csv&sheet=Accounts';
+const TRACKER_URL  = 'https://script.google.com/macros/s/AKfycbxOyZbt18JXuPTvkkJrZ3jJgM_xOMQ035CmQWJDolIuEqVKHFP1hNZfbmlcp6dY32Zprw/exec';
+const SESSION_KEY  = 'fae_portal_user';
+const SESSION_HRS  = 12;
+
+function parseAccountsCSV(text) {
+  const lines = text.trim().split('\n');
+  return lines.slice(1).map(line => {
+    const cols = line.match(/("(?:[^"]|"")*"|[^,]*)/g).map(c => c.replace(/^"|"$/g,'').trim());
+    return { email: cols[0], displayName: cols[1], pbiName: cols[2], role: cols[3] };
+  });
+}
+
+async function handleCredentialResponse(response) {
+  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  const email   = payload.email.toLowerCase();
+  const picture = payload.picture;
+  const errorEl = document.getElementById('login-error');
+  errorEl.style.cssText = 'display:block;color:#90bc90';
+  errorEl.textContent   = 'Checking access…';
+  try {
+    const csv   = await fetch(ACCOUNTS_CSV).then(r => r.text());
+    const rows  = parseAccountsCSV(csv);
+    const match = rows.find(r => r.email.toLowerCase() === email && r.email !== 'x');
+    if (!match) {
+      errorEl.style.color = '#ff8080';
+      errorEl.textContent = `Access denied for ${email}. Contact Ryan Swift to request access.`;
+      return;
+    }
+    const session = { email, displayName: match.displayName, pbiName: match.pbiName,
+                      role: match.role, picture, expires: Date.now() + SESSION_HRS * 3600000 };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    fetch(TRACKER_URL, { method:'POST', body: JSON.stringify({ email }) }).catch(() => {});
+    showPortal(session);
+  } catch(e) {
+    errorEl.style.color = '#ff8080';
+    errorEl.textContent = 'Could not verify access. Check your connection and try again.';
+  }
+}
+
+function showPortal(session) {
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('user-badge').style.display    = 'flex';
+  document.getElementById('user-name').textContent       = 'Welcome, ' + session.displayName;
+  const av = document.getElementById('user-avatar');
+  av.src = session.picture || ''; av.style.display = session.picture ? '' : 'none';
+}
+
+function signOut() {
+  localStorage.removeItem(SESSION_KEY);
+  location.reload();
+}
+
+(function () {
+  try {
+    const saved = localStorage.getItem(SESSION_KEY);
+    if (saved) {
+      const session = JSON.parse(saved);
+      if (session.expires > Date.now()) { showPortal(session); return; }
+      localStorage.removeItem(SESSION_KEY);
+    }
+  } catch(e) { localStorage.removeItem(SESSION_KEY); }
+})();
+
+// ── Report ────────────────────────────────────────────────────────────────
+const REPORT_API = 'https://script.google.com/macros/s/AKfycbwOXsEqPyzT4PrIqQK0pJ4wgynFFbdA1EsJQNfmdglrRQXqWtycYlPtZVgqZHTJgU6o/exec';
+
+function loadReport() {
+  const btn = document.getElementById('loadBtn');
+  const container = document.getElementById('reportContainer');
+  const output = document.getElementById('report-output');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Loading…';
+  container.style.display = 'block';
+  output.innerHTML = '<div class="report-loading">Fetching data…</div>';
+
+  fetch(REPORT_API + '?report=spareVessels')
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        output.innerHTML = '<div class="report-error">Error: ' + data.error + '</div>';
+        btn.disabled = false;
+        btn.textContent = 'Retry';
+        return;
+      }
+      renderTable(data.rows);
+      btn.innerHTML = '↻ Refresh';
+      btn.disabled = false;
+    })
+    .catch(() => {
+      output.innerHTML = '<div class="report-error">Failed to load. Check your connection and try again.</div>';
+      btn.innerHTML = 'Retry';
+      btn.disabled = false;
+    });
+}
+
+function renderTable(rows) {
+  const output = document.getElementById('report-output');
+  const countEl = document.getElementById('reportCount');
+
+  if (!rows || !rows.length) {
+    output.innerHTML = '<div class="report-empty">No entries yet.</div>';
+    countEl.textContent = '';
+    return;
+  }
+
+  countEl.textContent = rows.length + ' vessel' + (rows.length !== 1 ? 's' : '');
+
+  let html = '<div style="overflow-x:auto"><table class="report-table"><thead><tr>'
+    + '<th>Photo</th><th>Location</th><th>Size</th><th>Coordinates</th><th>Reporter</th><th>Date</th>'
+    + '</tr></thead><tbody>';
+
+  rows.forEach(r => {
+    const thumb = r.thumbUrl
+      ? `<a href="${r.photoUrl}" target="_blank"><img class="report-thumb" src="${r.thumbUrl}" alt="photo" loading="lazy" onerror="this.closest('a').outerHTML='<div class=report-thumb-none>📷</div>'"></a>`
+      : `<div class="report-thumb-none">📷</div>`;
+
+    let coords = '<span class="no-gps">No GPS</span>';
+    if (r.lat && r.lng) {
+      const latF = parseFloat(r.lat).toFixed(5);
+      const lngF = parseFloat(r.lng).toFixed(5);
+      coords = `<a class="maps-link" href="https://maps.google.com/?q=${r.lat},${r.lng}" target="_blank">📍 ${latF}, ${lngF}</a>`;
+    }
+
+    const size = [r.height ? r.height + ' ft' : '', r.diameter ? r.diameter + ' in' : ''].filter(Boolean).join(' × ') || '—';
+    const reporter = r.email ? r.email.replace(/@.*/, '') : '—';
+
+    html += `<tr>
+      <td>${thumb}</td>
+      <td>${r.location || '—'}</td>
+      <td>${size}</td>
+      <td>${coords}</td>
+      <td>${reporter}</td>
+      <td>${r.timestamp}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table></div>';
+  output.innerHTML = html;
+}
+</script>
+
+</body>
+</html>
