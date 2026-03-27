@@ -204,6 +204,11 @@
     .task-well:last-child { border-bottom: none; }
     .task-empty { font-size: 0.8rem; color: #8aaa8a; font-style: italic; }
     .tasks-next { opacity: 0.6; }
+    .tasks-sub-header { display:flex; align-items:center; justify-content:space-between; cursor:pointer; padding:6px 10px; margin-top:10px; border-radius:6px; background:#eef4ee; user-select:none; }
+    .tasks-sub-header:hover { background:#e4ede4; }
+    .tasks-sub-title { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#4a724a; }
+    .tasks-sub-body { overflow:hidden; max-height:0; transition:max-height 0.3s ease; }
+    .tasks-sub-body.open { max-height:9000px; }
     .tasks-body { overflow: hidden; max-height: 0; transition: max-height 0.35s ease; }
     .tasks-body.open { max-height: 9000px; }
     .tasks-eng-row { margin-bottom: 18px; }
@@ -239,8 +244,20 @@
         <div id="tasks-current-cols"></div>
       </div>
       <div id="tasks-next-block" class="tasks-next">
-        <div class="tasks-week-label" id="tasks-next-label"></div>
-        <div id="tasks-next-cols"></div>
+        <!-- pumper: plain label; others: sub-collapsible header -->
+        <div id="tasks-last-plain" style="display:none">
+          <div class="tasks-week-label" id="tasks-next-label-plain"></div>
+          <div id="tasks-next-cols-plain"></div>
+        </div>
+        <div id="tasks-last-collapsible" style="display:none">
+          <div class="tasks-sub-header" id="tasksLastToggle">
+            <span class="tasks-sub-title" id="tasks-next-label-coll">▶ Last Week</span>
+            <span style="font-size:0.75rem;color:#6a8a6a" id="tasksLastChevron">▶</span>
+          </div>
+          <div class="tasks-sub-body" id="tasksLastBody">
+            <div style="padding-top:8px" id="tasks-next-cols-coll"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -433,7 +450,7 @@
 
   <footer>
     Forty Acres Energy &nbsp;·&nbsp; Field Operations &nbsp;·&nbsp; Internal Use Only
-    <div class="data-note">Dashboard data from Power BI · Updated 2026-03-27 16:20</div>
+    <div class="data-note">Dashboard data from Power BI · Updated 2026-03-27 16:27</div>
   </footer>
 </div>
 
@@ -454,7 +471,7 @@ const FORMS = [
 
 const ZERO = () => ({ total: 0, byPumper: {} });
 
-const DATA = {  // auto-refreshed 2026-03-27 16:20
+const DATA = {  // auto-refreshed 2026-03-27 16:27
   pastweek: {
     gwi      : { total: 3, byPumper: { 'Andy': 1, 'Armando': 1, 'Wynn': 1 } },
     fap      : ZERO(),
@@ -485,7 +502,7 @@ const DATA = {  // auto-refreshed 2026-03-27 16:20
 };
 
 // <<PUMPER_TASKS_START>>
-const PUMPER_TASKS = {  // auto-refreshed 2026-03-27 16:20
+const PUMPER_TASKS = {  // auto-refreshed 2026-03-27 16:27
   currentWeek: {
     date: "3/23/2026",
     tasks: {
@@ -529,6 +546,36 @@ const PUMPER_TASKS = {  // auto-refreshed 2026-03-27 16:20
   lastWeek: {
     date: "3/16/2026",
     tasks: {
+      "Raul": {
+        "Gas Well Surveillance": "Carlson A Federal #001 (61137)",
+        "Well Test": "",
+        "Fluid Level": "",
+      },
+      "Waldo": {
+        "Gas Well Surveillance": "Federal F #005 (64036)",
+        "Well Test": "AR #9, 12",
+        "Fluid Level": "AR #013 (unable to shoot, csg valve frozen shut); Cagle C #005",
+      },
+      "Mando": {
+        "Gas Well Surveillance": "Otis L Jones #002 (58593)",
+        "Well Test": "BBN: AC 2 #024, 26\nBBS: AC 1 #46, 48",
+        "Fluid Level": "BBN: State A A/C 2 #004, 024, 061; \nBBS: State A A/C 3 COM #004",
+      },
+      "Jason": {
+        "Gas Well Surveillance": "State of NM 35 #003 (1181131)",
+        "Well Test": "",
+        "Fluid Level": "Maveety #9, Britt A 6 #002, State A-20 #001, #004",
+      },
+      "Andy / Shane": {
+        "Gas Well Surveillance": "J C Johnson #004 (59638)",
+        "Well Test": "Lamunyon #53",
+        "Fluid Level": "Lamunyon #40 (done)",
+      },
+      "Wynn": {
+        "Gas Well Surveillance": "New Mexico AA State #001 & #007",
+        "Well Test": "",
+        "Fluid Level": "Lynn A #004",
+      },
       "Henry": {
         "Gas Well Surveillance": "WEU 506?",
         "Well Test": "P1: -\nP2: 513 (in test), 512\nP3: 102, 106",
@@ -783,11 +830,31 @@ function renderTasks() {
   }
 
   renderWeek('tasks-current-label', '', 'tasks-current-cols', PUMPER_TASKS.currentWeek, isEng);
-  const nextBlock = document.getElementById('tasks-next-block');
-  if (PUMPER_TASKS.lastWeek) {
-    renderWeek('tasks-next-label', '', 'tasks-next-cols', PUMPER_TASKS.lastWeek, isEng);
+
+  const nextBlock  = document.getElementById('tasks-next-block');
+  const plainEl    = document.getElementById('tasks-last-plain');
+  const collEl     = document.getElementById('tasks-last-collapsible');
+  const lastLabel  = PUMPER_TASKS.lastWeek ? 'Week of ' + PUMPER_TASKS.lastWeek.date : 'No data';
+
+  if (role === 'pumper') {
+    // Pumper: plain, no collapsible
+    plainEl.style.display = '';
+    collEl.style.display  = 'none';
+    document.getElementById('tasks-next-label-plain').textContent = lastLabel;
+    if (PUMPER_TASKS.lastWeek) renderWeek(null, '', 'tasks-next-cols-plain', PUMPER_TASKS.lastWeek, false);
   } else {
-    document.getElementById('tasks-next-label').textContent = 'Last Week — No data';
+    // Engineer/admin/ops/tech: sub-collapsible, starts closed
+    plainEl.style.display = 'none';
+    collEl.style.display  = '';
+    document.getElementById('tasks-next-label-coll').textContent = '▶ ' + lastLabel;
+    document.getElementById('tasksLastChevron').textContent      = '▶';
+    if (PUMPER_TASKS.lastWeek) renderWeek(null, '', 'tasks-next-cols-coll', PUMPER_TASKS.lastWeek, true);
+    document.getElementById('tasksLastToggle').onclick = () => {
+      const open = document.getElementById('tasksLastBody').classList.toggle('open');
+      const sym  = open ? '▼' : '▶';
+      document.getElementById('tasks-next-label-coll').textContent = sym + ' ' + lastLabel;
+      document.getElementById('tasksLastChevron').textContent      = sym;
+    };
   }
   nextBlock.style.display = '';
 
