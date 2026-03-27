@@ -204,6 +204,8 @@
     .task-well:last-child { border-bottom: none; }
     .task-empty { font-size: 0.8rem; color: #8aaa8a; font-style: italic; }
     .tasks-next { opacity: 0.6; }
+    .tasks-body { overflow: hidden; max-height: 0; transition: max-height 0.35s ease; }
+    .tasks-body.open { max-height: 9000px; }
     .tasks-eng-row { margin-bottom: 18px; }
     .tasks-eng-name { font-size: 0.78rem; font-weight: 700; color: #2d5a2d; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; padding-left: 4px; border-left: 3px solid #2d7a2d; }
     @media (max-width: 600px) { .tasks-columns { grid-template-columns: 1fr; } }
@@ -224,19 +226,6 @@
 </header>
 
 <div class="page">
-
-  <!-- MY TASKS (pumper only) -->
-  <div id="tasks-panel">
-    <div class="section-label">My Tasks</div>
-    <div>
-      <div class="tasks-week-label">This Week <span id="tasks-current-date"></span></div>
-      <div class="tasks-columns" id="tasks-current-cols"></div>
-    </div>
-    <div id="tasks-next-block" class="tasks-next">
-      <div class="tasks-week-label">Next Week <span id="tasks-next-date"></span></div>
-      <div class="tasks-columns" id="tasks-next-cols"></div>
-    </div>
-  </div>
 
   <!-- DASHBOARD -->
   <div class="dash-header">
@@ -325,6 +314,24 @@
       <div class="chart-wrap"><canvas id="c-whs"></canvas></div>
     </div>
 
+  </div>
+
+  <!-- MY TASKS (pumper / engineer) -->
+  <div id="tasks-panel">
+    <div class="collapse-header" id="tasksToggle" style="margin-top:16px">
+      <span class="collapse-title">&#9650; Weekly Work Assignments</span>
+      <span class="collapse-chevron" id="tasksChevron">▲</span>
+    </div>
+    <div class="tasks-body open" id="tasksBody">
+      <div style="padding-top:12px">
+        <div class="tasks-week-label">This Week <span id="tasks-current-date"></span></div>
+        <div id="tasks-current-cols"></div>
+      </div>
+      <div id="tasks-next-block" class="tasks-next">
+        <div class="tasks-week-label">Next Week <span id="tasks-next-date"></span></div>
+        <div id="tasks-next-cols"></div>
+      </div>
+    </div>
   </div>
 
   <!-- FORMS -->
@@ -586,6 +593,14 @@ const rChevron = document.getElementById('reportsChevron');
 rToggle.addEventListener('click', () => {
   const open = rBody.classList.toggle('open');
   rChevron.textContent = open ? '▲' : '▼';
+});
+
+// ── Tasks collapse toggle ───────────────────────────────────────────────────
+document.getElementById('tasksToggle').addEventListener('click', () => {
+  const open = document.getElementById('tasksBody').classList.toggle('open');
+  document.getElementById('tasksChevron').textContent = open ? '▲' : '▼';
+  document.getElementById('tasksToggle').querySelector('.collapse-title').textContent =
+    (open ? '▲' : '▼') + ' Weekly Work Assignments';
 });
 
 </script>
