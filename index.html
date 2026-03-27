@@ -433,7 +433,7 @@
 
   <footer>
     Forty Acres Energy &nbsp;·&nbsp; Field Operations &nbsp;·&nbsp; Internal Use Only
-    <div class="data-note">Dashboard data from Power BI · Updated 2026-03-27 16:00</div>
+    <div class="data-note">Dashboard data from Power BI · Updated 2026-03-27 16:20</div>
   </footer>
 </div>
 
@@ -454,7 +454,7 @@ const FORMS = [
 
 const ZERO = () => ({ total: 0, byPumper: {} });
 
-const DATA = {  // auto-refreshed 2026-03-27 16:00
+const DATA = {  // auto-refreshed 2026-03-27 16:20
   pastweek: {
     gwi      : { total: 3, byPumper: { 'Andy': 1, 'Armando': 1, 'Wynn': 1 } },
     fap      : ZERO(),
@@ -485,7 +485,7 @@ const DATA = {  // auto-refreshed 2026-03-27 16:00
 };
 
 // <<PUMPER_TASKS_START>>
-const PUMPER_TASKS = {  // auto-refreshed 2026-03-27 16:00
+const PUMPER_TASKS = {  // auto-refreshed 2026-03-27 16:20
   currentWeek: {
     date: "3/23/2026",
     tasks: {
@@ -526,7 +526,16 @@ const PUMPER_TASKS = {  // auto-refreshed 2026-03-27 16:00
       },
     }
   },
-  nextWeek: null
+  lastWeek: {
+    date: "3/16/2026",
+    tasks: {
+      "Henry": {
+        "Gas Well Surveillance": "WEU 506?",
+        "Well Test": "P1: -\nP2: 513 (in test), 512\nP3: 102, 106",
+        "Fluid Level": "P1: 217, 220, 402, 417\nP2: 515, 520, 516, 521\nP3: 130, 103, 201, 202, 131",
+      },
+    }
+  }
 };
 // <<PUMPER_TASKS_END>>
 
@@ -775,10 +784,10 @@ function renderTasks() {
 
   renderWeek('tasks-current-label', '', 'tasks-current-cols', PUMPER_TASKS.currentWeek, isEng);
   const nextBlock = document.getElementById('tasks-next-block');
-  if (PUMPER_TASKS.nextWeek) {
-    renderWeek('tasks-next-label', '', 'tasks-next-cols', PUMPER_TASKS.nextWeek, isEng);
+  if (PUMPER_TASKS.lastWeek) {
+    renderWeek('tasks-next-label', '', 'tasks-next-cols', PUMPER_TASKS.lastWeek, isEng);
   } else {
-    document.getElementById('tasks-next-label').textContent = 'Next Week — Not yet assigned';
+    document.getElementById('tasks-next-label').textContent = 'Last Week — No data';
   }
   nextBlock.style.display = '';
 
