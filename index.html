@@ -324,11 +324,11 @@
     </div>
     <div class="tasks-body open" id="tasksBody">
       <div style="padding-top:12px">
-        <div class="tasks-week-label">This Week <span id="tasks-current-date"></span></div>
+        <div class="tasks-week-label" id="tasks-current-label"></div>
         <div id="tasks-current-cols"></div>
       </div>
       <div id="tasks-next-block" class="tasks-next">
-        <div class="tasks-week-label">Next Week <span id="tasks-next-date"></span></div>
+        <div class="tasks-week-label" id="tasks-next-label"></div>
         <div id="tasks-next-cols"></div>
       </div>
     </div>
@@ -752,7 +752,7 @@ function renderTasks() {
   }
 
   function renderWeek(labelId, dateId, colsId, weekData, allRows) {
-    document.getElementById(dateId).textContent = weekData ? '— ' + weekData.date : '';
+    if (labelId) document.getElementById(labelId).textContent = weekData ? 'Week of ' + weekData.date : '';
     if (allRows) {
       // Engineer: one grouped block per pumper
       const rows = weekData ? Object.entries(weekData.tasks).map(([pumper, tasks]) =>
@@ -773,16 +773,14 @@ function renderTasks() {
     }
   }
 
-  renderWeek('', 'tasks-current-date', 'tasks-current-cols', PUMPER_TASKS.currentWeek, isEng);
+  renderWeek('tasks-current-label', '', 'tasks-current-cols', PUMPER_TASKS.currentWeek, isEng);
   const nextBlock = document.getElementById('tasks-next-block');
   if (PUMPER_TASKS.nextWeek) {
-    document.getElementById('tasks-next-date').textContent = '— ' + PUMPER_TASKS.nextWeek.date;
-    renderWeek('', 'tasks-next-date', 'tasks-next-cols', PUMPER_TASKS.nextWeek, isEng);
-    nextBlock.style.display = '';
+    renderWeek('tasks-next-label', '', 'tasks-next-cols', PUMPER_TASKS.nextWeek, isEng);
   } else {
-    nextBlock.innerHTML = '<div class="tasks-week-label">Next Week <span>— Not yet assigned</span></div>';
-    nextBlock.style.display = '';
+    document.getElementById('tasks-next-label').textContent = 'Next Week — Not yet assigned';
   }
+  nextBlock.style.display = '';
   panel.style.display = 'block';
 }
 
