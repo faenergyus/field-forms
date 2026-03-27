@@ -227,6 +227,24 @@
 
 <div class="page">
 
+  <!-- MY TASKS (pumper / engineer) -->
+  <div id="tasks-panel">
+    <div class="collapse-header" id="tasksToggle">
+      <span class="collapse-title" id="tasksToggleLabel">&#9650; Weekly Work Assignments</span>
+      <span class="collapse-chevron" id="tasksChevron">▲</span>
+    </div>
+    <div class="tasks-body" id="tasksBody">
+      <div style="padding-top:12px">
+        <div class="tasks-week-label" id="tasks-current-label"></div>
+        <div id="tasks-current-cols"></div>
+      </div>
+      <div id="tasks-next-block" class="tasks-next">
+        <div class="tasks-week-label" id="tasks-next-label"></div>
+        <div id="tasks-next-cols"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- DASHBOARD -->
   <div class="dash-header">
     <div class="section-label" style="margin-bottom:0;flex:1">Activity Dashboard</div>
@@ -314,24 +332,6 @@
       <div class="chart-wrap"><canvas id="c-whs"></canvas></div>
     </div>
 
-  </div>
-
-  <!-- MY TASKS (pumper / engineer) -->
-  <div id="tasks-panel">
-    <div class="collapse-header" id="tasksToggle" style="margin-top:16px">
-      <span class="collapse-title">&#9650; Weekly Work Assignments</span>
-      <span class="collapse-chevron" id="tasksChevron">▲</span>
-    </div>
-    <div class="tasks-body open" id="tasksBody">
-      <div style="padding-top:12px">
-        <div class="tasks-week-label" id="tasks-current-label"></div>
-        <div id="tasks-current-cols"></div>
-      </div>
-      <div id="tasks-next-block" class="tasks-next">
-        <div class="tasks-week-label" id="tasks-next-label"></div>
-        <div id="tasks-next-cols"></div>
-      </div>
-    </div>
   </div>
 
   <!-- FORMS -->
@@ -781,6 +781,20 @@ function renderTasks() {
     document.getElementById('tasks-next-label').textContent = 'Next Week — Not yet assigned';
   }
   nextBlock.style.display = '';
+
+  // Pumpers: open by default; engineers/admin: collapsed by default
+  const body    = document.getElementById('tasksBody');
+  const chevron = document.getElementById('tasksChevron');
+  const tlabel  = document.getElementById('tasksToggleLabel');
+  if (role === 'pumper') {
+    body.classList.add('open');
+    chevron.textContent = '▲';
+    tlabel.textContent  = '▲ Weekly Work Assignments';
+  } else {
+    body.classList.remove('open');
+    chevron.textContent = '▼';
+    tlabel.textContent  = '▼ Weekly Work Assignments';
+  }
   panel.style.display = 'block';
 }
 
