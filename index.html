@@ -665,12 +665,13 @@ function renderTasks() {
     panel.style.display = 'none';
     return;
   }
-  const name = (CURRENT_USER.pbiName || CURRENT_USER.displayName || '').toLowerCase();
+  const name = (CURRENT_USER.displayName || CURRENT_USER.pbiName || '').toLowerCase();
   function findTasks(weekData) {
     if (!weekData || !weekData.tasks) return null;
     for (const [k, v] of Object.entries(weekData.tasks)) {
-      const kl = k.toLowerCase();
-      if (kl === name || kl.includes(name) || name.includes(kl)) return v;
+      // Split Excel key on "/" to handle "Andy/Shane" style entries
+      const parts = k.split('/').map(p => p.trim().toLowerCase());
+      if (parts.some(p => p === name || p.includes(name) || name.includes(p))) return v;
     }
     return null;
   }
