@@ -677,11 +677,22 @@ const TRACKER_URL   = 'https://script.google.com/macros/s/AKfycbxOyZbt18JXuPTvkk
 const SESSION_KEY   = 'fae_portal_user';
 const SESSION_HRS   = 720;  // hours before re-login required (30 days)
 
+function parseCSVLine(line) {
+  const out = []; let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+    else if (ch === ',' && !inQ) { out.push(cur.trim()); cur = ''; }
+    else cur += ch;
+  }
+  out.push(cur.trim());
+  return out;
+}
 function parseAccountsCSV(text) {
   const lines = text.trim().split('\n');
   // headers: email,display_name,pbi_name,role,...
   return lines.slice(1).map(line => {
-    const cols = line.match(/("(?:[^"]|"")*"|[^,]*)/g).map(c => c.replace(/^"|"$/g,'').trim());
+    const cols = parseCSVLine(line);
     return { email: cols[0], displayName: cols[1], pbiName: cols[2], role: cols[3] };
   });
 }
