@@ -204,6 +204,8 @@
     .task-well:last-child { border-bottom: none; }
     .task-empty { font-size: 0.8rem; color: #8aaa8a; font-style: italic; }
     .tasks-next { opacity: 0.6; }
+    .tasks-eng-row { margin-bottom: 18px; }
+    .tasks-eng-name { font-size: 0.78rem; font-weight: 700; color: #2d5a2d; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; padding-left: 4px; border-left: 3px solid #2d7a2d; }
     @media (max-width: 600px) { .tasks-columns { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -661,38 +663,53 @@ async function handleCredentialResponse(response) {
 
 function renderTasks() {
   const panel = document.getElementById('tasks-panel');
-  if (!CURRENT_USER || CURRENT_USER.role !== 'pumper' || !PUMPER_TASKS) {
+  const role  = (CURRENT_USER && CURRENT_USER.role || '').toLowerCase();
+  const isEng = role === 'engineer' || role === 'admin' || role === 'ops' || role === 'tech';
+  if (!CURRENT_USER || (!isEng && role !== 'pumper') || !PUMPER_TASKS) {
     panel.style.display = 'none';
     return;
   }
-  const name = (CURRENT_USER.displayName || CURRENT_USER.pbiName || '').toLowerCase();
-  function findTasks(weekData) {
-    if (!weekData || !weekData.tasks) return null;
-    for (const [k, v] of Object.entries(weekData.tasks)) {
-      // Split Excel key on "/" to handle "Andy/Shane" style entries
-      const parts = k.split('/').map(p => p.trim().toLowerCase());
-      if (parts.some(p => p === name || p.includes(name) || name.includes(p))) return v;
-    }
-    return null;
-  }
-  function renderCols(containerId, tasks) {
-    const cols = ['Gas Well Surveillance', 'Well Test', 'Fluid Level'];
-    document.getElementById(containerId).innerHTML = cols.map(col => {
-      const val = tasks ? (tasks[col] || '') : '';
+
+  const COLS = ['Gas Well Surveillance', 'Well Test', 'Fluid Level'];
+
+  function makeCols(tasks) {
+    return COLS.map(col => {
+      const val   = tasks ? (tasks[col] || '') : '';
       const wells = val.split('\n').map(s => s.trim()).filter(Boolean);
       const inner = wells.length
         ? wells.map(w => `<div class="task-well">${w}</div>`).join('')
-        : '<div class="task-empty">None this week</div>';
+        : '<div class="task-empty">None</div>';
       return `<div class="task-col"><div class="task-col-title">${col}</div>${inner}</div>`;
     }).join('');
   }
-  document.getElementById('tasks-current-date').textContent =
-    PUMPER_TASKS.currentWeek ? '— ' + PUMPER_TASKS.currentWeek.date : '';
-  renderCols('tasks-current-cols', findTasks(PUMPER_TASKS.currentWeek));
+
+  function renderWeek(labelId, dateId, colsId, weekData, allRows) {
+    document.getElementById(dateId).textContent = weekData ? '— ' + weekData.date : '';
+    if (allRows) {
+      // Engineer: one grouped block per pumper
+      const rows = weekData ? Object.entries(weekData.tasks).map(([pumper, tasks]) =>
+        `<div class="tasks-eng-row"><div class="tasks-eng-name">${pumper}</div><div class="tasks-columns">${makeCols(tasks)}</div></div>`
+      ).join('') : '<div class="task-empty">No data</div>';
+      document.getElementById(colsId).innerHTML = rows;
+    } else {
+      // Pumper: find their row
+      const name = (CURRENT_USER.displayName || '').toLowerCase();
+      let match = null;
+      if (weekData) {
+        for (const [k, v] of Object.entries(weekData.tasks)) {
+          const parts = k.split('/').map(p => p.trim().toLowerCase());
+          if (parts.some(p => p === name || p.includes(name) || name.includes(p))) { match = v; break; }
+        }
+      }
+      document.getElementById(colsId).innerHTML = `<div class="tasks-columns">${makeCols(match)}</div>`;
+    }
+  }
+
+  renderWeek('', 'tasks-current-date', 'tasks-current-cols', PUMPER_TASKS.currentWeek, isEng);
   const nextBlock = document.getElementById('tasks-next-block');
   if (PUMPER_TASKS.nextWeek) {
     document.getElementById('tasks-next-date').textContent = '— ' + PUMPER_TASKS.nextWeek.date;
-    renderCols('tasks-next-cols', findTasks(PUMPER_TASKS.nextWeek));
+    renderWeek('', 'tasks-next-date', 'tasks-next-cols', PUMPER_TASKS.nextWeek, isEng);
     nextBlock.style.display = '';
   } else {
     nextBlock.innerHTML = '<div class="tasks-week-label">Next Week <span>— Not yet assigned</span></div>';
