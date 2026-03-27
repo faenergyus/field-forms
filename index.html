@@ -192,6 +192,19 @@
     @media (max-width: 380px) {
       .cards { grid-template-columns: 1fr; }
     }
+
+    /* ── My Tasks panel ── */
+    #tasks-panel { display: none; margin-bottom: 20px; }
+    .tasks-week-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #4a724a; margin-bottom: 8px; }
+    .tasks-week-label span { font-weight: 400; color: #6a8a6a; text-transform: none; letter-spacing: 0; }
+    .tasks-columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+    .task-col { background: #fff; border-radius: 9px; border-left: 4px solid #2d7a2d; padding: 12px 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+    .task-col-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #3a5a3a; margin-bottom: 8px; }
+    .task-well { font-size: 0.82rem; color: #1a1a1a; padding: 3px 0; border-bottom: 1px solid #f0f4f0; line-height: 1.4; }
+    .task-well:last-child { border-bottom: none; }
+    .task-empty { font-size: 0.8rem; color: #8aaa8a; font-style: italic; }
+    .tasks-next { opacity: 0.6; }
+    @media (max-width: 600px) { .tasks-columns { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -209,6 +222,19 @@
 </header>
 
 <div class="page">
+
+  <!-- MY TASKS (pumper only) -->
+  <div id="tasks-panel">
+    <div class="section-label">My Tasks</div>
+    <div>
+      <div class="tasks-week-label">This Week <span id="tasks-current-date"></span></div>
+      <div class="tasks-columns" id="tasks-current-cols"></div>
+    </div>
+    <div id="tasks-next-block" class="tasks-next">
+      <div class="tasks-week-label">Next Week <span id="tasks-next-date"></span></div>
+      <div class="tasks-columns" id="tasks-next-cols"></div>
+    </div>
+  </div>
 
   <!-- DASHBOARD -->
   <div class="dash-header">
@@ -449,6 +475,10 @@ const DATA = {  // auto-refreshed 2026-03-27 13:00
   },
 };
 
+// <<PUMPER_TASKS_START>>
+const PUMPER_TASKS = null;
+// <<PUMPER_TASKS_END>>
+
 // ── Chart instances ────────────────────────────────────────────────────────
 const CHARTS = {};
 let CURRENT_USER = null;  // set after login; {displayName, pbiName, role}
@@ -629,6 +659,47 @@ async function handleCredentialResponse(response) {
   }
 }
 
+function renderTasks() {
+  const panel = document.getElementById('tasks-panel');
+  if (!CURRENT_USER || CURRENT_USER.role !== 'pumper' || !PUMPER_TASKS) {
+    panel.style.display = 'none';
+    return;
+  }
+  const name = (CURRENT_USER.pbiName || CURRENT_USER.displayName || '').toLowerCase();
+  function findTasks(weekData) {
+    if (!weekData || !weekData.tasks) return null;
+    for (const [k, v] of Object.entries(weekData.tasks)) {
+      const kl = k.toLowerCase();
+      if (kl === name || kl.includes(name) || name.includes(kl)) return v;
+    }
+    return null;
+  }
+  function renderCols(containerId, tasks) {
+    const cols = ['Gas Well Surveillance', 'Well Test', 'Fluid Level'];
+    document.getElementById(containerId).innerHTML = cols.map(col => {
+      const val = tasks ? (tasks[col] || '') : '';
+      const wells = val.split('\n').map(s => s.trim()).filter(Boolean);
+      const inner = wells.length
+        ? wells.map(w => `<div class="task-well">${w}</div>`).join('')
+        : '<div class="task-empty">None this week</div>';
+      return `<div class="task-col"><div class="task-col-title">${col}</div>${inner}</div>`;
+    }).join('');
+  }
+  document.getElementById('tasks-current-date').textContent =
+    PUMPER_TASKS.currentWeek ? '— ' + PUMPER_TASKS.currentWeek.date : '';
+  renderCols('tasks-current-cols', findTasks(PUMPER_TASKS.currentWeek));
+  const nextBlock = document.getElementById('tasks-next-block');
+  if (PUMPER_TASKS.nextWeek) {
+    document.getElementById('tasks-next-date').textContent = '— ' + PUMPER_TASKS.nextWeek.date;
+    renderCols('tasks-next-cols', findTasks(PUMPER_TASKS.nextWeek));
+    nextBlock.style.display = '';
+  } else {
+    nextBlock.innerHTML = '<div class="tasks-week-label">Next Week <span>— Not yet assigned</span></div>';
+    nextBlock.style.display = '';
+  }
+  panel.style.display = '';
+}
+
 function showPortal(session) {
   document.getElementById('login-overlay').style.display = 'none';
   document.getElementById('user-badge').style.display    = 'flex';
@@ -638,6 +709,7 @@ function showPortal(session) {
 
   // Set global user context and re-render charts with correct highlight
   CURRENT_USER = session;
+  renderTasks();
   const activePeriod = document.querySelector('.pill.active')?.dataset.period || 'pastweek';
   applyPeriod(activePeriod);
 }
