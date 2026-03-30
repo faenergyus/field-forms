@@ -114,7 +114,8 @@
         </div>
         <label>Will pumping unit run?</label>
         <div class="radio-group">
-          <div class="radio-btn"><input type="radio" name="puRun" id="pur_yes" value="Yes"><label for="pur_yes">Yes</label></div>
+          <div class="radio-btn"><input type="radio" name="puRun" id="pur_does" value="Does"><label for="pur_does">Does</label></div>
+          <div class="radio-btn"><input type="radio" name="puRun" id="pur_can" value="Can"><label for="pur_can">Can</label></div>
           <div class="radio-btn"><input type="radio" name="puRun" id="pur_no" value="No"><label for="pur_no">No</label></div>
         </div>
         <label>Has rods in wellbore?</label>
@@ -124,7 +125,8 @@
         </div>
         <label>Has compressor?</label>
         <div class="radio-group">
-          <div class="radio-btn"><input type="radio" name="compressor" id="comp_yes" value="Yes"><label for="comp_yes">Yes</label></div>
+          <div class="radio-btn"><input type="radio" name="compressor" id="comp_active" value="Actively used"><label for="comp_active">Actively used</label></div>
+          <div class="radio-btn"><input type="radio" name="compressor" id="comp_unused" value="Unused"><label for="comp_unused">Unused</label></div>
           <div class="radio-btn"><input type="radio" name="compressor" id="comp_no" value="No"><label for="comp_no">No</label></div>
         </div>
         <label>Suction Setpoints, psi (ex. 1-5)</label>
@@ -154,8 +156,9 @@
         <textarea id="tankDetails" placeholder="Including numbers and types"></textarea>
         <label>Has separator on site?</label>
         <div class="radio-group">
-          <div class="radio-btn"><input type="radio" name="separator" id="sep_yes" value="Yes"><label for="sep_yes">Yes</label></div>
-          <div class="radio-btn"><input type="radio" name="separator" id="sep_no" value="No"><label for="sep_no">No</label></div>
+          <div class="radio-btn"><input type="radio" name="separator" id="sep_2" value="2 Phase"><label for="sep_2">2 Phase</label></div>
+          <div class="radio-btn"><input type="radio" name="separator" id="sep_3" value="3 Phase"><label for="sep_3">3 Phase</label></div>
+          <div class="radio-btn"><input type="radio" name="separator" id="sep_no" value="None"><label for="sep_no">None</label></div>
         </div>
         <label>Liquid in separator?</label>
         <div class="radio-group">
@@ -169,11 +172,13 @@
         <label>Tubing valve open?</label>
         <div class="radio-group">
           <div class="radio-btn"><input type="radio" name="tubingValve" id="tv_yes" value="Yes"><label for="tv_yes">Yes</label></div>
+          <div class="radio-btn"><input type="radio" name="tubingValve" id="tv_cant" value="Can't"><label for="tv_cant">Can't</label></div>
           <div class="radio-btn"><input type="radio" name="tubingValve" id="tv_no" value="No"><label for="tv_no">No</label></div>
         </div>
         <label>Casing valve open?</label>
         <div class="radio-group">
           <div class="radio-btn"><input type="radio" name="casingValve" id="cv_yes" value="Yes"><label for="cv_yes">Yes</label></div>
+          <div class="radio-btn"><input type="radio" name="casingValve" id="cv_cant" value="Can't"><label for="cv_cant">Can't</label></div>
           <div class="radio-btn"><input type="radio" name="casingValve" id="cv_no" value="No"><label for="cv_no">No</label></div>
         </div>
         <label>Describe piping</label>
@@ -197,6 +202,7 @@
         <div class="radio-group">
           <div class="radio-btn"><input type="radio" name="leaksFixed" id="lf_yes" value="Yes"><label for="lf_yes">Yes</label></div>
           <div class="radio-btn"><input type="radio" name="leaksFixed" id="lf_no" value="No"><label for="lf_no">No</label></div>
+          <div class="radio-btn"><input type="radio" name="leaksFixed" id="lf_na" value="N/A"><label for="lf_na">N/A</label></div>
         </div>
       </div>
 
@@ -506,43 +512,6 @@ document.getElementById('gwi-form').addEventListener('submit', function(e) {
     if (!checked && !firstMissing) firstMissing = btns[0];
   });
   if (firstMissing) { firstMissing.closest('.radio-group').scrollIntoView({behavior:'smooth',block:'center'}); return; }
-
-  // Validate required text fields
-  const requiredTexts = [
-    {id:'piping',    label:'Describe piping'},
-    {id:'flowRate',  label:'Flow Rate'},
-    {id:'staticPressure', label:'Static Pressure'},
-    {id:'flowTime',  label:'Flow time'},
-    {id:'buildTime', label:'Build time'},
-  ];
-  for (const {id, label} of requiredTexts) {
-    const el = document.getElementById(id);
-    if (!el.value.trim()) {
-      el.style.borderColor = '#c0392b';
-      el.scrollIntoView({behavior:'smooth', block:'center'});
-      el.focus();
-      return;
-    } else { el.style.borderColor = ''; }
-  }
-
-  // Validate inspection method checkbox
-  const methodChecked = document.querySelectorAll('.checkbox-group input:checked');
-  if (!methodChecked.length) {
-    const firstCb = document.querySelector('.checkbox-group input');
-    firstCb.closest('.checkbox-group').style.outline = '2px solid #c0392b';
-    firstCb.closest('.checkbox-group').scrollIntoView({behavior:'smooth', block:'center'});
-    return;
-  } else { document.querySelector('.checkbox-group').style.outline = ''; }
-
-  // Validate required dropdowns
-  const cp = document.getElementById('casingPressure').value;
-  const tp = document.getElementById('tubingPressure').value;
-  if (cp === '' || tp === '') {
-    const el = document.getElementById(cp === '' ? 'casingPressure' : 'tubingPressure');
-    el.style.borderColor = '#c0392b';
-    el.scrollIntoView({behavior:'smooth', block:'center'});
-    return;
-  }
 
   const btn = document.getElementById('submitBtn');
   btn.disabled = true;
