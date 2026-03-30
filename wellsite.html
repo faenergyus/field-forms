@@ -78,7 +78,7 @@
         <label class="required">Inspected By</label>
         <select id="inspectedBy" required>
           <option value="">Select...</option>
-          <option>Andy</option><option>Armando</option><option>Eli</option><option>Henry</option>
+          <option value="Andy/Shane">Andy / Shane</option><option>Armando</option><option>Eli</option><option>Henry</option>
           <option>James</option><option>Jason</option><option>Joe</option><option>Leo</option>
           <option>Raul</option><option>Waldo</option><option>Wynn</option>
         </select>
@@ -307,9 +307,9 @@ document.getElementById('wsi-form').addEventListener('submit', function(e) {
   const fd = new FormData();
   fd.append(ENTRY.inspectedBy, document.getElementById('inspectedBy').value);
   const dateParts = document.getElementById('inspDate').value.split('-');
-  fd.append(ENTRY.inspDate + '_year',  dateParts[0]);
-  fd.append(ENTRY.inspDate + '_month', dateParts[1]);
-  fd.append(ENTRY.inspDate + '_day',   dateParts[2]);
+  fd.append(ENTRY.inspDate + '_year',  parseInt(dateParts[0]));
+  fd.append(ENTRY.inspDate + '_month', parseInt(dateParts[1]));
+  fd.append(ENTRY.inspDate + '_day',   parseInt(dateParts[2]));
   fd.append(ENTRY.wellSite, selectedWell);
 
   const radios = {
