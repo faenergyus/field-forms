@@ -63,8 +63,23 @@
       padding: 16px 32px;
       display: flex;
       align-items: center;
+      position: relative;
       box-shadow: 0 2px 10px rgba(0,0,0,0.35);
     }
+    .price-ticker {
+      position: absolute; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 24px;
+      pointer-events: none;
+    }
+    .price-item { text-align: center; line-height: 1.2; }
+    .price-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; color: #90bc90; text-transform: uppercase; display: block; }
+    .price-val { font-size: 1rem; font-weight: 700; color: #fff; }
+    .price-chg { font-size: 0.65rem; font-weight: 600; margin-left: 4px; }
+    .price-up { color: #5dc85d; }
+    .price-down { color: #ff7070; }
+    .price-dot { color: #4a724a; font-size: 1.2rem; line-height: 1; }
+    .price-date { font-size: 0.58rem; color: #6a8a6a; display: block; }
+    @media (max-width: 600px) { .price-ticker { display: none; } }
     .logo-fae { font-size: 1.9rem; font-weight: 900; letter-spacing: -1px; color: #5dc85d; line-height: 1; }
     .logo-fae span { color: #fff; font-weight: 300; }
     .logo-tagline { font-size: 0.75rem; color: #90bc90; letter-spacing: 0.1em; margin-top: 2px; }
@@ -223,6 +238,20 @@
     <div class="logo-fae">fae<span>II</span></div>
     <div class="logo-tagline">forty acres <em>energy</em></div>
   </div>
+  <div class="price-ticker" id="price-ticker">
+    <div class="price-item">
+      <span class="price-label">WTI Crude</span>
+      <span id="wti-val" class="price-val">—</span><span id="wti-chg" class="price-chg"></span>
+      <span id="wti-date" class="price-date"></span>
+    </div>
+    <span class="price-dot">·</span>
+    <div class="price-item">
+      <span class="price-label">Waha Hub</span>
+      <span id="waha-val" class="price-val">—</span><span id="waha-chg" class="price-chg"></span>
+      <span id="waha-date" class="price-date"></span>
+    </div>
+  </div>
+
   <div class="user-badge" id="user-badge" style="display:none">
     <img class="user-avatar" id="user-avatar" src="" alt="">
     <span class="user-name" id="user-name"></span>
@@ -450,7 +479,7 @@
 
   <footer>
     Forty Acres Energy &nbsp;·&nbsp; Field Operations &nbsp;·&nbsp; Internal Use Only
-    <div class="data-note">Dashboard data from Power BI · Updated 2026-03-30 09:00</div>
+    <div class="data-note">Dashboard data from Power BI · Updated 2026-03-30 09:54</div>
   </footer>
 </div>
 
@@ -471,7 +500,7 @@ const FORMS = [
 
 const ZERO = () => ({ total: 0, byPumper: {} });
 
-const DATA = {  // auto-refreshed 2026-03-30 09:00
+const DATA = {  // auto-refreshed 2026-03-30 09:54
   pastweek: {
     gwi      : { total: 2, byPumper: { 'Andy': 1, 'Wynn': 1 } },
     fap      : ZERO(),
@@ -502,13 +531,13 @@ const DATA = {  // auto-refreshed 2026-03-30 09:00
 };
 
 // <<PUMPER_TASKS_START>>
-const PUMPER_TASKS = {  // auto-refreshed 2026-03-30 09:00
+const PUMPER_TASKS = {  // auto-refreshed 2026-03-30 09:54
   currentWeek: {
     date: "3/30/2026",
     tasks: {
       "Raul": {
         "Gas Well Surveillance": "Myers B Federal #031",
-        "Well Test": "",
+        "Well Test": "C D Woolworth  #8",
         "Fluid Level": "Martin B #003, #004; Mexico G #001",
       },
       "Waldo": {
@@ -518,8 +547,8 @@ const PUMPER_TASKS = {  // auto-refreshed 2026-03-30 09:00
       },
       "Mando": {
         "Gas Well Surveillance": "Janda State #001 \nJanda State #002",
-        "Well Test": "BBN BATT 1: AC 2 # 23, 4\nBBN BATT 5: AC 2 #026, 023\nBBS: AC 1 #46, 48",
-        "Fluid Level": "BBN: State A A/C 2 # 1, 24, 31, 61",
+        "Well Test": "BBN BATT 1: AC 2 # 23, 4\nBBN BATT 5: AC 2 # 26, 54\nBBS BATT 43-61-64-69: AC 1 #43, 64\nBBS BATT 18-37-55-81-111: -\nBBS BATT 46: AC 1 # 46\nBBS BATT 48: AC 1 # 48",
+        "Fluid Level": "BBN: A/C 2 # 24, 61, 29, 30, 31, 25, 26, 54\nBBS: A/C 1 # 69, 64, 81; A/C 3 # 9, COM # 4",
       },
       "Jason": {
         "Gas Well Surveillance": "State D #005\nState D #007",
@@ -538,8 +567,8 @@ const PUMPER_TASKS = {  // auto-refreshed 2026-03-30 09:00
       },
       "Henry": {
         "Gas Well Surveillance": "WEU 508",
-        "Well Test": "P1: 215 (done), 417 (done)\nP2: 513 (in test), 512, 510\nP3: 102, 106",
-        "Fluid Level": "P1: 217, 220, 402, 417\nP2: 515, 520, 516, 521, 510, 511, 512, 513\nP3: 130, 103, 201, 202, 131",
+        "Well Test": "P1 BATT 417: 215, 417\nP1 BATT GM State: no well testing\nP1 BATT Lea 407: no well testing\nP1 BATT LW WHITE COM: no well testing\nP2 BATT BAY FED: 512, 510\nP2 BATT FED D: no well testing\nP2 BATT FOPEANO: no well testing\nP3 BATT GULF State: 102, 106",
+        "Fluid Level": "P1: 217, 402, 206, 220, 417\nP2: 515, 520, 516, 521, 510, 511, 512, 513, 514\nP3: 130, 103, 201, 202, 131",
       },
     }
   },
@@ -585,6 +614,13 @@ const PUMPER_TASKS = {  // auto-refreshed 2026-03-30 09:00
   }
 };
 // <<PUMPER_TASKS_END>>
+
+// <<PRICES_START>>
+const PRICES = {  // auto-refreshed 2026-03-30 09:54
+  wti:  {price:102.23, chg:2.59, date:"3/30/2026"},
+  waha: {price:-3.06, chg:-1.12, date:"3/27/2026"}
+};
+// <<PRICES_END>>
 
 // ── Chart instances ────────────────────────────────────────────────────────
 const CHARTS = {};
@@ -887,6 +923,30 @@ function showPortal(session) {
   const activePeriod = document.querySelector('.pill.active')?.dataset.period || 'pastweek';
   applyPeriod(activePeriod);
 }
+
+function showPrices() {
+  if (!PRICES) return;
+  function fmt(price) {
+    return price < 0 ? '-$' + Math.abs(price).toFixed(3) : '$' + price.toFixed(2);
+  }
+  function chgHtml(chg) {
+    if (chg == null) return '';
+    const cls = chg >= 0 ? 'price-up' : 'price-down';
+    const arrow = chg >= 0 ? '▲' : '▼';
+    return `<span class="price-chg ${cls}">${arrow} ${Math.abs(chg).toFixed(2)}</span>`;
+  }
+  if (PRICES.wti) {
+    document.getElementById('wti-val').textContent = fmt(PRICES.wti.price);
+    document.getElementById('wti-chg').outerHTML = chgHtml(PRICES.wti.chg);
+    document.getElementById('wti-date').textContent = PRICES.wti.date || '';
+  }
+  if (PRICES.waha) {
+    document.getElementById('waha-val').textContent = fmt(PRICES.waha.price);
+    document.getElementById('waha-chg').outerHTML = chgHtml(PRICES.waha.chg);
+    document.getElementById('waha-date').textContent = PRICES.waha.date || '';
+  }
+}
+showPrices();
 
 function signOut() {
   localStorage.removeItem(SESSION_KEY);
