@@ -328,6 +328,10 @@
 
   <!-- Stat Tiles -->
   <div class="stat-row">
+    <div class="stat-tile" id="tile-avo" style="border-top-color:#9c6b3a">
+      <div class="stat-num" id="num-avo">0</div>
+      <div class="stat-sub">AVO<br>Inspection</div>
+    </div>
     <div class="stat-tile" id="tile-gwi">
       <div class="stat-num" id="num-gwi">0</div>
       <div class="stat-sub">Gas Well<br>Inspection</div>
@@ -362,6 +366,11 @@
   <div class="charts-grid" id="chartsGrid">
 
     <div class="chart-card">
+      <div class="chart-title">📋 AVO Inspection</div>
+      <div class="chart-wrap"><canvas id="c-avo"></canvas></div>
+    </div>
+
+    <div class="chart-card">
       <div class="chart-title">
         <svg width="14" height="14" viewBox="0 0 24 24"><path d="M12 2C10 5 7 7 7 11c0 2.76 2.24 5 5 5s5-2.24 5-5c0-1.5-.6-2.8-1.5-3.8C15 8.5 14 10 12 10c1-2 1.5-5 0-8z" fill="#e67e22"/></svg>
         Gas Well Inspection
@@ -372,33 +381,17 @@
     <div class="chart-card">
       <div class="chart-title">
         <svg width="14" height="14" viewBox="0 0 24 24"><rect x="9" y="19" width="6" height="2" rx="0.5" fill="#555"/><rect x="11.2" y="11" width="1.6" height="8" fill="#555"/><polygon points="10,11 14,11 12,6" fill="#666"/><line x1="5" y1="9" x2="19" y2="11" stroke="#444" stroke-width="1.8" stroke-linecap="round"/><path d="M4 9 Q3 7.5 5 7 Q6 6.5 6 8 L5 9Z" fill="#333"/></svg>
-        Fluid Levels (FAP)
+        FAP &amp; Pump Up
       </div>
-      <div class="chart-wrap"><canvas id="c-fap"></canvas></div>
+      <div class="chart-wrap"><canvas id="c-fap-pumpup"></canvas></div>
     </div>
 
     <div class="chart-card">
-      <div class="chart-title">
-        <svg width="14" height="14" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="#e8e8e8" stroke="#888" stroke-width="1.2"/><circle cx="12" cy="13" r="6" fill="#fff" stroke="#aaa" stroke-width="0.8"/><line x1="12" y1="7.5" x2="12" y2="9" stroke="#555" stroke-width="1"/><line x1="12" y1="13" x2="15" y2="9" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="13" r="1" fill="#555"/></svg>
-        Pump Up Entry
-      </div>
-      <div class="chart-wrap"><canvas id="c-pumpup"></canvas></div>
+      <div class="chart-title">🔍 Well Site &amp; Facility Inspection</div>
+      <div class="chart-wrap"><canvas id="c-wellsite-facility"></canvas></div>
     </div>
 
-    <div class="chart-card">
-      <div class="chart-title">🔍 Well Site Inspection</div>
-      <div class="chart-wrap"><canvas id="c-wellsite"></canvas></div>
-    </div>
-
-    <div class="chart-card">
-      <div class="chart-title">
-        <svg width="14" height="14" viewBox="0 0 24 24"><ellipse cx="12" cy="7" rx="7" ry="3" fill="#5a8fa8"/><rect x="5" y="7" width="14" height="10" fill="#4a7f98"/><ellipse cx="12" cy="17" rx="7" ry="3" fill="#3a6f88"/></svg>
-        Facility Inspection
-      </div>
-      <div class="chart-wrap"><canvas id="c-facility"></canvas></div>
-    </div>
-
-    <div class="chart-card">
+    <div class="chart-card" style="display:none">
       <div class="chart-title">⚡ Wellhead Grounding Survey</div>
       <div class="chart-wrap"><canvas id="c-whs"></canvas></div>
     </div>
@@ -514,7 +507,9 @@
 //         WHS=Grounding (Timestamp — InspDate has 2027/2028 typos), PU=Pump Up, FAP=FAP (Timestamp), ENV=Env Report (Timestamp)
 const PUMPERS = ['Andy','Armando','Eli','Henry','Jason','Raul','Waldo','Wynn'];
 
-const FORMS = [
+// Tile definitions (drives stat tiles; avo is first)
+const TILE_DEFS = [
+  { key:'avo',      color:'#9c6b3a' },
   { key:'gwi',      color:'#2d7a2d' },
   { key:'fap',      color:'#1a8a7a' },
   { key:'pumpup',   color:'#c8860a' },
@@ -523,10 +518,19 @@ const FORMS = [
   { key:'whs',      color:'#7a5aaa' },
 ];
 
+// Chart definitions (single = one dataset; combo = two datasets side-by-side)
+const CHART_DEFS = [
+  { id:'c-avo',               keys:['avo'],                 colors:['#9c6b3a'],           labels:['AVO Inspection'] },
+  { id:'c-gwi',               keys:['gwi'],                 colors:['#2d7a2d'],           labels:['Gas Well Inspection'] },
+  { id:'c-fap-pumpup',        keys:['fap','pumpup'],        colors:['#1a8a7a','#c8860a'], labels:['FAP','Pump Up'] },
+  { id:'c-wellsite-facility', keys:['wellsite','facility'], colors:['#2a6ea6','#4a7a9a'], labels:['Well Site','Facility'] },
+];
+
 const ZERO = () => ({ total: 0, byPumper: {}, wellsByPumper: {} });
 
 const DATA = {  // auto-refreshed 2026-03-30 16:12
   pastweek: {
+    avo      : { total: 6, byPumper: { 'Jason': 2, 'Henry': 3, 'Armando': 1 }, wellsByPumper: { 'Jason': ["STATE D #005","STATE D #007"], 'Henry': ["BS&W DRAW","CIF Skim Facility","WEST EUMONT UNIT #131"], 'Armando': ["HUGHES B-6 #011"] } },
     gwi      : { total: 2, byPumper: { 'Andy': 1, 'Wynn': 1 }, wellsByPumper: { 'Andy': ["BRITT #001"], 'Wynn': ["STEVENS B #013"] } },
     fap      : ZERO(),
     pumpup   : { total: 1, byPumper: { 'Armando': 1 }, wellsByPumper: { 'Armando': ["STATE A A/C 2 #024"] } },
@@ -536,6 +540,7 @@ const DATA = {  // auto-refreshed 2026-03-30 16:12
     env      : ZERO(),
   },
   ytd: {
+    avo      : { total: 58, byPumper: { 'Armando': 43, 'Waldo': 5, 'Henry': 6, 'Raul': 2, 'Jason': 2 }, wellsByPumper: { 'Armando': ["101 SWD BATTERY","AC 1 115 WSW Facility","FEDERAL 20 #001","FEDERAL 714 #003","HUGHES B-6 #011","J F JANDA NCT H #002","J F JANDA NCT H #003","J F JANDA NCT-G #002","J F JANDA NCT-J #005","MATKINS #001","MATKINS #002","MATKINS #003","MATKINS #004","MATKINS #005","MATKINS #006","STATE 157 F #004","STATE 157 G #004","STATE 157 G-A #005","STATE A A/C 1 #006","STATE A A/C 1 #036","STATE A A/C 1 #045","STATE A A/C 1 #046","STATE A A/C 1 #047","STATE A A/C 1 #048","STATE A A/C 1 #061","STATE A A/C 1 #064","STATE A A/C 1 #069","STATE A A/C 1 #080","STATE A A/C 1 #081","STATE A A/C 1 #115","STATE A A/C 1 #116","STATE A A/C 1 #117","STATE A A/C 1 #118","STATE A A/C 1 #119","STATE A A/C 1 #120","STATE A A/C 1 #121","STATE A A/C 2 #064","STATE A A/C 3 #010","STATE A A/C 3 #011","STATE A A/C 3 #012","STATE A A/C 3 COM A #004"], 'Waldo': ["ARNOTT RAMSAY NCT-B BATTERY","RHODES FEDERAL UNIT #087","RHODES FEDERAL UNIT #226","SHOLES B 13 #004","Sholes B Tank Battery"], 'Henry': ["BS&W DRAW","CIF Skim Facility","WEST EUMONT UNIT #131","WEST EUMONT UNIT #225"], 'Raul': ["CARLSON A FEDERAL #001"], 'Jason': ["STATE D #005","STATE D #007"] } },
     gwi      : { total: 27, byPumper: { 'Andy': 1, 'Eli': 9, 'Wynn': 12, 'Waldo': 2, 'Armando': 3 }, wellsByPumper: { 'Andy': ["BRITT #001"], 'Eli': ["BRITT A 6 #002", "HOLT MEXICO STATE COM #001", "HUSKY WOOLWORTH #001", "MAVEETY STATE GAS COM #009", "REED A 3 #002", "REED A 3 #003", "STEELER A #001", "STEELER A #003", "STEELER A #004"], 'Wynn': ["CLOSSON B FEDERAL #012", "CLOSSON C #001", "LYNN A #004", "LYNN A #006", "MEYER B 31 A #001", "NEW MEXICO AA STATE #001", "NEW MEXICO AA STATE #007", "SHELL STATE #004", "SHELL STATE #007", "STATE H #002", "STATE H #005", "STEVENS B #013"], 'Waldo': ["FEDERAL F #005", "MOBERLY RHODES WF PROJECT #004"], 'Armando': ["MATKINS #006", "OTIS L JONES #001", "OTIS L JONES #002"] } },
     fap      : { total: 118, byPumper: { 'Henry': 23, 'Jason': 90, 'Armando': 5 }, wellsByPumper: { 'Jason': ["ARNOTT RAMSAY NCT-B #006", "ARNOTT RAMSAY NCT-B #008", "ARNOTT RAMSAY NCT-B #009", "ARNOTT RAMSAY NCT-B #010", "ARNOTT RAMSAY NCT-B #012", "ARNOTT RAMSAY NCT-B #020", "ARNOTT RAMSAY NCT-B #021", "BAYLUS CADE FEDERAL #004", "BAYLUS CADE FEDERAL #006", "BRITT A 6 #005", "CLOWER STATE #001", "E C HILL B FEDERAL #018", "E C HILL B FEDERAL #020", "ELLIOTT #002", "G G TRAVIS #004", "GILLULLY B FEDERAL RA A #010", "LOCKHART B 31 #003", "LOCKHART B 31 #005", "LOCKHART B 31 #006", "LOCKHART B 31 #009", "MAVEETY STATE GAS COM #009", "MCQUATTERS COM #004", "STATE A A/C 1 #036", "STATE A A/C 1 #043", "STATE A A/C 1 #046", "STATE A A/C 1 #048", "STATE A A/C 1 #061", "STATE A A/C 1 #064", "STATE A A/C 1 #069", "STATE A A/C 1 #081", "STATE A A/C 2 #004", "STATE A A/C 2 #023", "STATE A A/C 2 #025", "STATE A A/C 2 #026", "STATE A A/C 2 #027", "STATE A A/C 2 #029", "STATE A A/C 2 #030", "STATE A A/C 2 #031", "STATE A A/C 2 #054", "STATE A A/C 3 #009", "STATE A A/C 3 COM A #004", "STATE D #002", "STATE D #005", "STATE D #006", "STATE D #007", "STATE D #008", "STATE E #002", "TRAVIS #005", "WEST EUMONT UNIT #102", "WEST EUMONT UNIT #104", "WEST EUMONT UNIT #106", "WEST EUMONT UNIT #130", "WEST EUMONT UNIT #131", "WEST EUMONT UNIT #203", "WEST EUMONT UNIT #204", "WEST EUMONT UNIT #206", "WEST EUMONT UNIT #209", "WEST EUMONT UNIT #210", "WEST EUMONT UNIT #215", "WEST EUMONT UNIT #216", "WEST EUMONT UNIT #510", "WEST EUMONT UNIT #511", "WEST EUMONT UNIT #512", "WEST EUMONT UNIT #513", "WEST EUMONT UNIT #514", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #521"], 'Armando': ["STATE A A/C 1 #081", "STATE A A/C 2 #025"], 'Henry': ["WEST EUMONT UNIT #102", "WEST EUMONT UNIT #104", "WEST EUMONT UNIT #106", "WEST EUMONT UNIT #203", "WEST EUMONT UNIT #204", "WEST EUMONT UNIT #206", "WEST EUMONT UNIT #209", "WEST EUMONT UNIT #210", "WEST EUMONT UNIT #215", "WEST EUMONT UNIT #216", "WEST EUMONT UNIT #220", "WEST EUMONT UNIT #402", "WEST EUMONT UNIT #417", "WEST EUMONT UNIT #510", "WEST EUMONT UNIT #511", "WEST EUMONT UNIT #512", "WEST EUMONT UNIT #513", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #520", "WEST EUMONT UNIT #521"] } },
     pumpup   : { total: 1, byPumper: { 'Armando': 1 }, wellsByPumper: { 'Armando': ["STATE A A/C 2 #024"] } },
@@ -545,6 +550,7 @@ const DATA = {  // auto-refreshed 2026-03-30 16:12
     env      : ZERO(),
   },
   lastyear: {
+    avo      : ZERO(),
     gwi      : ZERO(),
     fap      : { total: 415, byPumper: { 'Waldo': 75, 'Henry': 118, 'Jason': 190, 'Armando': 7, 'Wynn': 3, 'Gary': 1, 'Andy': 16, 'Raul': 5 }, wellsByPumper: { 'Jason': ["ATLANTIC STATE #003", "BAYLUS CADE FEDERAL #004", "BAYLUS CADE FEDERAL #006", "BERTIE WHITMIRE #008", "BERTIE WHITMIRE #009", "BRITT A 6 #005", "BRITT B 8 #002", "C E LAMUNYON #025", "C E LAMUNYON #037", "C E LAMUNYON #040", "C E LAMUNYON #044", "C E LAMUNYON #053", "C E LAMUNYON #062", "C E LAMUNYON #068", "C E LAMUNYON #073", "C E LAMUNYON #074", "C E LAMUNYON #075", "CLOWER STATE #001", "DANCIGER #001", "E C HILL A #007", "E C HILL B FEDERAL #015", "E C HILL B FEDERAL #017", "E C HILL B FEDERAL #018", "ELLIOTT #001", "ELLIOTT #002", "ELLIOTT B 20 #001", "ELLIOTT B 20 #002", "ELLIOTT B 20 #003", "EMERY KING NW #001", "EVA E BLINEBRY FEDERAL #004", "FEDERAL 714 #003", "G G TRAVIS #004", "GILLULLY B FEDERAL RA A #010", "JACK B 30 #001", "JACK B 30 #002", "JACK B 30 #003", "LOCKHART B 31 #005", "MCQUATTERS COM #004", "MEYER B 31 A #001", "SEETON #004", "SHELL D STATE COM #013", "STATE A A/C 1 #043", "STATE A A/C 1 #048", "STATE A A/C 1 #061", "STATE A A/C 1 #064", "STATE A A/C 2 #023", "STATE A A/C 2 #024", "STATE A A/C 2 #026", "STATE A A/C 2 #030", "STATE C TR 11 #007", "STATE C TR 11 #008", "STATE C TR 11 #009", "STATE E #002", "TRAVIS #005", "VACUUM 31 #001", "WATKINS #003", "WELLS A #007", "WEST EUMONT UNIT #102", "WEST EUMONT UNIT #104", "WEST EUMONT UNIT #106", "WEST EUMONT UNIT #507", "WEST EUMONT UNIT #509", "WEST EUMONT UNIT #513", "WEST EUMONT UNIT #514", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #519", "ZATTU CUSHING #001"], 'Armando': ["ELLIOTT B 20 #003", "STATE A A/C 1 #043", "STATE A A/C 1 #061", "STATE A A/C 2 #004", "STATE A A/C 2 #023", "STATE A A/C 2 #024", "STATE A A/C 2 #030"], 'Henry': ["WEST EUMONT UNIT #102", "WEST EUMONT UNIT #103", "WEST EUMONT UNIT #104", "WEST EUMONT UNIT #106", "WEST EUMONT UNIT #130", "WEST EUMONT UNIT #131", "WEST EUMONT UNIT #202", "WEST EUMONT UNIT #203", "WEST EUMONT UNIT #204", "WEST EUMONT UNIT #206", "WEST EUMONT UNIT #209", "WEST EUMONT UNIT #210", "WEST EUMONT UNIT #215", "WEST EUMONT UNIT #216", "WEST EUMONT UNIT #217", "WEST EUMONT UNIT #220", "WEST EUMONT UNIT #401", "WEST EUMONT UNIT #402", "WEST EUMONT UNIT #411", "WEST EUMONT UNIT #417", "WEST EUMONT UNIT #418", "WEST EUMONT UNIT #509", "WEST EUMONT UNIT #510", "WEST EUMONT UNIT #511", "WEST EUMONT UNIT #512", "WEST EUMONT UNIT #513", "WEST EUMONT UNIT #514", "WEST EUMONT UNIT #515", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #520", "WEST EUMONT UNIT #521", "WEST EUMONT UNIT #528"], 'Waldo': ["ARNOTT RAMSAY NCT-B #006", "ARNOTT RAMSAY NCT-B #008", "ARNOTT RAMSAY NCT-B #009", "ARNOTT RAMSAY NCT-B #010", "ARNOTT RAMSAY NCT-B #012", "ARNOTT RAMSAY NCT-B #020", "ARNOTT RAMSAY NCT-B #021", "C D WOOLWORTH #010", "FARNSWORTH 4 #002", "FARNSWORTH 4 #003", "FARNSWORTH 4 #010", "WATKINS #003", "WELLS A #007", "ZATTU CUSHING #001", "ZATTU CUSHING #002"], 'Wynn': ["ELLIOTT B 20 #001", "ELLIOTT B 20 #002", "ELLIOTT B 20 #003"], 'Gary': ["MEYER B 31 A #001"], 'Andy': ["C E LAMUNYON #040", "C E LAMUNYON #042", "C E LAMUNYON #044", "C E LAMUNYON #053", "C E LAMUNYON #059", "C E LAMUNYON #060", "C E LAMUNYON #074", "E C HILL A #007", "E C HILL B FEDERAL #015", "M K STEWART #005", "SEETON #001", "SEETON #002", "SEETON #003", "SEETON #004"], 'Raul': ["C D WOOLWORTH #004", "C D WOOLWORTH #005", "C D WOOLWORTH #006", "C D WOOLWORTH #007", "C D WOOLWORTH #008"] } },
     pumpup   : { total: 1, byPumper: { 'Waldo': 1 }, wellsByPumper: { 'Waldo': ["ARNOTT RAMSAY NCT-B #010"] } },
@@ -653,102 +659,124 @@ let CURRENT_USER = null;  // set after login; {displayName, pbiName, role}
 const GRID_COLOR = '#eef2ee';
 const TICK_COLOR = '#5a6a5a';
 
+// Shared external tooltip handler (works for single and multi-dataset charts)
+function externalTooltip(context) {
+  var tip = document.getElementById('chart-tooltip');
+  if (!tip) return;
+  var model = context.tooltip;
+  if (model.opacity === 0) { tip.style.display = 'none'; return; }
+  var pumper = model.title && model.title[0];
+  if (!pumper) { tip.style.display = 'none'; return; }
+
+  // For combo charts filter out zero-value datasets so tooltip isn't noisy
+  var dps = (model.dataPoints || []).filter(function(dp) { return dp.raw > 0; });
+  if (!dps.length) dps = model.dataPoints || [];
+
+  var html = '<strong>' + pumper + '</strong>';
+  dps.forEach(function(dp) {
+    var ds    = context.chart.data.datasets[dp.datasetIndex];
+    var count = dp.raw;
+    var wells = (ds.wellsByPumper || {})[pumper] || [];
+    var lbl   = (dps.length > 1 && ds.label) ? ' <span style="opacity:0.75">(' + ds.label + ')</span>' : '';
+    html += '<br>' + count + (count === 1 ? ' submission' : ' submissions') + lbl;
+    if (wells.length) {
+      html += '<hr style="border:none;border-top:1px solid rgba(255,255,255,0.25);margin:3px 0">';
+      html += wells.map(function(w) { return '\u2022 ' + w; }).join('<br>');
+    }
+  });
+
+  tip.innerHTML = html;
+  tip.style.display = 'block';
+  var x = model.caretX + context.chart.canvas.getBoundingClientRect().left + 12;
+  var y = model.caretY + context.chart.canvas.getBoundingClientRect().top;
+  var vw = window.innerWidth, vh = window.innerHeight;
+  tip.style.left = ''; tip.style.right = '';
+  tip.style.top  = ''; tip.style.bottom = '';
+  if (x + 250 > vw) { tip.style.right = (vw - x + 24) + 'px'; }
+  else               { tip.style.left  = x + 'px'; }
+  if (y + tip.offsetHeight + 16 > vh) { tip.style.bottom = (vh - y) + 'px'; }
+  else                                 { tip.style.top    = y + 'px'; }
+}
+
+const SCALE_OPTS = {
+  x: { grid: { color: GRID_COLOR }, ticks: { color: TICK_COLOR, font: { size: 10 }, precision: 0 }, beginAtZero: true },
+  y: { grid: { display: false },    ticks: { color: TICK_COLOR, font: { size: 10 }, autoSkip: false } }
+};
+
 function makeChart(id, color) {
   const ctx = document.getElementById(id);
+  if (!ctx) return null;
+  return new Chart(ctx, {
+    type: 'bar',
+    data: { labels: PUMPERS, datasets: [{ label: '', data: PUMPERS.map(() => 0), backgroundColor: color, borderRadius: 4, barPercentage: 0.6 }] },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
+      plugins: { legend: { display: false }, tooltip: { enabled: false, external: externalTooltip } },
+      scales: SCALE_OPTS
+    }
+  });
+}
+
+function makeComboChart(id, colors, labels) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return null;
   return new Chart(ctx, {
     type: 'bar',
     data: {
       labels: PUMPERS,
-      datasets: [{ data: PUMPERS.map(() => 0), backgroundColor: color, borderRadius: 4, barPercentage: 0.6 }]
+      datasets: labels.map(function(lbl, i) {
+        return { label: lbl, data: PUMPERS.map(() => 0), backgroundColor: colors[i], borderRadius: 3, barPercentage: 0.85, categoryPercentage: 0.9 };
+      })
     },
     options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: { duration: 300 },
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
+      interaction: { mode: 'index', axis: 'y' },
       plugins: {
-        legend: { display: false },
-        tooltip: {
-          enabled: false,
-          external: function(context) {
-            var tip = document.getElementById('chart-tooltip');
-            if (!tip) return;
-            var model = context.tooltip;
-            if (model.opacity === 0) { tip.style.display = 'none'; return; }
-
-            var pumper = model.title && model.title[0];
-            if (!pumper) { tip.style.display = 'none'; return; }
-
-            var ds    = context.chart.data.datasets[0];
-            var count = ds.data[model.dataPoints[0].dataIndex];
-            var wells = (ds.wellsByPumper || {})[pumper] || [];
-
-            var html = '<strong>' + pumper + '</strong><br>'
-              + count + (count === 1 ? ' submission' : ' submissions');
-            if (wells.length) {
-              html += '<hr style="border:none;border-top:1px solid rgba(255,255,255,0.25);margin:4px 0">';
-              html += wells.map(function(w) { return '\u2022 ' + w; }).join('<br>');
-            }
-            tip.innerHTML = html;
-            tip.style.display = 'block';
-
-            // Position near cursor, keep within viewport
-            var x = model.caretX + context.chart.canvas.getBoundingClientRect().left + 12;
-            var y = model.caretY + context.chart.canvas.getBoundingClientRect().top;
-            var vw = window.innerWidth, vh = window.innerHeight;
-            tip.style.left = '';  tip.style.right = '';
-            tip.style.top  = '';  tip.style.bottom = '';
-            // flip left if too close to right edge
-            if (x + 250 > vw) { tip.style.right = (vw - x + 24) + 'px'; }
-            else               { tip.style.left  = x + 'px'; }
-            // flip up if too close to bottom
-            if (y + tip.offsetHeight + 16 > vh) { tip.style.bottom = (vh - y) + 'px'; }
-            else                                 { tip.style.top    = y + 'px'; }
-          }
-        }
+        legend: { display: true, position: 'top', labels: { color: TICK_COLOR, font: { size: 10 }, boxWidth: 10, padding: 8 } },
+        tooltip: { enabled: false, external: externalTooltip }
       },
-      scales: {
-        x: {
-          grid: { color: GRID_COLOR },
-          ticks: { color: TICK_COLOR, font: { size: 10 }, precision: 0 },
-          beginAtZero: true
-        },
-        y: {
-          grid: { display: false },
-          ticks: { color: TICK_COLOR, font: { size: 10 }, autoSkip: false }
-        }
-      }
+      scales: SCALE_OPTS
     }
   });
 }
 
 // Build all charts on load
-FORMS.forEach(f => { CHARTS[f.key] = makeChart('c-' + f.key, f.color); });
+CHART_DEFS.forEach(cd => {
+  CHARTS[cd.id] = cd.keys.length === 1
+    ? makeChart(cd.id, cd.colors[0])
+    : makeComboChart(cd.id, cd.colors, cd.labels);
+});
 
 // ── Update UI for selected period ─────────────────────────────────────────
 function applyPeriod(period) {
   const d = DATA[period];
-  FORMS.forEach(f => {
-    const fd = d[f.key];
-    // Stat tile
-    document.getElementById('num-' + f.key).textContent = fd.total;
-    const tile = document.getElementById('tile-' + f.key);
-    // all forms are now in Power BI — no graying needed
-    // Chart data
-    const vals = PUMPERS.map(p => fd.byPumper[p] || 0);
-    CHARTS[f.key].data.datasets[0].data = vals;
-    CHARTS[f.key].data.datasets[0].wellsByPumper = fd.wellsByPumper || {};
-    // Highlight logged-in pumper's bar; admins/engineers see full color
-    const isPumper = CURRENT_USER && CURRENT_USER.role === 'pumper';
-    if (isPumper) {
-      const myIdx = PUMPERS.indexOf(CURRENT_USER.pbiName);
-      CHARTS[f.key].data.datasets[0].backgroundColor = PUMPERS.map((_, i) =>
-        i === myIdx ? f.color : 'rgba(150,180,150,0.35)'
-      );
-    } else {
-      CHARTS[f.key].data.datasets[0].backgroundColor = f.color;
-    }
-    CHARTS[f.key].update();
+  const isPumper = CURRENT_USER && CURRENT_USER.role === 'pumper';
+  const myIdx    = isPumper ? PUMPERS.indexOf(CURRENT_USER.pbiName) : -1;
+
+  // Stat tiles
+  TILE_DEFS.forEach(t => {
+    const fd = d[t.key];
+    if (fd) document.getElementById('num-' + t.key).textContent = fd.total;
+  });
+
+  // Charts
+  CHART_DEFS.forEach(cd => {
+    const chart = CHARTS[cd.id];
+    if (!chart) return;
+    cd.keys.forEach((key, i) => {
+      const fd   = d[key];
+      const vals = PUMPERS.map(p => fd.byPumper[p] || 0);
+      chart.data.datasets[i].data           = vals;
+      chart.data.datasets[i].wellsByPumper  = fd.wellsByPumper || {};
+      if (isPumper) {
+        chart.data.datasets[i].backgroundColor = PUMPERS.map((_, j) =>
+          j === myIdx ? cd.colors[i] : 'rgba(150,180,150,0.35)'
+        );
+      } else {
+        chart.data.datasets[i].backgroundColor = cd.colors[i];
+      }
+    });
+    chart.update();
   });
 }
 
