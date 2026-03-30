@@ -300,17 +300,6 @@ document.getElementById('wsi-form').addEventListener('submit', function(e) {
   if (!selectedWell) { wellInput.focus(); wellInput.style.borderColor = '#c0392b'; return; }
   if (!validateNums()) { document.querySelector('.input-error').scrollIntoView({behavior:'smooth',block:'center'}); return; }
 
-  // Validate required radio groups
-  const requiredRadios = ['wellSign','stainedPad','padBrush','trash','unusedEquip'];
-  let firstMissing = null;
-  requiredRadios.forEach(name => {
-    const group = document.querySelector('input[name="' + name + '"]:checked');
-    const btns = document.querySelectorAll('input[name="' + name + '"]');
-    btns.forEach(b => b.closest('.radio-group').style.outline = group ? '' : '2px solid #c0392b');
-    if (!group && !firstMissing) firstMissing = btns[0];
-  });
-  if (firstMissing) { firstMissing.closest('.radio-group').scrollIntoView({behavior:'smooth',block:'center'}); return; }
-
   const btn = document.getElementById('submitBtn');
   btn.disabled = true;
   btn.textContent = 'Submitting...';
