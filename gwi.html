@@ -496,6 +496,16 @@ document.getElementById('gwi-form').addEventListener('submit', function(e) {
   if (!selectedWell) { wellInput.focus(); wellInput.style.borderColor = '#c0392b'; return; }
   if (!validateNums()) { document.querySelector('.input-error').scrollIntoView({behavior:'smooth',block:'center'}); return; }
 
+  const requiredRadios = ['power','pumpUnit','rods','compressor','tanks','tubingValve','casingValve','leaks','leaksFixed'];
+  let firstMissing = null;
+  requiredRadios.forEach(name => {
+    const checked = document.querySelector('input[name="'+name+'"]:checked');
+    const btns = document.querySelectorAll('input[name="'+name+'"]');
+    btns.forEach(b => b.closest('.radio-group').style.outline = checked ? '' : '2px solid #c0392b');
+    if (!checked && !firstMissing) firstMissing = btns[0];
+  });
+  if (firstMissing) { firstMissing.closest('.radio-group').scrollIntoView({behavior:'smooth',block:'center'}); return; }
+
   const btn = document.getElementById('submitBtn');
   btn.disabled = true;
   btn.textContent = 'Submitting...';
@@ -503,9 +513,9 @@ document.getElementById('gwi-form').addEventListener('submit', function(e) {
   const fd = new FormData();
   fd.append(ENTRY.inspectedBy, document.getElementById('inspectedBy').value);
   const dateParts = document.getElementById('inspDate').value.split('-');
-  fd.append(ENTRY.inspDate + '_year', dateParts[0]);
-  fd.append(ENTRY.inspDate + '_month', dateParts[1]);
-  fd.append(ENTRY.inspDate + '_day', dateParts[2]);
+  fd.append(ENTRY.inspDate + '_year', parseInt(dateParts[0]));
+  fd.append(ENTRY.inspDate + '_month', parseInt(dateParts[1]));
+  fd.append(ENTRY.inspDate + '_day', parseInt(dateParts[2]));
   fd.append(ENTRY.wellSite, selectedWell);
 
   const radios = {power:'power',pumpUnit:'pumpUnit',puRun:'puRun',rods:'rods',compressor:'compressor',

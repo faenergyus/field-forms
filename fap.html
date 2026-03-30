@@ -267,9 +267,9 @@ document.getElementById('fap-form').addEventListener('submit', function(e) {
   fd.append(ENTRY.fapShotBy, document.getElementById('fapShotBy').value);
   fd.append(ENTRY.wellName, selectedWell);
   const dateParts = document.getElementById('fapDate').value.split('-');
-  fd.append(ENTRY.fapDate + '_year',  dateParts[0]);
-  fd.append(ENTRY.fapDate + '_month', dateParts[1]);
-  fd.append(ENTRY.fapDate + '_day',   dateParts[2]);
+  fd.append(ENTRY.fapDate + '_year',  parseInt(dateParts[0]));
+  fd.append(ENTRY.fapDate + '_month', parseInt(dateParts[1]));
+  fd.append(ENTRY.fapDate + '_day',   parseInt(dateParts[2]));
 
   const texts = { fap:'fap', runtimePct:'runtimePct', spm:'spm', comment:'comment' };
   for (const [key, id] of Object.entries(texts)) {

@@ -391,9 +391,9 @@ document.getElementById('fac-form').addEventListener('submit', function(e) {
   const fd = new FormData();
   fd.append(ENTRY.inspectedBy, document.getElementById('inspectedBy').value);
   const dateParts = document.getElementById('inspDate').value.split('-');
-  fd.append(ENTRY.inspDate + '_year',  dateParts[0]);
-  fd.append(ENTRY.inspDate + '_month', dateParts[1]);
-  fd.append(ENTRY.inspDate + '_day',   dateParts[2]);
+  fd.append(ENTRY.inspDate + '_year',  parseInt(dateParts[0]));
+  fd.append(ENTRY.inspDate + '_month', parseInt(dateParts[1]));
+  fd.append(ENTRY.inspDate + '_day',   parseInt(dateParts[2]));
   fd.append(ENTRY.facilityName, selectedFacility);
 
   // Radio fields

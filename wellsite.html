@@ -134,7 +134,7 @@
       <div class="section">
         <div class="section-title">Well</div>
 
-        <label class="required">Rod Pump - Belt Guard Installed?</label>
+        <label>Rod Pump - Belt Guard Installed?</label>
         <div class="radio-group">
           <div class="radio-btn"><input type="radio" name="beltGuard" id="bg_yes" value="Yes"><label for="bg_yes">Yes</label></div>
           <div class="radio-btn"><input type="radio" name="beltGuard" id="bg_no" value="No"><label for="bg_no">No</label></div>
@@ -301,7 +301,7 @@ document.getElementById('wsi-form').addEventListener('submit', function(e) {
   if (!validateNums()) { document.querySelector('.input-error').scrollIntoView({behavior:'smooth',block:'center'}); return; }
 
   // Validate required radio groups
-  const requiredRadios = ['wellSign','stainedPad','padBrush','trash','unusedEquip','beltGuard'];
+  const requiredRadios = ['wellSign','stainedPad','padBrush','trash','unusedEquip'];
   let firstMissing = null;
   requiredRadios.forEach(name => {
     const group = document.querySelector('input[name="' + name + '"]:checked');

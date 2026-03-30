@@ -343,9 +343,9 @@ document.getElementById('pumpup-form').addEventListener('submit', function(e) {
   const fd = new FormData();
   fd.append(ENTRY.testPerformedBy, document.getElementById('testPerformedBy').value);
   const dateParts = document.getElementById('testDate').value.split('-');
-  fd.append(ENTRY.testDate + '_year', dateParts[0]);
-  fd.append(ENTRY.testDate + '_month', dateParts[1]);
-  fd.append(ENTRY.testDate + '_day', dateParts[2]);
+  fd.append(ENTRY.testDate + '_year', parseInt(dateParts[0]));
+  fd.append(ENTRY.testDate + '_month', parseInt(dateParts[1]));
+  fd.append(ENTRY.testDate + '_day', parseInt(dateParts[2]));
   fd.append(ENTRY.wellName, selectedWell);
 
   // Radio fields
