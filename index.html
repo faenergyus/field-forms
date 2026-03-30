@@ -79,7 +79,21 @@
     .price-down { color: #ff7070; }
     .price-dot { color: #4a724a; font-size: 1.2rem; line-height: 1; }
     .price-date { font-size: 0.58rem; color: #6a8a6a; display: block; }
-    @media (max-width: 600px) { .price-ticker { display: none; } }
+    @media (max-width: 600px) {
+      header { flex-wrap: wrap; padding: 12px 16px 8px; }
+      .price-ticker {
+        position: static; transform: none;
+        order: 3; width: 100%;
+        justify-content: center; gap: 20px;
+        padding: 6px 0 2px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        pointer-events: none;
+      }
+      .price-val { font-size: 0.85rem; }
+      .price-label { font-size: 0.58rem; }
+      .price-chg { font-size: 0.62rem; }
+      .price-date { font-size: 0.55rem; }
+    }
     .logo-fae { font-size: 1.9rem; font-weight: 900; letter-spacing: -1px; color: #5dc85d; line-height: 1; }
     .logo-fae span { color: #fff; font-weight: 300; }
     .logo-tagline { font-size: 0.75rem; color: #90bc90; letter-spacing: 0.1em; margin-top: 2px; }
