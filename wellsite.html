@@ -333,6 +333,9 @@ document.getElementById('wsi-form').addEventListener('submit', function(e) {
 
   const cmt = document.getElementById('comment').value;
   if (cmt) fd.append(ENTRY.comment, cmt);
+  fd.append('fvv', '1');
+  fd.append('fbzx', Math.floor(Math.random() * 9e18).toString());
+  fd.append('pageHistory', '0');
 
   fetch(FORM_ACTION, { method: 'POST', body: fd, mode: 'no-cors' })
     .then(() => showSuccess())

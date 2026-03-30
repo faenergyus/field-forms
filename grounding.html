@@ -257,6 +257,9 @@ document.getElementById('grounding-form').addEventListener('submit', function(e)
 
   const comment = document.getElementById('comment').value;
   if (comment) fd.append(ENTRY.comment, comment);
+  fd.append('fvv', '1');
+  fd.append('fbzx', Math.floor(Math.random() * 9e18).toString());
+  fd.append('pageHistory', '0');
 
   fetch(FORM_ACTION, { method: 'POST', body: fd, mode: 'no-cors' })
     .then(() => showSuccess())
