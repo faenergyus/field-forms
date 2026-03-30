@@ -159,6 +159,16 @@
     .chart-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #3a5a3a; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
     .chart-wrap { position: relative; height: 300px; width: 100%; }
     canvas { display: block; }
+    /* ── External chart tooltip ── */
+    #chart-tooltip {
+      position: fixed; z-index: 9000; pointer-events: none;
+      background: rgba(0,0,0,0.82); color: #fff;
+      border-radius: 6px; padding: 7px 10px;
+      font-size: 10px; line-height: 1.5;
+      max-width: 240px; white-space: pre-wrap; word-break: break-word;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+      display: none;
+    }
     .chart-card.span2 { grid-column: span 2; }
 
     /* ── Form Cards ── */
@@ -232,6 +242,7 @@
   </style>
 </head>
 <body>
+<div id="chart-tooltip"></div>
 
 <header>
   <div>
@@ -644,33 +655,41 @@ function makeChart(id, color) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          bodyFont: { size: 10 },
-          titleFont: { size: 10 },
-          boxPadding: 2,
-          padding: 6,
-          callbacks: {
-            label: function(ctx) {
-              const pumper = ctx.label;
-              const count = ctx.raw;
-              const wells = (ctx.dataset.wellsByPumper || {})[pumper] || [];
-              const MAX = 26;
-              const lines = [' ' + count + (count === 1 ? ' submission' : ' submissions')];
-              wells.forEach(function(w) {
-                // wrap long names at MAX chars on a word boundary
-                var words = w.split(' ');
-                var line = '  \u2022';
-                words.forEach(function(word) {
-                  if ((line + ' ' + word).length > MAX + 4) {
-                    lines.push(line);
-                    line = '    ' + word;
-                  } else {
-                    line += ' ' + word;
-                  }
-                });
-                lines.push(line);
-              });
-              return lines;
+          enabled: false,
+          external: function(context) {
+            var tip = document.getElementById('chart-tooltip');
+            if (!tip) return;
+            var model = context.tooltip;
+            if (model.opacity === 0) { tip.style.display = 'none'; return; }
+
+            var pumper = model.title && model.title[0];
+            if (!pumper) { tip.style.display = 'none'; return; }
+
+            var ds    = context.chart.data.datasets[0];
+            var count = ds.data[model.dataPoints[0].dataIndex];
+            var wells = (ds.wellsByPumper || {})[pumper] || [];
+
+            var html = '<strong>' + pumper + '</strong><br>'
+              + count + (count === 1 ? ' submission' : ' submissions');
+            if (wells.length) {
+              html += '<hr style="border:none;border-top:1px solid rgba(255,255,255,0.25);margin:4px 0">';
+              html += wells.map(function(w) { return '\u2022 ' + w; }).join('<br>');
             }
+            tip.innerHTML = html;
+            tip.style.display = 'block';
+
+            // Position near cursor, keep within viewport
+            var x = model.caretX + context.chart.canvas.getBoundingClientRect().left + 12;
+            var y = model.caretY + context.chart.canvas.getBoundingClientRect().top;
+            var vw = window.innerWidth, vh = window.innerHeight;
+            tip.style.left = '';  tip.style.right = '';
+            tip.style.top  = '';  tip.style.bottom = '';
+            // flip left if too close to right edge
+            if (x + 250 > vw) { tip.style.right = (vw - x + 24) + 'px'; }
+            else               { tip.style.left  = x + 'px'; }
+            // flip up if too close to bottom
+            if (y + tip.offsetHeight + 16 > vh) { tip.style.bottom = (vh - y) + 'px'; }
+            else                                 { tip.style.top    = y + 'px'; }
           }
         }
       },
