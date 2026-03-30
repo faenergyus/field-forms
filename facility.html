@@ -255,35 +255,7 @@
   </div>
 
 <script>
-const FORM_ACTION = 'https://docs.google.com/forms/d/e/1FAIpQLSeMkwySXY19QXMd4TUiNIYHAC3h4yHwJnn9yap-j-gmyaa46w/formResponse';
-const PHOTO_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwOXsEqPyzT4PrIqQK0pJ4wgynFFbdA1EsJQNfmdglrRQXqWtycYlPtZVgqZHTJgU6o/exec';
-
-const ENTRY = {
-  inspectedBy:    'entry.477301310',
-  inspDate:       'entry.264275726',
-  facilityName:   'entry.175632849',
-  stainedPad:     'entry.1161142953',
-  oosTanks:       'entry.2071144565',
-  windSock:       'entry.768746787',
-  firewall:       'entry.761471305',
-  firewallComments:'entry.727729726',
-  pumpContain:    'entry.1548790234',
-  pumpEmpty:      'entry.833303432',
-  sign:           'entry.497562928',
-  signComments:   'entry.1867967117',
-  thiefHatch:     'entry.790287668',
-  trash:          'entry.549761890',
-  trashComments:  'entry.1709910118',
-  dartsSeals:     'entry.392667862',
-  stencilled:     'entry.1334427109',
-  leakMethod:     'entry.170235322',
-  leaksFound:     'entry.1392298293',
-  leaksFixed1:    'entry.1606330293',
-  leaksFixed2:    'entry.418177253',
-  valveNote:      'entry.1389443121',
-  oxygenPPM:      'entry.141500299',
-  envConcerns:    'entry.1707049947',
-};
+const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwOXsEqPyzT4PrIqQK0pJ4wgynFFbdA1EsJQNfmdglrRQXqWtycYlPtZVgqZHTJgU6o/exec';
 
 const FACILITIES = ["#1 LYNN \"B-1\"", "#1 STEVENS \"B-14\"", "#2 DANCIGAR \"A-8\"", "#4 MEYER \"B-28-A\" AC-1", "A B COATES B", "AIRPORT", "ARCO CRUMP", "ARNOTT RAMSAY A CRP", "ARNOTT RAMSAY NCT-B", "ASCARTE C 24 #001", "Adele Sowell #1", "Arnott Ramsay CIF", "Arnott Ramsey A", "Arnott Ramsey LP CRP", "Atlantic State", "Aztec", "B A Christmas #2", "B DAVIS", "B M JUSTIS #12", "B T LANEHART #7", "BAYLUS CADE FEDERAL", "BERTIE WHITMIRE 8", "BOREN GREER GAS COM #004", "BRITT A 6", "BRITT A-6 1,2 01345", "BRITT B 8", "BRITT PHILLIPS", "BYRON WILLIAMS #1", "Bay Federal", "Britt CRP", "Britt Laughlin CRP", "Brownlee", "Brownlee #2", "C D WOOLWORTH", "C T BATES", "CARLSON FEDERAL 5", "CARLSON HARRISON FED COM 4", "CARTER EAVES", "CHRISTMAS A", "CITGO SE STATE #2", "CITIES THOMAS", "CLOSSON C 001", "CM Farnsworth A", "COOPER FEDERAL", "CURRIE", "Cagle C #5", "Carlson B Federal #1", "Carlson Federal A 1", "Carter #1", "Christmas B-2", "Citgo AS State #2, 3 CRP", "Closson B 2", "Clower State #1", "Courtland Myers #10", "Courtland Myers #9", "Cowden CRP", "DANCIGER #001", "DYER CRP", "Dabbs #3", "E C HILL B & D FEDERAL", "E C HILL C", "EDDY CORRIGAN #1,2 CRP", "EF KING #1", "ELLIOTT", "ELLIOTT B 6", "ELLIOTT FEDERAL 6", "EMERY KING NW", "EMERY KING SE", "EVA E BLINEBRY FEDERAL", "Elliott B 20", "Elliott Federal #1", "Elliott State", "FANNING", "FARNSWORTH  BATTERY", "FARNSWORTH 4", "FARNSWORTH B FEDERAL", "FARNSWORTH FEDERAL", "FEDERAL 714", "FEDERAL A CRP", "FEDERAL D ACCT A", "FEDERAL SEALE", "FM Burleson WN #2", "FM Burleson WN #3", "Fed D", "Federal F", "Fopeano", "Fowler State #1", "G G TRAVIS", "G H MATTIX FEDERAL", "GILLULLY B FEDERAL RA A", "GM State", "GREGORY B", "GUTMAN SWD", "Gregory B #1", "Gulf State", "Gutman #1", "H G MOBERLY A FEDERAL", "H S Record", "H T MATTERN #003", "HANSEN", "HARRISON FEDERAL #002", "HI TOP FEE", "HUGHES B-6 #11", "Henry Battery", "Henry Harrison 1", "Hodge #2", "Holt Mexico State Com #1", "Husky Woolworth #1", "Injector", "J F JANDA NCT H 003", "J F JANDA NCT-J", "J HIRAM MOORE STATE", "J K RECTOR #1", "J W Sherrill #11", "JACK B 30 #1,3", "JACK B 30 #2", "JOHN WHITTEN", "JUSTIS STATE #1", "JW COOPER A", "Jack Federal #5", "Janda State", "Johnson #4", "Johnson CTB", "Justice #10 CRP", "KIMMY", "LA MUNYON SWD #41 Tank Battery", "LAMUNYON 2", "LAMUNYON CTB", "LANEHART 001Y BATTERY", "LANEHART AIRPORT CRP", "LANGLIE A #3", "LANGLIE A FEDERAL", "LANGLIE C FEDERAL 001", "LANGLIE JAL FED #2", "LINDLEY", "LOCKHART", "LYNN A", "Lankford #2", "Late Thomas #2", "Late Thomas #4", "Lea 407", "Lw White Com", "M K STEWART", "M S Berryman #2", "MANDA \"C\" #1", "MARTIN B", "MCKINNEY SWD", "MOBERLY RHODES WF PROJECT", "MOSLEY", "MYCERS C SWD", "MYERS B FEDERAL #001", "MYERS B FEDERAL #011", "Magruder State", "Marlo State #1", "Matkins", "Mattie James #1 & 4 CRP", "Maveety State Gas Com #9", "McQuatters", "Mexico E 1", "Mexico E 2", "Mexico E 4", "Mexico E 5", "Mexico G CRP", "Mexico W", "Meyer B #9", "Meyer B 23", "Meyer B 31 A", "Meyer B CRP", "Meyer B-27 #3", "Meyers B Fed #7", "Munn Harrison #1", "Myers B #6", "Myers CRP", "NEW MEXICO AA STATE", "North Shore Woolworth #6", "OLSEN BLINBERRY #2", "Odessa Langlie Federal #1", "Otis L Jones #2", "PENROC STATE #1", "POSSH", "Prichard #1", "Quapaw Com #2", "R O Gregory A #3", "R R Bell", "REED A 3#2", "RHODES FED UNIT #415", "RHODES FED UNIT #86", "RHODES FED UNIT 155", "RHODES FED UNIT 157", "RHODES FED UNIT 158", "RHODES FED UNIT 22-1", "RHODES FED UNIT 223", "RHODES FED UNIT 266", "RHODES FED UNIT 27-2", "RHODES FED UNIT 83", "RHODES FED UNIT 96", "RHODES FEDERAL UNIT #56", "RHODES FEDERAL UNIT 159", "RHODES FEDERAL UNIT 226", "RHODES FEDERAL UNIT 55", "RHODES FEDERAL UNIT 87", "RR BELL NCT-1", "Resler", "Rhodes State Com #5", "Rhodes State Unit 16-5", "S.R. Cooper #3", "SALTMOUNT", "SEETON", "SHELL A STATE COM A5", "SHELL D STATE COM", "SHELL STATE #9", "SHELL STATE COM E1", "SHOLES 30 #3", "SHOLES B 13", "SHOLES B 25", "STATE \"28\" NO. 1", "STATE \"A\" #2", "STATE \"AY\" WELL NO. 1", "STATE \"BV\" #1", "STATE \"E\" COM #1", "STATE 157 F NO. 004", "STATE 157 G", "STATE A A/C 1 BATT 17", "STATE C TR 11", "STATE D", "STATE E", "STATE H", "STATE I GAS UNIT COMM #3", "STATE OF NEW MEXICO 35", "STATE WE H", "STEVENS A 35 COM", "STUART 9 #001", "Shell State #11", "Shell State #3", "Shell State #7", "Shell State #8", "Sherrill CRP", "Sinclair", "Skelly M State #4", "State \"C\"", "State 334", "State A #7", "State A 20 #4", "State A A/C 1 Batt 03", "State A A/C 1 Batt 05", "State A A/C 1 Batt 07", "State A A/C 1 Batt 08", "State A A/C 1 Batt 10", "State A A/C 1 Batt 11", "State A A/C 1 Batt 12", "State A A/C 1 Batt 13", "State A A/C 1 Batt 14", "State A A/C 1 Batt 15", "State A A/C 1 CIF", "State A A/C 2 Batt 01", "State A A/C 2 Batt 04", "State A A/C 2 Batt 05", "State A A/C 2 Batt 06", "State A A/C 2 Batt 07", "State A A/C 2 Batt 08", "State A A/C 2 CIF", "State A AC 1 Main Additional Battery", "State A Com #6", "State A Com #8", "State A Com CRP", "State E CRP", "State E Com #5", "State H 17 #2", "State J #6", "State O #4", "State SPX", "State WE F", "Steeler", "Stevens B 15 #3", "Stevens B7 #8", "TEAGUE INJECTION STATION", "THOMAS A", "Terra Carlson Federal #1", "Thomas A #1", "Toby #3", "Tom Closson", "Travis 5", "Turner State CRP", "VACUUM 31 #001", "VAN ZANDT", "W H ELSON", "W H King #4 CDP", "W T JOYNER", "W.H. Harrison #7", "W.H. Harrison WN #2", "WATKINS", "WATKINS #3", "WELLS A 7", "WELLS B-5 #1", "WELLS FEDERAL #15", "WELLS FEDERAL #17", "WELLS FEDERAL #18", "WELLS FEDERAL #21", "WEST EUMONT UNIT 112", "WEU 417", "WEU CIF", "Winningham #8", "Wulff State #2", "YATES STATE #1", "YATES STATE #2", "ZATTU CUSHING", "injector on NMOCD"];
 
@@ -379,74 +351,81 @@ function validateNums() {
 }
 
 // Form submission
-document.getElementById('fac-form').addEventListener('submit', function(e) {
+document.getElementById('fac-form').addEventListener('submit', async function(e) {
   e.preventDefault();
   if (!selectedFacility) { facInput.focus(); facInput.style.borderColor = '#c0392b'; return; }
   if (!validateNums()) { document.querySelector('.input-error').scrollIntoView({behavior:'smooth',block:'center'}); return; }
 
   const btn = document.getElementById('submitBtn');
+  const prog = document.getElementById('uploadProgress');
   btn.disabled = true;
   btn.textContent = 'Submitting...';
 
-  const fd = new URLSearchParams();
-  fd.append(ENTRY.inspectedBy, document.getElementById('inspectedBy').value);
-  const dateParts = document.getElementById('inspDate').value.split('-');
-  fd.append(ENTRY.inspDate + '_year',  parseInt(dateParts[0]));
-  fd.append(ENTRY.inspDate + '_month', parseInt(dateParts[1]));
-  fd.append(ENTRY.inspDate + '_day',   parseInt(dateParts[2]));
-  fd.append(ENTRY.facilityName, selectedFacility);
-
-  // Radio fields
-  const radioMap = {
-    stainedPad:'stainedPad', windSock:'windSock', firewall:'firewall',
-    pumpContain:'pumpContain', pumpEmpty:'pumpEmpty', sign:'sign',
-    thiefHatch:'thiefHatch', trash:'trash', dartsSeals:'dartsSeals',
-    stencilled:'stencilled', leakMethod:'leakMethod', leaksFound:'leaksFound',
-    leaksFixed1:'leaksFixed1', leaksFixed2:'leaksFixed2'
+  const getRadio = name => { const el = document.querySelector('input[name="'+name+'"]:checked'); return el ? el.value : ''; };
+  const fields = {
+    inspectedBy:      document.getElementById('inspectedBy').value,
+    inspDate:         document.getElementById('inspDate').value,
+    facilityName:     selectedFacility,
+    stainedPad:       getRadio('stainedPad'),
+    oosTanks:         document.getElementById('oostanks').value,
+    windSock:         getRadio('windSock'),
+    firewall:         getRadio('firewall'),
+    firewallComments: document.getElementById('firewallComments').value,
+    pumpContain:      getRadio('pumpContain'),
+    pumpEmpty:        getRadio('pumpEmpty'),
+    sign:             getRadio('sign'),
+    signComments:     document.getElementById('signComments').value,
+    thiefHatch:       getRadio('thiefHatch'),
+    trash:            getRadio('trash'),
+    trashComments:    document.getElementById('trashComments').value,
+    dartsSeals:       getRadio('dartsSeals'),
+    stencilled:       getRadio('stencilled'),
+    leakMethod:       getRadio('leakMethod'),
+    leaksFound:       getRadio('leaksFound'),
+    leaksFixed1:      getRadio('leaksFixed1'),
+    leaksFixed2:      getRadio('leaksFixed2'),
+    valveNote:        document.getElementById('valveNote').value,
+    oxygenPPM:        document.getElementById('oxygenPPM').value,
+    envConcerns:      document.getElementById('envConcerns').value
   };
-  for (const [key, name] of Object.entries(radioMap)) {
-    const checked = document.querySelector('input[name="' + name + '"]:checked');
-    if (checked) fd.append(ENTRY[key], checked.value);
-  }
 
-  // Select field (# OoS Tanks)
-  const ooVal = document.getElementById('oostanks').value;
-  if (ooVal !== '') fd.append(ENTRY.oosTanks, ooVal);
-
-  // Text/textarea fields
-  const textMap = {
-    firewallComments:'firewallComments', signComments:'signComments',
-    trashComments:'trashComments', valveNote:'valveNote', oxygenPPM:'oxygenPPM',
-    envConcerns:'envConcerns'
-  };
-  for (const [key, id] of Object.entries(textMap)) {
-    const val = document.getElementById(id).value.trim();
-    if (val && ENTRY[key]) fd.append(ENTRY[key], val);
-  }
-  fd.append('fvv', '1');
-  fd.append('fbzx', Math.floor(Math.random() * 9e18).toString());
-  fd.append('pageHistory', '0');
-
-  fetch(FORM_ACTION, { method: 'POST', body: fd, mode: 'no-cors' })
-    .then(() => showSuccess())
-    .catch(() => showSuccess());
-});
-
-function showSuccess() {
-  const facility = selectedFacility;
-  const date = document.getElementById('inspDate').value;
-  const inspector = document.getElementById('inspectedBy').value;
-  document.getElementById('successMsg').textContent = facility + ' — ' + date;
-  document.getElementById('submitBtn').disabled = false;
-  document.getElementById('submitBtn').textContent = 'Submit Inspection';
-  document.getElementById('successOverlay').classList.add('show');
+  const photos = [];
   if (photoFiles.length > 0) {
-    uploadPhotos(facility, date, inspector);
-  } else {
-    setTimeout(() => window.close(), 1500);
-    document.getElementById('newInspBtn').style.display = 'inline-block';
+    prog.style.display = 'block';
+    for (let i = 0; i < photoFiles.length; i++) {
+      prog.textContent = 'Encoding photo ' + (i + 1) + ' of ' + photoFiles.length + '...';
+      const base64 = await fileToBase64(photoFiles[i]);
+      photos.push({ name: photoFiles[i].name, base64, mimeType: photoFiles[i].type || 'image/jpeg' });
+    }
+    prog.textContent = 'Uploading...';
   }
-}
+
+  try {
+    const resp = await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ formType: 'facility', fields, photos })
+    });
+    const result = await resp.json();
+    if (result.success) {
+      document.getElementById('successMsg').textContent = selectedFacility + ' — ' + fields.inspDate;
+      btn.disabled = false;
+      btn.textContent = 'Submit Inspection';
+      prog.textContent = photos.length > 0 ? 'Photos uploaded!' : '';
+      document.getElementById('successOverlay').classList.add('show');
+      document.getElementById('newInspBtn').style.display = 'inline-block';
+      setTimeout(() => window.close(), 1500);
+    } else {
+      prog.textContent = 'Error: ' + (result.error || 'Unknown error');
+      btn.disabled = false;
+      btn.textContent = 'Submit Inspection';
+    }
+  } catch (err) {
+    prog.textContent = 'Submit error: ' + err.message;
+    btn.disabled = false;
+    btn.textContent = 'Submit Inspection';
+  }
+});
 
 document.getElementById('newInspBtn').addEventListener('click', function() {
   document.getElementById('successOverlay').classList.remove('show');
@@ -496,28 +475,6 @@ function fileToBase64(file) {
   });
 }
 
-async function uploadPhotos(facility, date, inspector) {
-  const prog = document.getElementById('uploadProgress');
-  prog.style.display = 'block';
-  const photos = [];
-  for (let i = 0; i < photoFiles.length; i++) {
-    prog.textContent = 'Uploading photo ' + (i + 1) + ' of ' + photoFiles.length + '...';
-    photos.push({ name: photoFiles[i].name, base64: await fileToBase64(photoFiles[i]), mimeType: photoFiles[i].type || 'image/jpeg' });
-  }
-  try {
-    const resp = await fetch(PHOTO_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ wellSite: facility, date, inspector, photos })
-    });
-    const result = await resp.json();
-    prog.textContent = result.success ? result.count + ' photo(s) uploaded!' : 'Upload error: ' + (result.error || '');
-    setTimeout(() => window.close(), 1500);
-  } catch (err) {
-    prog.textContent = 'Upload error: ' + err.message;
-  }
-  document.getElementById('newInspBtn').style.display = 'inline-block';
-}
 
 function resetForm() {
   document.getElementById('fac-form').reset();

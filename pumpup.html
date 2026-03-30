@@ -196,24 +196,7 @@
 </div>
 
 <script>
-const FORM_ACTION = 'https://docs.google.com/forms/d/e/1FAIpQLSc366DrGF712zDwzZBy6chnZjqE-d-5XTNUEWcR6pzbEZ3_Nw/formResponse';
-const PHOTO_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwOXsEqPyzT4PrIqQK0pJ4wgynFFbdA1EsJQNfmdglrRQXqWtycYlPtZVgqZHTJgU6o/exec';
-
-const ENTRY = {
-  testPerformedBy: 'entry.259274684',
-  testDate:        'entry.1047488386',
-  wellName:        'entry.62739910',
-  runTimePct:      'entry.1380210357',
-  strokesTo500:    'entry.1157762164',
-  holds500:        'entry.666316702',
-  pumpingPressure: 'entry.502845222',
-  tagging:         'entry.1787060220',
-  casingPressure:  'entry.2021631614',
-  checkValve:      'entry.671821103',
-  oilCut:          'entry.933783649',
-  spm:             'entry.1976493259',
-  notes:           'entry.1987412898',
-};
+const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwOXsEqPyzT4PrIqQK0pJ4wgynFFbdA1EsJQNfmdglrRQXqWtycYlPtZVgqZHTJgU6o/exec';
 
 const WELLS = ["A B COATES B #001", "ARNOTT RAMSAY NCT-B #006", "ARNOTT RAMSAY NCT-B #008", "ARNOTT RAMSAY NCT-B #009", "ARNOTT RAMSAY NCT-B #010", "ARNOTT RAMSAY NCT-B #012", "ARNOTT RAMSAY NCT-B #020", "ARNOTT RAMSAY NCT-B #021", "B DAVIS #003", "BAYLUS CADE FEDERAL #002", "BAYLUS CADE FEDERAL #004", "BAYLUS CADE FEDERAL #006", "BAYLUS CADE FEDERAL #007", "BRITT A 6 #005", "BRITT B 8 #002", "C D WOOLWORTH #004", "C D WOOLWORTH #005", "C D WOOLWORTH #006", "C D WOOLWORTH #007", "C D WOOLWORTH #008", "C D WOOLWORTH #010", "C E LAMUNYON #025", "C E LAMUNYON #030", "C E LAMUNYON #037", "C E LAMUNYON #040", "C E LAMUNYON #042", "C E LAMUNYON #044", "C E LAMUNYON #053", "C E LAMUNYON #056", "C E LAMUNYON #062", "C E LAMUNYON #068", "C E LAMUNYON #073", "C E LAMUNYON #074", "C E LAMUNYON #075", "C E LAMUNYON #080", "C T BATES #001", "C T BATES #003", "C T BATES #004", "CARLSON-HARRISON FEDERAL COM #004", "CARTER EAVES NCT A #002", "CHRISTMAS A #003", "CHRISTMAS A #004", "CITIES THOMAS #004", "CLOSSON B FEDERAL #012", "CLOSSON B FEDERAL #013", "CLOWER STATE #001", "COOPER FEDERAL #001", "CURRIE #001", "DANCIGER #001", "E C HILL A #007", "E C HILL B #005", "E C HILL B FEDERAL #015", "E C HILL B FEDERAL #017", "E C HILL B FEDERAL #018", "E C HILL B FEDERAL #020", "E C HILL B FEDERAL #023", "ELLIOTT #002", "ELLIOTT B 20 #001", "ELLIOTT B 20 #002", "ELLIOTT B 20 #003", "ELLIOTT B 6 #002", "ELLIOTT FEDERAL #006", "EMERY KING NW #001", "EVA E BLINEBRY FEDERAL #004", "EVA E BLINEBRY FEDERAL #008", "EVA E BLINEBRY FEDERAL #009", "EVA E BLINEBRY FEDERAL #010", "FANNING B #001", "FARNSWORTH 4 #002", "FARNSWORTH 4 #003", "FARNSWORTH 4 #010", "FARNSWORTH B FEDERAL #005", "FARNSWORTH FEDERAL #001", "FEDERAL 714 #003", "G G TRAVIS #003", "G G TRAVIS #004", "G H MATTIX FEDERAL #001", "G H MATTIX FEDERAL #003", "G H MATTIX FEDERAL #008", "GILLULLY B FEDERAL RA A #010", "GILLULLY B FEDERAL RA A #018", "GREGORY B #001", "H G MOBERLY A FEDERAL #001", "H G MOBERLY A FEDERAL #003", "HENRY #001", "HENRY #003", "HENRY #004", "HI TOP FEE #001", "J F JANDA NCT-J #005", "J HIRAM MOORE STATE #001", "J W COOPER A #004", "JACK B 30 #001", "JACK B 30 #002", "JACK B 30 #003", "KIMMY #003", "KIMMY #004", "KIMMY K #001", "LANEHART #001Y", "LANGLIE A FEDERAL #001", "LANGLIE A FEDERAL #002", "LINDLEY #001", "LINDLEY #002", "LOCKHART B 31 #005", "LOCKHART B 31 #008", "M K STEWART #002", "M K STEWART #005", "MCQUATTERS COM #004", "MEYER B 23 #003", "MEYER B 31 A #001", "MEYER B 31 A #002", "MEYER B 31 A #003", "MEYER B 31 A #005", "MEYER B 31 A #006", "MYERS B FEDERAL #011", "NEW MEXICO AA STATE #007", "NEW MEXICO AA STATE #008", "NORTHSHORE WOOLWORTH #006", "POSSH #004", "RHODES FEDERAL UNIT #087", "RHODES FEDERAL UNIT #226", "SALTMOUNT #003", "SEETON #001", "SEETON #002", "SEETON #003", "SEETON #004", "SHELL D STATE COM #013", "SHOLES B 13 #004", "SHOLES B 25 #001", "STATE A A/C 1 #036", "STATE A A/C 1 #043", "STATE A A/C 1 #045", "STATE A A/C 1 #046", "STATE A A/C 1 #048", "STATE A A/C 1 #061", "STATE A A/C 1 #064", "STATE A A/C 1 #065", "STATE A A/C 1 #069", "STATE A A/C 1 #072", "STATE A A/C 1 #073", "STATE A A/C 1 #080", "STATE A A/C 1 #081", "STATE A A/C 1 #084", "STATE A A/C 1 #102", "STATE A A/C 1 #129", "STATE A A/C 2 #004", "STATE A A/C 2 #009", "STATE A A/C 2 #023", "STATE A A/C 2 #024", "STATE A A/C 2 #025", "STATE A A/C 2 #026", "STATE A A/C 2 #027", "STATE A A/C 2 #030", "STATE A A/C 2 #033", "STATE A A/C 2 #046", "STATE A A/C 2 #047", "STATE A A/C 2 #054", "STATE BV #001", "STATE C TR 11 #007", "STATE C TR 11 #008", "STATE C TR 11 #009", "STATE D #005", "STATE D #007", "STATE E #002", "STATE H #005", "STATE OF NEW MEXICO 35 #002", "STEVENS A 35 COM #003", "STEVENS B 15 #003", "STUART 9 #001", "THOMAS A #003", "THOMAS A #004", "TRAVIS #005", "VACUUM 31 #001", "VAN ZANDT #001", "W H ELSON #002", "W T JOYNER #001", "WATKINS #003", "WELLS A #007", "WEST EUMONT UNIT #102", "WEST EUMONT UNIT #104", "WEST EUMONT UNIT #107", "WEST EUMONT UNIT #111", "WEST EUMONT UNIT #130", "WEST EUMONT UNIT #131", "WEST EUMONT UNIT #203", "WEST EUMONT UNIT #204", "WEST EUMONT UNIT #206", "WEST EUMONT UNIT #207", "WEST EUMONT UNIT #209", "WEST EUMONT UNIT #210", "WEST EUMONT UNIT #215", "WEST EUMONT UNIT #216", "WEST EUMONT UNIT #217", "WEST EUMONT UNIT #220", "WEST EUMONT UNIT #402", "WEST EUMONT UNIT #410", "WEST EUMONT UNIT #411", "WEST EUMONT UNIT #417", "WEST EUMONT UNIT #502", "WEST EUMONT UNIT #509", "WEST EUMONT UNIT #510", "WEST EUMONT UNIT #511", "WEST EUMONT UNIT #512", "WEST EUMONT UNIT #513", "WEST EUMONT UNIT #514", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #519", "WEST EUMONT UNIT #521", "WEST EUMONT UNIT #528", "WEST EUMONT UNIT #610", "ZATTU CUSHING #001", "ZATTU CUSHING #002"];
 
@@ -331,61 +314,69 @@ function validateNums() {
 }
 
 // Form submission
-document.getElementById('pumpup-form').addEventListener('submit', function(e) {
+document.getElementById('pumpup-form').addEventListener('submit', async function(e) {
   e.preventDefault();
   if (!selectedWell) { wellInput.focus(); wellInput.style.borderColor = '#c0392b'; return; }
   if (!validateNums()) { document.querySelector('.input-error').scrollIntoView({behavior:'smooth',block:'center'}); return; }
 
   const btn = document.getElementById('submitBtn');
+  const prog = document.getElementById('uploadProgress2');
   btn.disabled = true;
   btn.textContent = 'Submitting...';
 
-  const fd = new URLSearchParams();
-  fd.append(ENTRY.testPerformedBy, document.getElementById('testPerformedBy').value);
-  const dateParts = document.getElementById('testDate').value.split('-');
-  fd.append(ENTRY.testDate + '_year', parseInt(dateParts[0]));
-  fd.append(ENTRY.testDate + '_month', parseInt(dateParts[1]));
-  fd.append(ENTRY.testDate + '_day', parseInt(dateParts[2]));
-  fd.append(ENTRY.wellName, selectedWell);
+  const getRadio = name => { const el = document.querySelector('input[name="'+name+'"]:checked'); return el ? el.value : ''; };
+  const fields = {
+    testPerformedBy: document.getElementById('testPerformedBy').value,
+    testDate:        document.getElementById('testDate').value,
+    wellName:        selectedWell,
+    runTimePct:      document.getElementById('runTimePct').value,
+    strokesTo500:    document.getElementById('strokesTo500').value,
+    holds500:        getRadio('holds500'),
+    pumpingPressure: document.getElementById('pumpingPressure').value,
+    tagging:         getRadio('tagging'),
+    casingPressure:  document.getElementById('casingPressure').value,
+    checkValve:      getRadio('checkValve'),
+    oilCut:          document.getElementById('oilCut').value,
+    spm:             document.getElementById('spm').value,
+    notes:           document.getElementById('notes').value
+  };
 
-  // Radio fields
-  const radios = {holds500:'holds500', tagging:'tagging', checkValve:'checkValve'};
-  for (const [key, name] of Object.entries(radios)) {
-    const checked = document.querySelector('input[name="'+name+'"]:checked');
-    if (checked) fd.append(ENTRY[key], checked.value);
-  }
-
-  // Numeric / text fields
-  const textFields = {runTimePct:'runTimePct', strokesTo500:'strokesTo500',
-    pumpingPressure:'pumpingPressure', casingPressure:'casingPressure',
-    oilCut:'oilCut', spm:'spm', notes:'notes'};
-  for (const [key, id] of Object.entries(textFields)) {
-    const val = document.getElementById(id).value;
-    if (val) fd.append(ENTRY[key], val);
-  }
-  fd.append('fvv', '1');
-  fd.append('fbzx', Math.floor(Math.random() * 9e18).toString());
-  fd.append('pageHistory', '0');
-
-  fetch(FORM_ACTION, { method: 'POST', body: fd, mode: 'no-cors' })
-    .then(() => showSuccess())
-    .catch(() => showSuccess());
-});
-
-function showSuccess() {
-  const well = selectedWell;
-  const date = document.getElementById('testDate').value;
-  const inspector = document.getElementById('testPerformedBy').value;
-  document.getElementById('successMsg').textContent = well + ' — ' + date;
-  document.getElementById('submitBtn').disabled = false;
-  document.getElementById('submitBtn').textContent = 'Submit';
-  document.getElementById('successOverlay').classList.add('show');
+  const photos = [];
   if (photoFiles.length > 0) {
-    uploadPhotos(well, date, inspector);
-  } else {
-    document.getElementById('newEntryBtn').style.display = 'inline-block';
+    prog.style.display = 'block';
+    for (let i = 0; i < photoFiles.length; i++) {
+      prog.textContent = 'Encoding photo ' + (i + 1) + ' of ' + photoFiles.length + '...';
+      const base64 = await fileToBase64(photoFiles[i]);
+      photos.push({ name: photoFiles[i].name, base64, mimeType: photoFiles[i].type || 'image/jpeg' });
+    }
+    prog.textContent = 'Uploading...';
   }
-}
+
+  try {
+    const resp = await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ formType: 'pumpup', fields, photos })
+    });
+    const result = await resp.json();
+    if (result.success) {
+      document.getElementById('successMsg').textContent = selectedWell + ' — ' + fields.testDate;
+      btn.disabled = false;
+      btn.textContent = 'Submit';
+      prog.textContent = photos.length > 0 ? 'Photos uploaded!' : '';
+      document.getElementById('successOverlay').classList.add('show');
+      document.getElementById('newEntryBtn').style.display = 'inline-block';
+    } else {
+      prog.textContent = 'Error: ' + (result.error || 'Unknown error');
+      btn.disabled = false;
+      btn.textContent = 'Submit';
+    }
+  } catch (err) {
+    prog.textContent = 'Submit error: ' + err.message;
+    btn.disabled = false;
+    btn.textContent = 'Submit';
+  }
+});
 
 document.getElementById('newEntryBtn').addEventListener('click', function() {
   document.getElementById('successOverlay').classList.remove('show');
@@ -437,33 +428,6 @@ function fileToBase64(file) {
   });
 }
 
-async function uploadPhotos(wellSite, date, inspector) {
-  if (photoFiles.length === 0) return;
-  const prog = document.getElementById('uploadProgress2');
-  prog.style.display = 'block';
-  const photos = [];
-  for (let i = 0; i < photoFiles.length; i++) {
-    prog.textContent = 'Uploading photo ' + (i + 1) + ' of ' + photoFiles.length + '...';
-    const b64 = await fileToBase64(photoFiles[i]);
-    photos.push({ name: photoFiles[i].name, base64: b64, mimeType: photoFiles[i].type || 'image/jpeg' });
-  }
-  try {
-    const resp = await fetch(PHOTO_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ wellSite, date, inspector, photos })
-    });
-    const result = await resp.json();
-    if (result.success) {
-      prog.textContent = result.count + ' photo(s) uploaded!';
-    } else {
-      prog.textContent = 'Photo upload error: ' + (result.error || '');
-    }
-  } catch (err) {
-    prog.textContent = 'Photo upload error: ' + err.message;
-  }
-  document.getElementById('newEntryBtn').style.display = 'inline-block';
-}
 
 function resetForm() {
   document.getElementById('pumpup-form').reset();

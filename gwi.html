@@ -346,8 +346,7 @@
   </div>
 
 <script>
-const FORM_ACTION = 'https://docs.google.com/forms/d/e/1FAIpQLSfCoQ4xKJDhmmVBGTMgQjtQ11NgBLk4qMBuVJGHDHkmWbQxgw/formResponse';
-const PHOTO_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwOXsEqPyzT4PrIqQK0pJ4wgynFFbdA1EsJQNfmdglrRQXqWtycYlPtZVgqZHTJgU6o/exec';
+const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwOXsEqPyzT4PrIqQK0pJ4wgynFFbdA1EsJQNfmdglrRQXqWtycYlPtZVgqZHTJgU6o/exec';
 
 const ENTRY = {
   inspectedBy:      'entry.422563114',
@@ -497,73 +496,88 @@ function validateNums() {
 }
 
 // Form submission
-document.getElementById('gwi-form').addEventListener('submit', function(e) {
+document.getElementById('gwi-form').addEventListener('submit', async function(e) {
   e.preventDefault();
   if (!selectedWell) { wellInput.focus(); wellInput.style.borderColor = '#c0392b'; return; }
   if (!validateNums()) { document.querySelector('.input-error').scrollIntoView({behavior:'smooth',block:'center'}); return; }
 
-  // Validate required radios
   const btn = document.getElementById('submitBtn');
+  const prog = document.getElementById('uploadProgress');
   btn.disabled = true;
   btn.textContent = 'Submitting...';
 
-  const fd = new URLSearchParams();
-  fd.append(ENTRY.inspectedBy, document.getElementById('inspectedBy').value);
-  const dateParts = document.getElementById('inspDate').value.split('-');
-  fd.append(ENTRY.inspDate + '_year', parseInt(dateParts[0]));
-  fd.append(ENTRY.inspDate + '_month', parseInt(dateParts[1]));
-  fd.append(ENTRY.inspDate + '_day', parseInt(dateParts[2]));
-  fd.append(ENTRY.wellSite, selectedWell);
+  // Build fields object
+  const fields = {};
+  fields.inspectedBy = document.getElementById('inspectedBy').value;
+  fields.inspDate    = document.getElementById('inspDate').value;
+  fields.wellSite    = selectedWell;
 
-  const radios = {power:'power',pumpUnit:'pumpUnit',puRun:'puRun',rods:'rods',compressor:'compressor',
+  const radioNames = {power:'power',pumpUnit:'pumpUnit',puRun:'puRun',rods:'rods',compressor:'compressor',
     tanks:'tanks',tanksHooked:'tanksHooked',separator:'separator',sepLiquid:'sepLiquid',
     tubingValve:'tubingValve',casingValve:'casingValve',leaks:'leaks',leaksFixed:'leaksFixed'};
-  for (const [key, name] of Object.entries(radios)) {
+  for (const [key, name] of Object.entries(radioNames)) {
     const checked = document.querySelector('input[name="'+name+'"]:checked');
-    if (checked) fd.append(ENTRY[key], checked.value);
+    fields[key] = checked ? checked.value : '';
   }
 
-  document.querySelectorAll('.checkbox-group input:checked').forEach(cb => {
-    fd.append(ENTRY.inspMethod, cb.value);
-  });
+  const methods = [];
+  document.querySelectorAll('.checkbox-group input:checked').forEach(cb => methods.push(cb.value));
+  fields.inspMethod = methods.join(', ');
 
-  const texts = {suction:'suction',dischargeLimits:'dischargeLimits',dischargePressure:'dischargePressure',
+  const textIds = {suction:'suction',dischargeLimits:'dischargeLimits',dischargePressure:'dischargePressure',
     tankDetails:'tankDetails',piping:'piping',flowRate:'flowRate',staticPressure:'staticPressure',
     flowTime:'flowTime',buildTime:'buildTime',fap:'fap'};
-  for (const [key, id] of Object.entries(texts)) {
-    const val = document.getElementById(id).value;
-    if (val) fd.append(ENTRY[key], val);
+  for (const [key, id] of Object.entries(textIds)) {
+    fields[key] = document.getElementById(id).value;
   }
+  fields.casingPressure = document.getElementById('casingPressure').value;
+  fields.tubingPressure = document.getElementById('tubingPressure').value;
 
-  const cp = document.getElementById('casingPressure').value;
-  const tp = document.getElementById('tubingPressure').value;
-  if (cp !== '') fd.append(ENTRY.casingPressure, cp);
-  if (tp !== '') fd.append(ENTRY.tubingPressure, tp);
-  fd.append('fvv', '1');
-  fd.append('fbzx', Math.floor(Math.random() * 9e18).toString());
-  fd.append('pageHistory', '0');
-
-  fetch(FORM_ACTION, { method: 'POST', body: fd, mode: 'no-cors' })
-    .then(() => showSuccess())
-    .catch(() => showSuccess());
-});
-
-function showSuccess() {
-  const well = selectedWell;
-  const date = document.getElementById('inspDate').value;
-  const inspector = document.getElementById('inspectedBy').value;
-  document.getElementById('successMsg').textContent = well + ' — ' + date;
-  document.getElementById('submitBtn').disabled = false;
-  document.getElementById('submitBtn').textContent = 'Submit Inspection';
-  document.getElementById('successOverlay').classList.add('show');
+  // Collect photos as base64
+  const photos = [];
   if (photoFiles.length > 0) {
-    uploadPhotos(well, date, inspector);
-  } else {
-    // No photos — close after a brief moment
-    setTimeout(() => window.close(), 1500);
-    document.getElementById('newInspBtn').style.display = 'inline-block';
+    prog.style.display = 'block';
+    for (let i = 0; i < photoFiles.length; i++) {
+      prog.textContent = 'Preparing photo ' + (i+1) + ' of ' + photoFiles.length + '...';
+      const b64 = await fileToBase64(photoFiles[i]);
+      photos.push({name: photoFiles[i].name, base64: b64, mimeType: photoFiles[i].type || 'image/jpeg'});
+    }
+    prog.textContent = 'Submitting...';
   }
-}
+
+  try {
+    const resp = await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain'},
+      body: JSON.stringify({formType: 'gwi', fields, photos})
+    });
+    const result = await resp.json();
+    if (result.success) {
+      document.getElementById('successMsg').textContent = selectedWell + ' — ' + fields.inspDate;
+      if (result.photoUrls && result.photoUrls.length > 0) {
+        prog.style.display = 'block';
+        prog.innerHTML = result.photoUrls.length + ' photo(s) saved! ' +
+          result.photoUrls.map((u,i) => '<a href="'+u+'" target="_blank" style="color:#27ae60">Photo '+(i+1)+'</a>').join(' ');
+      } else {
+        prog.style.display = 'none';
+      }
+      btn.disabled = false;
+      btn.textContent = 'Submit Inspection';
+      document.getElementById('successOverlay').classList.add('show');
+      document.getElementById('newInspBtn').style.display = 'inline-block';
+    } else {
+      prog.style.display = 'block';
+      prog.textContent = 'Submit failed: ' + (result.error || 'Unknown error');
+      btn.disabled = false;
+      btn.textContent = 'Submit Inspection';
+    }
+  } catch(err) {
+    prog.style.display = 'block';
+    prog.textContent = 'Submit failed: ' + err.message;
+    btn.disabled = false;
+    btn.textContent = 'Submit Inspection';
+  }
+});
 
 document.getElementById('newInspBtn').addEventListener('click', function() {
   document.getElementById('successOverlay').classList.remove('show');
@@ -614,34 +628,6 @@ function fileToBase64(file) {
   });
 }
 
-async function uploadPhotos(wellSite, date, inspector) {
-  if (photoFiles.length === 0) return;
-  const prog = document.getElementById('uploadProgress');
-  prog.style.display = 'block';
-  const photos = [];
-  for (let i = 0; i < photoFiles.length; i++) {
-    prog.textContent = 'Uploading photo ' + (i + 1) + ' of ' + photoFiles.length + '...';
-    const b64 = await fileToBase64(photoFiles[i]);
-    photos.push({ name: photoFiles[i].name, base64: b64, mimeType: photoFiles[i].type || 'image/jpeg' });
-  }
-  try {
-    const resp = await fetch(PHOTO_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ wellSite, date, inspector, photos })
-    });
-    const result = await resp.json();
-    if (result.success) {
-      prog.textContent = result.count + ' photo(s) uploaded!';
-      setTimeout(() => window.close(), 1500);
-    } else {
-      prog.textContent = 'Photo upload error: ' + (result.error || '');
-    }
-  } catch (err) {
-    prog.textContent = 'Photo upload error: ' + err.message;
-  }
-  document.getElementById('newInspBtn').style.display = 'inline-block';
-}
 
 function resetForm() {
   document.getElementById('gwi-form').reset();
