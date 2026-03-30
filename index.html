@@ -644,13 +644,31 @@ function makeChart(id, color) {
       plugins: {
         legend: { display: false },
         tooltip: {
+          bodyFont: { size: 10 },
+          titleFont: { size: 10 },
+          boxPadding: 2,
+          padding: 6,
           callbacks: {
             label: function(ctx) {
               const pumper = ctx.label;
               const count = ctx.raw;
               const wells = (ctx.dataset.wellsByPumper || {})[pumper] || [];
+              const MAX = 26;
               const lines = [' ' + count + (count === 1 ? ' submission' : ' submissions')];
-              wells.forEach(w => lines.push('  \u2022 ' + w));
+              wells.forEach(function(w) {
+                // wrap long names at MAX chars on a word boundary
+                var words = w.split(' ');
+                var line = '  \u2022';
+                words.forEach(function(word) {
+                  if ((line + ' ' + word).length > MAX + 4) {
+                    lines.push(line);
+                    line = '    ' + word;
+                  } else {
+                    line += ' ' + word;
+                  }
+                });
+                lines.push(line);
+              });
               return lines;
             }
           }
