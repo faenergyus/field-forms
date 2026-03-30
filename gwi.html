@@ -496,6 +496,7 @@ document.getElementById('gwi-form').addEventListener('submit', function(e) {
   if (!selectedWell) { wellInput.focus(); wellInput.style.borderColor = '#c0392b'; return; }
   if (!validateNums()) { document.querySelector('.input-error').scrollIntoView({behavior:'smooth',block:'center'}); return; }
 
+  // Validate required radios
   const requiredRadios = ['power','pumpUnit','rods','compressor','tanks','tubingValve','casingValve','leaks','leaksFixed'];
   let firstMissing = null;
   requiredRadios.forEach(name => {
@@ -505,6 +506,43 @@ document.getElementById('gwi-form').addEventListener('submit', function(e) {
     if (!checked && !firstMissing) firstMissing = btns[0];
   });
   if (firstMissing) { firstMissing.closest('.radio-group').scrollIntoView({behavior:'smooth',block:'center'}); return; }
+
+  // Validate required text fields
+  const requiredTexts = [
+    {id:'piping',    label:'Describe piping'},
+    {id:'flowRate',  label:'Flow Rate'},
+    {id:'staticPressure', label:'Static Pressure'},
+    {id:'flowTime',  label:'Flow time'},
+    {id:'buildTime', label:'Build time'},
+  ];
+  for (const {id, label} of requiredTexts) {
+    const el = document.getElementById(id);
+    if (!el.value.trim()) {
+      el.style.borderColor = '#c0392b';
+      el.scrollIntoView({behavior:'smooth', block:'center'});
+      el.focus();
+      return;
+    } else { el.style.borderColor = ''; }
+  }
+
+  // Validate inspection method checkbox
+  const methodChecked = document.querySelectorAll('.checkbox-group input:checked');
+  if (!methodChecked.length) {
+    const firstCb = document.querySelector('.checkbox-group input');
+    firstCb.closest('.checkbox-group').style.outline = '2px solid #c0392b';
+    firstCb.closest('.checkbox-group').scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  } else { document.querySelector('.checkbox-group').style.outline = ''; }
+
+  // Validate required dropdowns
+  const cp = document.getElementById('casingPressure').value;
+  const tp = document.getElementById('tubingPressure').value;
+  if (cp === '' || tp === '') {
+    const el = document.getElementById(cp === '' ? 'casingPressure' : 'tubingPressure');
+    el.style.borderColor = '#c0392b';
+    el.scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
 
   const btn = document.getElementById('submitBtn');
   btn.disabled = true;
@@ -540,8 +578,8 @@ document.getElementById('gwi-form').addEventListener('submit', function(e) {
 
   const cp = document.getElementById('casingPressure').value;
   const tp = document.getElementById('tubingPressure').value;
-  if (cp) fd.append(ENTRY.casingPressure, cp);
-  if (tp) fd.append(ENTRY.tubingPressure, tp);
+  if (cp !== '') fd.append(ENTRY.casingPressure, cp);
+  if (tp !== '') fd.append(ENTRY.tubingPressure, tp);
 
   fetch(FORM_ACTION, { method: 'POST', body: fd, mode: 'no-cors' })
     .then(() => showSuccess())
