@@ -47,6 +47,8 @@
     .overlay-btn { padding: 12px 24px; border-radius: 8px; border: none; font-size: 0.95rem; font-weight: 600; cursor: pointer; margin: 4px; }
     .btn-new { background: #2d7a2d; color: #fff; }
     .btn-new:active { background: #1c5a1c; }
+    .btn-close { background: #6c757d; color: #fff; }
+    .btn-close:active { background: #495057; }
 
     /* Photo upload */
     .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0 12px; }
@@ -143,6 +145,7 @@
       <p id="successMsg"></p>
       <div class="upload-progress" id="uploadProgress" style="margin-bottom:8px;"></div>
       <button class="overlay-btn btn-new" id="newFapBtn" style="display:none;">New FAP</button>
+      <button class="overlay-btn btn-close" id="closeBtn" style="display:none;">Close</button>
     </div>
   </div>
 
@@ -293,6 +296,7 @@ document.getElementById('fap-form').addEventListener('submit', async function(e)
       prog.textContent = photos.length > 0 ? 'Photos uploaded!' : '';
       document.getElementById('successOverlay').classList.add('show');
       document.getElementById('newFapBtn').style.display = 'inline-block';
+      document.getElementById('closeBtn').style.display = 'inline-block';
       setTimeout(() => window.close(), 1500);
     } else {
       prog.textContent = 'Error: ' + (result.error || 'Unknown error');
@@ -309,6 +313,10 @@ document.getElementById('fap-form').addEventListener('submit', async function(e)
 document.getElementById('newFapBtn').addEventListener('click', function() {
   document.getElementById('successOverlay').classList.remove('show');
   resetForm();
+});
+
+document.getElementById('closeBtn').addEventListener('click', function() {
+  window.close();
 });
 
 // ── Photo grids ──────────────────────────────────────────────────────────────

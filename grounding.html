@@ -57,8 +57,9 @@
     .overlay-card h2 { color: #1c4a1c; font-size: 1.2rem; margin-bottom: 4px; }
     .overlay-card p { color: #4a724a; font-size: 0.9rem; margin-bottom: 16px; }
     .upload-progress { font-size: 0.85rem; color: #3a5a3a; margin-bottom: 12px; display: none; }
-    .overlay-btn { padding: 10px 24px; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+    .overlay-btn { padding: 10px 24px; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; margin: 4px; }
     .btn-new { background: #2d7a2d; color: #fff; }
+    .btn-close { background: #6c757d; color: #fff; }
   </style>
 </head>
 <body>
@@ -148,6 +149,7 @@
     <p id="successMsg"></p>
     <div class="upload-progress" id="uploadProgress"></div>
     <button class="overlay-btn btn-new" id="newSurveyBtn" style="display:none;">New Survey</button>
+    <button class="overlay-btn btn-close" id="closeBtn" style="display:none;">Close</button>
   </div>
 </div>
 
@@ -267,6 +269,7 @@ document.getElementById('grounding-form').addEventListener('submit', async funct
       prog.textContent = photos.length > 0 ? 'Photos uploaded!' : '';
       document.getElementById('successOverlay').classList.add('show');
       document.getElementById('newSurveyBtn').style.display = 'inline-block';
+      document.getElementById('closeBtn').style.display = 'inline-block';
     } else {
       prog.textContent = 'Error: ' + (result.error || 'Unknown error');
       btn.disabled = false;
@@ -282,6 +285,10 @@ document.getElementById('grounding-form').addEventListener('submit', async funct
 document.getElementById('newSurveyBtn').addEventListener('click', function() {
   document.getElementById('successOverlay').classList.remove('show');
   resetForm();
+});
+
+document.getElementById('closeBtn').addEventListener('click', function() {
+  window.close();
 });
 
 // Photo grid
