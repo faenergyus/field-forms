@@ -304,7 +304,7 @@ document.getElementById('wsi-form').addEventListener('submit', function(e) {
   btn.disabled = true;
   btn.textContent = 'Submitting...';
 
-  const fd = new FormData();
+  const fd = new URLSearchParams();
   fd.append(ENTRY.inspectedBy, document.getElementById('inspectedBy').value);
   const dateParts = document.getElementById('inspDate').value.split('-');
   fd.append(ENTRY.inspDate + '_year',  parseInt(dateParts[0]));

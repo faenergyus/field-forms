@@ -340,7 +340,7 @@ document.getElementById('pumpup-form').addEventListener('submit', function(e) {
   btn.disabled = true;
   btn.textContent = 'Submitting...';
 
-  const fd = new FormData();
+  const fd = new URLSearchParams();
   fd.append(ENTRY.testPerformedBy, document.getElementById('testPerformedBy').value);
   const dateParts = document.getElementById('testDate').value.split('-');
   fd.append(ENTRY.testDate + '_year', parseInt(dateParts[0]));

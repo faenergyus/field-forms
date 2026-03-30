@@ -263,7 +263,7 @@ document.getElementById('fap-form').addEventListener('submit', function(e) {
   btn.disabled = true;
   btn.textContent = 'Submitting...';
 
-  const fd = new FormData();
+  const fd = new URLSearchParams();
   fd.append(ENTRY.fapShotBy, document.getElementById('fapShotBy').value);
   fd.append(ENTRY.wellName, selectedWell);
   const dateParts = document.getElementById('fapDate').value.split('-');
