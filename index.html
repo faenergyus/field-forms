@@ -497,7 +497,7 @@
 
   <footer>
     Forty Acres Energy &nbsp;·&nbsp; Field Operations &nbsp;·&nbsp; Internal Use Only
-    <div class="data-note">Dashboard data from Google Sheets · Updated 2026-03-31 10:47</div>
+    <div class="data-note">Dashboard data from Google Sheets · Updated 2026-03-31 10:53</div>
   </footer>
 </div>
 
@@ -513,8 +513,8 @@ const TILE_DEFS = [
   { key:'gwi',      color:'#2d7a2d' },
   { key:'fap',      color:'#1a8a7a' },
   { key:'pumpup',   color:'#c8860a' },
-  { key:'wellsite', color:'#2a6ea6' },
-  { key:'facility', color:'#4a7a9a' },
+  { key:'wellsite', color:'#1565c0' },
+  { key:'facility', color:'#b94c00' },
   { key:'whs',      color:'#7a5aaa' },
 ];
 
@@ -523,18 +523,18 @@ const CHART_DEFS = [
   { id:'c-avo',               keys:['avo'],                 colors:['#9c6b3a'],           labels:['AVO Inspection'] },
   { id:'c-gwi',               keys:['gwi'],                 colors:['#2d7a2d'],           labels:['Gas Well Inspection'] },
   { id:'c-fap-pumpup',        keys:['fap','pumpup'],        colors:['#1a8a7a','#c8860a'], labels:['FAP','Pump Up'] },
-  { id:'c-wellsite-facility', keys:['wellsite','facility'], colors:['#2a6ea6','#4a7a9a'], labels:['Well Site','Facility'] },
+  { id:'c-wellsite-facility', keys:['wellsite','facility'], colors:['#1565c0','#b94c00'], labels:['Well Site','Facility'] },
 ];
 
 const ZERO = () => ({ total: 0, byPumper: {}, wellsByPumper: {} });
 
-const DATA = {  // auto-refreshed 2026-03-31 10:48
+const DATA = {  // auto-refreshed 2026-03-31 10:53
   pastweek: {
     avo      : { total: 1, byPumper: { 'Armando': 1 }, wellsByPumper: { 'Armando': ["HUGHES B-6 #011"] } },
     gwi      : { total: 1, byPumper: { 'Wynn': 1 }, wellsByPumper: { 'Wynn': ["STEVENS B #013"] } },
     fap      : ZERO(),
     pumpup   : { total: 1, byPumper: { 'Armando': 1 }, wellsByPumper: { 'Armando': ["STATE A A/C 2 #024"] } },
-    wellsite : { total: 8, byPumper: { '2026-03-27': 7, '2026-03-30': 1 }, wellsByPumper: { '2026-03-27': ["Eli"], '2026-03-30': ["Eli"] } },
+    wellsite : { total: 8, byPumper: { 'Eli': 8 }, wellsByPumper: {  } },
     facility : { total: 1, byPumper: { 'Eli': 1 }, wellsByPumper: { 'Eli': ["TEAGUE INJECTION STATION"] } },
     whs      : ZERO(),
     env      : ZERO(),
@@ -544,7 +544,7 @@ const DATA = {  // auto-refreshed 2026-03-31 10:48
     gwi      : { total: 30, byPumper: { 'Wynn': 15, 'Henry': 1, 'Armando': 3, 'Waldo': 2, 'Eli': 9 }, wellsByPumper: { 'Wynn': ["CLOSSON B FEDERAL #012", "CLOSSON C #001", "LYNN A #004", "LYNN A #006", "MEYER B 31 A #001", "NEW MEXICO AA STATE #001", "NEW MEXICO AA STATE #007", "OTIS L JONES #002", "SHELL STATE #004", "SHELL STATE #007", "STATE H #002", "STATE H #005", "STEVENS B #013"], 'Henry': ["WEST EUMONT UNIT #508"], 'Armando': ["MATKINS #006", "OTIS L JONES #001", "OTIS L JONES #002"], 'Waldo': ["FEDERAL F #005", "MOBERLY RHODES WF PROJECT #004"], 'Eli': ["BRITT A 6 #002", "HOLT MEXICO STATE COM #001", "HUSKY WOOLWORTH #001", "MAVEETY STATE GAS COM #009", "REED A 3 #002", "REED A 3 #003", "STEELER A #001", "STEELER A #003", "STEELER A #004"] } },
     fap      : { total: 110, byPumper: { 'Jason': 82, 'Armando': 5, 'Henry': 23 }, wellsByPumper: { 'Jason': ["ARNOTT RAMSAY NCT-B #006", "ARNOTT RAMSAY NCT-B #008", "ARNOTT RAMSAY NCT-B #009", "ARNOTT RAMSAY NCT-B #010", "ARNOTT RAMSAY NCT-B #012", "ARNOTT RAMSAY NCT-B #020", "ARNOTT RAMSAY NCT-B #021", "BAYLUS CADE FEDERAL #004", "BAYLUS CADE FEDERAL #006", "BRITT A 6 #005", "CLOWER STATE #001", "E C HILL B FEDERAL #018", "E C HILL B FEDERAL #020", "ELLIOTT #002", "G G TRAVIS #004", "GILLULLY B FEDERAL RA A #010", "LOCKHART B 31 #003", "LOCKHART B 31 #005", "LOCKHART B 31 #006", "LOCKHART B 31 #009", "MAVEETY STATE GAS COM #009", "MCQUATTERS COM #004", "STATE A A/C 1 #036", "STATE A A/C 1 #043", "STATE A A/C 1 #046", "STATE A A/C 1 #048", "STATE A A/C 1 #061", "STATE A A/C 1 #064", "STATE A A/C 1 #069", "STATE A A/C 1 #081", "STATE A A/C 2 #004", "STATE A A/C 2 #023", "STATE A A/C 2 #025", "STATE A A/C 2 #026", "STATE A A/C 2 #027", "STATE A A/C 2 #029", "STATE A A/C 2 #030", "STATE A A/C 2 #031", "STATE A A/C 2 #054", "STATE A A/C 3 #009", "STATE A A/C 3 COM A #004", "STATE D #002", "STATE D #005", "STATE D #006", "STATE D #007", "STATE D #008", "STATE E #002", "TRAVIS #005", "WEST EUMONT UNIT #102", "WEST EUMONT UNIT #104", "WEST EUMONT UNIT #106", "WEST EUMONT UNIT #131", "WEST EUMONT UNIT #203", "WEST EUMONT UNIT #204", "WEST EUMONT UNIT #206", "WEST EUMONT UNIT #209", "WEST EUMONT UNIT #210", "WEST EUMONT UNIT #215", "WEST EUMONT UNIT #216", "WEST EUMONT UNIT #510", "WEST EUMONT UNIT #511", "WEST EUMONT UNIT #512", "WEST EUMONT UNIT #513", "WEST EUMONT UNIT #514", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #521"], 'Armando': ["STATE A A/C 1 #081", "STATE A A/C 2 #025"], 'Henry': ["WEST EUMONT UNIT #102", "WEST EUMONT UNIT #104", "WEST EUMONT UNIT #106", "WEST EUMONT UNIT #203", "WEST EUMONT UNIT #204", "WEST EUMONT UNIT #206", "WEST EUMONT UNIT #209", "WEST EUMONT UNIT #210", "WEST EUMONT UNIT #215", "WEST EUMONT UNIT #216", "WEST EUMONT UNIT #220", "WEST EUMONT UNIT #402", "WEST EUMONT UNIT #417", "WEST EUMONT UNIT #510", "WEST EUMONT UNIT #511", "WEST EUMONT UNIT #512", "WEST EUMONT UNIT #513", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #520", "WEST EUMONT UNIT #521"] } },
     pumpup   : { total: 1, byPumper: { 'Armando': 1 }, wellsByPumper: { 'Armando': ["STATE A A/C 2 #024"] } },
-    wellsite : { total: 16, byPumper: { 'Armando': 8, '2026-03-27': 7, '2026-03-30': 1 }, wellsByPumper: { 'Armando': ["STATE A A/C 1 #046", "STATE A A/C 1 #061", "STATE A A/C 2 #023", "STATE A A/C 2 #024", "STATE A A/C 2 #025", "STATE A A/C 2 #027", "STATE A A/C 2 #030", "STATE A A/C 2 #047"], '2026-03-27': ["Eli"], '2026-03-30': ["Eli"] } },
+    wellsite : { total: 16, byPumper: { 'Armando': 8, 'Eli': 8 }, wellsByPumper: { 'Armando': ["STATE A A/C 1 #046", "STATE A A/C 1 #061", "STATE A A/C 2 #023", "STATE A A/C 2 #024", "STATE A A/C 2 #025", "STATE A A/C 2 #027", "STATE A A/C 2 #030", "STATE A A/C 2 #047"] } },
     facility : { total: 6, byPumper: { 'Eli': 6 }, wellsByPumper: { 'Eli': ["State A A/C 2 CIF", "State A AC 1 Main Additional Battery", "TEAGUE INJECTION STATION", "WEU Bay Federal", "WEU CIF", "WEU Federal D"] } },
     whs      : ZERO(),
     env      : ZERO(),
@@ -562,7 +562,7 @@ const DATA = {  // auto-refreshed 2026-03-31 10:48
 };
 
 // <<PUMPER_TASKS_START>>
-const PUMPER_TASKS = {  // auto-refreshed 2026-03-31 10:48
+const PUMPER_TASKS = {  // auto-refreshed 2026-03-31 10:53
   currentWeek: {
     date: "3/30/2026",
     tasks: {
@@ -647,8 +647,8 @@ const PUMPER_TASKS = {  // auto-refreshed 2026-03-31 10:48
 // <<PUMPER_TASKS_END>>
 
 // <<PRICES_START>>
-const PRICES = {  // auto-refreshed 2026-03-31 10:48
-  wti:  {price:104.2, chg:1.32, date:"3/31/2026"},
+const PRICES = {  // auto-refreshed 2026-03-31 10:53
+  wti:  {price:104.13, chg:1.25, date:"3/31/2026"},
   waha: {price:-3.59, chg:-0.55, date:"3/31/2026"}
 };
 // <<PRICES_END>>
