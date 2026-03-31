@@ -362,7 +362,8 @@ document.getElementById('pumpup-form').addEventListener('submit', async function
     });
     const result = await resp.json();
     if (result.success) {
-      document.getElementById('successMsg').textContent = selectedWell + ' — ' + fields.testDate;
+      const [y,mo,d] = fields.testDate.split('-');
+      document.getElementById('successMsg').textContent = selectedWell + ' — ' + (+mo) + '/' + (+d) + '/' + y;
       btn.disabled = false;
       btn.textContent = 'Submit';
       prog.textContent = photos.length > 0 ? 'Photos uploaded!' : '';

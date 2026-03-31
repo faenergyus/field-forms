@@ -411,7 +411,8 @@ document.getElementById('fac-form').addEventListener('submit', async function(e)
     });
     const result = await resp.json();
     if (result.success) {
-      document.getElementById('successMsg').textContent = selectedFacility + ' — ' + fields.inspDate;
+      const [y,mo,d] = fields.inspDate.split('-');
+      document.getElementById('successMsg').textContent = selectedFacility + ' — ' + (+mo) + '/' + (+d) + '/' + y;
       btn.disabled = false;
       btn.textContent = 'Submit Inspection';
       prog.textContent = photos.length > 0 ? 'Photos uploaded!' : '';

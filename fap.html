@@ -290,7 +290,8 @@ document.getElementById('fap-form').addEventListener('submit', async function(e)
     });
     const result = await resp.json();
     if (result.success) {
-      document.getElementById('successMsg').textContent = selectedWell + ' — ' + fields.fapDate;
+      const [y,mo,d] = fields.fapDate.split('-');
+      document.getElementById('successMsg').textContent = selectedWell + ' — ' + (+mo) + '/' + (+d) + '/' + y;
       btn.disabled = false;
       btn.textContent = 'Submit FAP';
       prog.textContent = photos.length > 0 ? 'Photos uploaded!' : '';

@@ -556,7 +556,8 @@ document.getElementById('gwi-form').addEventListener('submit', async function(e)
     });
     const result = await resp.json();
     if (result.success) {
-      document.getElementById('successMsg').textContent = selectedWell + ' — ' + fields.inspDate;
+      const [y,mo,d] = fields.inspDate.split('-');
+      document.getElementById('successMsg').textContent = selectedWell + ' — ' + (+mo) + '/' + (+d) + '/' + y;
       if (result.photoUrls && result.photoUrls.length > 0) {
         prog.style.display = 'block';
         prog.innerHTML = result.photoUrls.length + ' photo(s) saved! ' +
