@@ -267,17 +267,18 @@ document.getElementById('fap-form').addEventListener('submit', async function(e)
   };
 
   const photos = [];
+  const wavePhotos = [];
   const allFiles = [
-    ...resultsFiles.map(f => ({ file: f, label: 'results' })),
-    ...waveFiles.map(f => ({ file: f, label: 'wave' }))
+    ...resultsFiles.map(f => ({ file: f, arr: photos })),
+    ...waveFiles.map(f => ({ file: f, arr: wavePhotos }))
   ];
   if (allFiles.length > 0) {
     prog.style.display = 'block';
     for (let i = 0; i < allFiles.length; i++) {
       prog.textContent = 'Encoding photo ' + (i + 1) + ' of ' + allFiles.length + '...';
-      const { file, label } = allFiles[i];
+      const { file, arr } = allFiles[i];
       const base64 = await fileToBase64(file);
-      photos.push({ name: label + '_' + file.name, base64, mimeType: file.type || 'image/jpeg' });
+      arr.push({ name: file.name, base64, mimeType: file.type || 'image/jpeg' });
     }
     prog.textContent = 'Uploading...';
   }
@@ -286,7 +287,7 @@ document.getElementById('fap-form').addEventListener('submit', async function(e)
     const resp = await fetch(ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ formType: 'fap', fields, photos })
+      body: JSON.stringify({ formType: 'fap', fields, photos, wavePhotos })
     });
     const result = await resp.json();
     if (result.success) {
