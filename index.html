@@ -497,7 +497,7 @@
 
   <footer>
     Forty Acres Energy &nbsp;·&nbsp; Field Operations &nbsp;·&nbsp; Internal Use Only
-    <div class="data-note">Dashboard data from Google Sheets · Updated 2026-04-06 08:00</div>
+    <div class="data-note">Dashboard data from Google Sheets · Updated 2026-04-06 09:00</div>
   </footer>
 </div>
 
@@ -528,7 +528,7 @@ const CHART_DEFS = [
 
 const ZERO = () => ({ total: 0, byPumper: {}, wellsByPumper: {} });
 
-const DATA = {  // auto-refreshed 2026-04-06 08:00
+const DATA = {  // auto-refreshed 2026-04-06 09:00
   pastweek: {
     avo      : ZERO(),
     gwi      : { total: 10, byPumper: { 'Waldo': 4, 'Armando': 6 }, wellsByPumper: { 'Waldo': ["FEDERAL F #002", "FEDERAL F #003", "FEDERAL F #004", "FEDERAL F #005"], 'Armando': ["HUGHES B-6 #011", "HUGHES B-6 #012", "J F JANDA NCT-G #002", "JANDA STATE #001", "JANDA STATE #002", "SHELL STATE #002"] } },
@@ -562,8 +562,48 @@ const DATA = {  // auto-refreshed 2026-04-06 08:00
 };
 
 // <<PUMPER_TASKS_START>>
-const PUMPER_TASKS = {  // auto-refreshed 2026-04-06 08:00
+const PUMPER_TASKS = {  // auto-refreshed 2026-04-06 09:00
   currentWeek: {
+    date: "4/6/2026",
+    tasks: {
+      "Raul": {
+        "Gas Well Surveillance": "Myers B Federal #031",
+        "Well Test": "C D Woolworth  #8",
+        "Fluid Level": "Martin B #003, #004; Mexico G #001",
+      },
+      "Waldo": {
+        "Gas Well Surveillance": "Federal F #004 \nFederal F #003\nFederal F #002",
+        "Well Test": "AR: # 9, 20",
+        "Fluid Level": "AR: # 9, 12, 13; \nCagle C #005",
+      },
+      "Mando": {
+        "Gas Well Surveillance": "Janda State #001 \nJanda State #002",
+        "Well Test": "BBN BATT 1: AC 2 # 23, 4\nBBN BATT 5: AC 2 # 26, 54\nBBS BATT 43-61-64-69: AC 1 #43, 64\nBBS BATT 18-37-55-81-111: AC 1 #81\nBBS BATT 46: AC 1 # 46\nBBS BATT 48: AC 1 # 48",
+        "Fluid Level": "BBN: A/C 2 # 24, 61, 29, 30, 31, 25, 26, 54\nBBS: A/C 1 # 69, 64, 81; A/C 3 # 9, COM # 4",
+      },
+      "Jason": {
+        "Gas Well Surveillance": "State D #005\nState D #007",
+        "Well Test": "",
+        "Fluid Level": "Britt A 6 #002, State A-20 #001, #004",
+      },
+      "Andy / Shane": {
+        "Gas Well Surveillance": "J C Johnson #004",
+        "Well Test": "C E Lamunyon #53 (in test)\nC E Lamunyon #68\nC E Lamunyon #62",
+        "Fluid Level": "",
+      },
+      "Wynn": {
+        "Gas Well Surveillance": "State H #003\nState H #006",
+        "Well Test": "",
+        "Fluid Level": "Lynn A #004",
+      },
+      "Henry": {
+        "Gas Well Surveillance": "WEU 302",
+        "Well Test": "P1 BATT 417: 215, 417\nP1 BATT GM State: no well testing\nP1 BATT Lea 407: no well testing\nP1 BATT LW WHITE COM: no well testing\nP2 BATT BAY FED: 512, 510\nP2 BATT FED D: no well testing\nP2 BATT FOPEANO: no well testing\nP3 BATT GULF State: 102, 106",
+        "Fluid Level": "P1: 217, 402, 206, 220, 417\nP2: 515, 520, 516, 521, 510, 511, 512, 513, 514\nP3: 202, 130, 131, 102, 104",
+      },
+    }
+  },
+  lastWeek: {
     date: "3/30/2026",
     tasks: {
       "Raul": {
@@ -602,53 +642,13 @@ const PUMPER_TASKS = {  // auto-refreshed 2026-04-06 08:00
         "Fluid Level": "P1: 217, 402, 206, 220, 417\nP2: 515, 520, 516, 521, 510, 511, 512, 513, 514\nP3: 202, 130, 131, 102, 104",
       },
     }
-  },
-  lastWeek: {
-    date: "3/23/2026",
-    tasks: {
-      "Raul": {
-        "Gas Well Surveillance": "Myers B Federal #031",
-        "Well Test": "",
-        "Fluid Level": "Martin B #003, #004; Mexico G #001",
-      },
-      "Waldo": {
-        "Gas Well Surveillance": "Federal F #005\nFederal F #004 \nFederal F #003\nFederal F #002",
-        "Well Test": "AR #12 (in test), 9, 20",
-        "Fluid Level": "AR #013; Cagle C #005",
-      },
-      "Mando": {
-        "Gas Well Surveillance": "Janda State #001 \nJanda State #002",
-        "Well Test": "BBN: AC 2 #24 (in test), 026, 023\nBBS: AC 1 #46, 48",
-        "Fluid Level": "BBN: State A A/C 2 #024, 061",
-      },
-      "Jason": {
-        "Gas Well Surveillance": "State D #005\nState D #007",
-        "Well Test": "",
-        "Fluid Level": "Britt A 6 #002, State A-20 #001, #004",
-      },
-      "Andy / Shane": {
-        "Gas Well Surveillance": "J C Johnson #004",
-        "Well Test": "C E Lamunyon #53 (in test)",
-        "Fluid Level": "C E Lamunyon #40",
-      },
-      "Wynn": {
-        "Gas Well Surveillance": "Stevens B #013",
-        "Well Test": "",
-        "Fluid Level": "Lynn A #004",
-      },
-      "Henry": {
-        "Gas Well Surveillance": "WEU 508",
-        "Well Test": "P1: 215 (done), 417 (done)\nP2: 513 (in test), 512, 510\nP3: 102, 106",
-        "Fluid Level": "P1: 217, 220, 402, 417\nP2: 515, 520, 516, 521, 510, 511, 512, 513\nP3: 130, 103, 201, 202, 131",
-      },
-    }
   }
 };
 // <<PUMPER_TASKS_END>>
 
 // <<PRICES_START>>
-const PRICES = {  // auto-refreshed 2026-04-06 08:00
-  wti:  {price:110.5, chg:-1.04, date:"4/6/2026"},
+const PRICES = {  // auto-refreshed 2026-04-06 09:00
+  wti:  {price:112.56, chg:1.02, date:"4/6/2026"},
   waha: {price:-3.88, chg:-0.21, date:"4/2/2026"}
 };
 // <<PRICES_END>>
