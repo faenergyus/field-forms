@@ -386,10 +386,10 @@ function drawWBD(w) {
   if (!maxD) maxD = 5000;
   maxD *= 1.05;
 
-  var svgW = 500, svgH = 850;
+  var svgW = 600, svgH = 850;
   var topM = 30, botM = 15;
   var totalH = svgH - topM - botM;
-  var cx = 250;
+  var cx = 320;
 
   // Piecewise depth scale: top 500' = 7.5%, middle = 10%, bottom 10% = 82.5%
   var botZoneStart = maxD * 0.75; // top of the detail zone (bottom 25% of depth)
@@ -446,15 +446,25 @@ function drawWBD(w) {
     s += '<line x1="' + (cx - or_ - 8) + '" y1="' + (y2 + 3) + '" x2="' + (cx - or_) + '" y2="' + (y2 - 10) + '" stroke="#555" stroke-width="2.5"/>';
     s += '<line x1="' + (cx + or_ + 8) + '" y1="' + (y2 + 3) + '" x2="' + (cx + or_) + '" y2="' + (y2 - 10) + '" stroke="#555" stroke-width="2.5"/>';
 
-    // Label — left side with arrow
-    var ly = y2;
-    var tip = cx - or_ - 12;
-    s += '<line x1="12" y1="' + ly + '" x2="' + tip + '" y2="' + ly + '" stroke="#000" stroke-width="0.8"/>';
-    s += '<polygon points="' + tip + ',' + ly + ' ' + (tip - 6) + ',' + (ly - 2.5) + ' ' + (tip - 6) + ',' + (ly + 2.5) + '" fill="#000"/>';
-    s += '<text x="10" y="' + (ly - 7) + '" font-size="9" fill="#000" font-weight="700">' + esc(cs.name) + '</text>';
-    var dtl = (cs.raw[1] || '') + '  ' + (cs.raw[2] || '');
-    s += '<text x="10" y="' + (ly + 3) + '" font-size="7.5" fill="#333">' + esc(dtl.trim()) + '</text>';
-    s += '<text x="10" y="' + (ly + 13) + '" font-size="7.5" fill="#333">Set @ ' + cs.depth + "'" + '</text>';
+    // Small depth label at shoe
+    s += '<text x="' + (cx + or_ + 10) + '" y="' + (y2 + 4) + '" font-size="8" fill="#333">' + cs.depth + "'" + '</text>';
+  }
+
+  // Casing spec boxes — fixed positions on LEFT, outside the wellbore
+  var boxX = 5, boxW = 130, boxH = 58, boxGap = 6;
+  var boxY = gy + 10;
+  for (var i = 0; i < sorted.length; i++) {
+    var cs = sorted[i];
+    s += '<rect x="' + boxX + '" y="' + boxY + '" width="' + boxW + '" height="' + boxH + '" fill="#fff" stroke="#666" stroke-width="1" rx="2"/>';
+    s += '<text x="' + (boxX + 5) + '" y="' + (boxY + 13) + '" font-size="10" fill="#000" font-weight="700">' + esc(cs.name) + '</text>';
+    s += '<text x="' + (boxX + 5) + '" y="' + (boxY + 25) + '" font-size="9" fill="#333">Size: ' + esc(cs.raw[1] || '--') + '</text>';
+    s += '<text x="' + (boxX + 5) + '" y="' + (boxY + 36) + '" font-size="9" fill="#333">Wt: ' + esc(cs.raw[2] || '--') + '</text>';
+    s += '<text x="' + (boxX + 5) + '" y="' + (boxY + 47) + '" font-size="9" fill="#333">Set @: ' + cs.depth + "'" + '</text>';
+    s += '<text x="' + (boxX + 5) + '" y="' + (boxY + 56) + '" font-size="8" fill="#666">Hole: ' + esc(cs.raw[3] || '--') + '</text>';
+    // Arrow from box to shoe
+    var shoeY = dToY(cs.depth);
+    s += '<line x1="' + (boxX + boxW) + '" y1="' + (boxY + boxH / 2) + '" x2="' + (cx - or_ - 5) + '" y2="' + shoeY + '" stroke="#999" stroke-width="0.5" stroke-dasharray="3,2"/>';
+    boxY += boxH + boxGap;
   }
 
   // Tubing — visible pipe inside production casing
