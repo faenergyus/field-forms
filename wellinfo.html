@@ -354,264 +354,122 @@ function parsePerfs(s) {
 
 function drawWBD(w) {
   var container = document.getElementById('wbdContainer');
-  var keys = ['sc','ic','pc','ln'];
-  var names = ['Surface Casing','Intermediate Casing','Production Casing','Liner'];
-  var WALL = 3; // casing wall thickness in px
+  var ks = ['sc','ic','pc','ln'];
+  var nms = ['Surface Csg','Intermediate Csg','Production Csg','Liner'];
+  var fhw = [70, 55, 40, 28];
+  var W = 4;
 
-  // Gather casing strings
-  var strings = [];
+  var strs = [];
   for (var i = 0; i < 4; i++) {
-    var c = w[keys[i]];
+    var c = w[ks[i]];
     if (!c) continue;
-    var depth = parseDepth(c[0]), size = parseSize(c[1]);
-    if (depth || size) strings.push({ name: names[i], depth: depth, size: size, weight: c[2], holeSize: parseSize(c[3]), raw: c, idx: i });
+    var depth = parseDepth(c[0]);
+    if (depth) strs.push({name:nms[i], depth:depth, raw:c, hw:fhw[i]});
   }
   var td = parseDepth(w.td), pbtd = parseDepth(w.pb), perfs = parsePerfs(w.pf);
 
-  if (!strings.length && !td && !perfs.length) {
+  if (!strs.length && !td && !perfs.length) {
     container.innerHTML = '<div style="text-align:center;color:#999;font-size:0.85rem;padding:40px 0;">No wellbore data available</div>';
     return;
   }
 
-  // Collect all feature depths
-  var featureDepths = [0];
-  for (var i = 0; i < strings.length; i++) if (strings[i].depth) featureDepths.push(strings[i].depth);
-  for (var i = 0; i < perfs.length; i++) { featureDepths.push(perfs[i].top); featureDepths.push(perfs[i].bot); }
-  if (td) featureDepths.push(td);
-  if (pbtd) featureDepths.push(pbtd);
-  featureDepths.sort(function(a,b){return a-b;});
+  var maxD = 0;
+  for (var i = 0; i < strs.length; i++) if (strs[i].depth > maxD) maxD = strs[i].depth;
+  if (td && td > maxD) maxD = td;
+  if (pbtd && pbtd > maxD) maxD = pbtd;
+  for (var i = 0; i < perfs.length; i++) if (perfs[i].bot > maxD) maxD = perfs[i].bot;
+  if (!maxD) maxD = 5000;
+  maxD *= 1.05;
 
-  // Build zones around features, compress gaps with breaks
-  var ZONE_PAD = 100;
-  var zones = [];
-  for (var i = 0; i < featureDepths.length; i++) {
-    var zt = Math.max(0, featureDepths[i] - ZONE_PAD);
-    var zb = featureDepths[i] + ZONE_PAD;
-    if (zones.length && zt <= zones[zones.length-1].bot + 50) {
-      zones[zones.length-1].bot = Math.max(zones[zones.length-1].bot, zb);
-    } else {
-      zones.push({top: zt, bot: zb});
-    }
+  var svgW = 400, topM = 50, botM = 20, svgH = 700;
+  var cx = svgW / 2 + 20;
+  function dToY(d) { return topM + (d / maxD) * (svgH - topM - botM); }
+
+  var s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + svgW + ' ' + svgH + '" style="font-family:Arial,sans-serif;background:#fff">';
+
+  // Ground
+  s += '<line x1="40" y1="' + topM + '" x2="' + (svgW-10) + '" y2="' + topM + '" stroke="#5d4037" stroke-width="3"/>';
+  for (var gx = 45; gx < svgW-10; gx += 7) s += '<line x1="' + gx + '" y1="' + topM + '" x2="' + (gx-4) + '" y2="' + (topM-6) + '" stroke="#8B7355" stroke-width="0.8"/>';
+
+  // Depth ticks
+  var ti = maxD <= 1500 ? 200 : maxD <= 4000 ? 500 : 1000;
+  for (var d = ti; d < maxD; d += ti) {
+    var ty = dToY(d);
+    s += '<line x1="38" y1="' + ty + '" x2="44" y2="' + ty + '" stroke="#bbb" stroke-width="0.5"/>';
+    s += '<text x="36" y="' + (ty+3) + '" text-anchor="end" font-size="7" fill="#999">' + d + "'" + '</text>';
   }
 
-  var maxDepth = featureDepths[featureDepths.length-1] * 1.03 || 5000;
-
-  // Segments: zone | break | zone ...
-  var BREAK_PX = 22;
-  var segments = [], breakCount = 0;
-  for (var i = 0; i < zones.length; i++) {
-    if (i > 0 && zones[i].top > zones[i-1].bot + 50) {
-      segments.push({startD: zones[i-1].bot, endD: zones[i].top, px: BREAK_PX, isBreak: true});
-      breakCount++;
-    }
-    segments.push({startD: zones[i].top, endD: Math.min(zones[i].bot, maxDepth), px: 0, isBreak: false});
-  }
-
-  // SVG layout — taller, with label margins
-  var svgW = 420, topM = 55, botM = 30, labelL = 100, labelR = 120;
-  var pipeW = svgW - labelL - labelR; // width for the pipe area
-  var centerX = labelL + pipeW / 2;
-
-  // Allocate pixels
-  var totalDepthShown = 0;
-  for (var i = 0; i < segments.length; i++) if (!segments[i].isBreak) totalDepthShown += (segments[i].endD - segments[i].startD);
-  // Target height: ~80px per zone segment minimum
-  var minZonePx = strings.length * 80 + perfs.length * 40 + 120;
-  var svgH = Math.max(650, minZonePx + breakCount * BREAK_PX + topM + botM);
-  var availH = svgH - topM - botM;
-  var availForZones = availH - breakCount * BREAK_PX;
-  for (var i = 0; i < segments.length; i++) {
-    if (!segments[i].isBreak) {
-      segments[i].px = Math.max(40, ((segments[i].endD - segments[i].startD) / totalDepthShown) * availForZones);
-    }
-  }
-
-  var segY = [topM];
-  for (var i = 0; i < segments.length; i++) segY.push(segY[i] + segments[i].px);
-
-  function dToY(d) {
-    for (var i = 0; i < segments.length; i++) {
-      if (d <= segments[i].endD) {
-        if (segments[i].isBreak) return segY[i] + segments[i].px / 2;
-        var frac = (d - segments[i].startD) / Math.max(1, segments[i].endD - segments[i].startD);
-        return segY[i] + frac * segments[i].px;
-      }
-    }
-    return segY[segY.length - 1];
-  }
-
-  // Size to half-width — larger pipe
-  var maxHalfW = pipeW / 2 - 5;
-  var maxSz = 0;
-  for (var i = 0; i < strings.length; i++) {
-    var hs = strings[i].holeSize || (strings[i].size ? strings[i].size * 1.5 : 0);
-    if (hs > maxSz) maxSz = hs;
-  }
-  if (maxSz < 10) maxSz = 16;
-  function sToW(sz) { return sz ? Math.max(10, (sz / maxSz) * maxHalfW) : 18; }
-
-  // Outermost casing half-width (for break clipping)
-  var outerHW = 0;
-  for (var i = 0; i < strings.length; i++) {
-    var hw = sToW(strings[i].holeSize || (strings[i].size ? strings[i].size * 1.3 : 10));
-    if (hw > outerHW) outerHW = hw;
-  }
-  outerHW += 8;
-
-  // --- SVG ---
-  var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + svgW + ' ' + svgH + '" style="font-family:Arial,sans-serif">';
-  svg += '<defs>';
-  svg += '<pattern id="cement" width="5" height="5" patternUnits="userSpaceOnUse"><rect width="5" height="5" fill="#d5cbb8"/><circle cx="1.2" cy="1.2" r="0.8" fill="#b8a88a"/><circle cx="3.5" cy="3.8" r="0.6" fill="#b8a88a"/></pattern>';
-  svg += '<linearGradient id="steel" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#888"/><stop offset="30%" stop-color="#ccc"/><stop offset="50%" stop-color="#e8e8e8"/><stop offset="70%" stop-color="#ccc"/><stop offset="100%" stop-color="#888"/></linearGradient>';
-  svg += '</defs>';
-  svg += '<rect width="' + svgW + '" height="' + svgH + '" fill="#fff" rx="6"/>';
-
-  // Ground surface
-  svg += '<rect x="' + (centerX - outerHW - 30) + '" y="' + (topM - 18) + '" width="' + (outerHW * 2 + 60) + '" height="18" fill="#8B7355" opacity="0.15"/>';
-  for (var gx = centerX - outerHW - 25; gx < centerX + outerHW + 25; gx += 6) {
-    svg += '<line x1="' + gx + '" y1="' + topM + '" x2="' + (gx - 3) + '" y2="' + (topM - 5) + '" stroke="#6d5b3f" stroke-width="0.6" opacity="0.5"/>';
-  }
-  svg += '<line x1="' + (centerX - outerHW - 30) + '" y1="' + topM + '" x2="' + (centerX + outerHW + 30) + '" y2="' + topM + '" stroke="#5d4037" stroke-width="2.5"/>';
-
-  // Depth breaks — zigzag ONLY across the pipe width
-  for (var i = 0; i < segments.length; i++) {
-    if (!segments[i].isBreak) continue;
-    var by = segY[i], bh = segments[i].px;
-    var bx1 = centerX - outerHW - 3, bx2 = centerX + outerHW + 3;
-    // White mask over pipe area
-    svg += '<rect x="' + bx1 + '" y="' + (by - 1) + '" width="' + (bx2 - bx1) + '" height="' + (bh + 2) + '" fill="#fff"/>';
-    // Top and bottom zigzag
-    for (var z = 0; z < 2; z++) {
-      var zy = z === 0 ? by + 2 : by + bh - 2;
-      var path = 'M' + bx1 + ',' + zy;
-      for (var zx = bx1; zx < bx2; zx += 6) path += ' l3,-4 l3,4';
-      svg += '<path d="' + path + '" fill="none" stroke="#666" stroke-width="1.2"/>';
-    }
-  }
-
-  // Draw casing strings (largest first) — gray steel look
-  var sorted = strings.slice().sort(function(a,b) { return (b.size||0) - (a.size||0); });
-  var labelSlots = []; // track used Y positions for labels
-
-  for (var i = 0; i < sorted.length; i++) {
-    var cs = sorted[i];
-    if (!cs.depth) continue;
-    var y1 = topM, y2 = dToY(cs.depth);
-    var hw = sToW(cs.size || 5);
-    var hhw = cs.holeSize ? sToW(cs.holeSize) : hw + 5;
-
-    // Cement in annulus (bottom 60%)
-    var cTop = y1 + (y2 - y1) * 0.4;
-    var annW = hhw - hw;
-    if (annW > 1) {
-      svg += '<rect x="' + (centerX - hhw) + '" y="' + cTop + '" width="' + annW + '" height="' + (y2 - cTop) + '" fill="url(#cement)"/>';
-      svg += '<rect x="' + (centerX + hw) + '" y="' + cTop + '" width="' + annW + '" height="' + (y2 - cTop) + '" fill="url(#cement)"/>';
-    }
-
-    // Casing walls — steel gradient look with 3D effect
+  // Casings — outer first
+  strs.sort(function(a,b){return b.hw - a.hw;});
+  for (var i = 0; i < strs.length; i++) {
+    var cs = strs[i], y1 = topM, y2 = dToY(cs.depth), hw = cs.hw;
     // Left wall
-    svg += '<rect x="' + (centerX - hw - WALL) + '" y="' + y1 + '" width="' + WALL + '" height="' + (y2 - y1) + '" fill="#999"/>';
-    svg += '<rect x="' + (centerX - hw - WALL + 0.5) + '" y="' + y1 + '" width="1" height="' + (y2 - y1) + '" fill="#ddd" opacity="0.6"/>';
+    s += '<rect x="' + (cx-hw-W) + '" y="' + y1 + '" width="' + W + '" height="' + (y2-y1) + '" fill="#888"/>';
+    s += '<rect x="' + (cx-hw-W+1) + '" y="' + y1 + '" width="1.5" height="' + (y2-y1) + '" fill="#ccc" opacity="0.7"/>';
     // Right wall
-    svg += '<rect x="' + (centerX + hw) + '" y="' + y1 + '" width="' + WALL + '" height="' + (y2 - y1) + '" fill="#999"/>';
-    svg += '<rect x="' + (centerX + hw + 0.5) + '" y="' + y1 + '" width="1" height="' + (y2 - y1) + '" fill="#ddd" opacity="0.6"/>';
-
-    // Inner annulus fill (white/light between casings)
-    svg += '<rect x="' + (centerX - hw) + '" y="' + y1 + '" width="' + (hw * 2) + '" height="' + (y2 - y1) + '" fill="#f5f5f5" opacity="0.5"/>';
-
+    s += '<rect x="' + (cx+hw) + '" y="' + y1 + '" width="' + W + '" height="' + (y2-y1) + '" fill="#888"/>';
+    s += '<rect x="' + (cx+hw+1) + '" y="' + y1 + '" width="1.5" height="' + (y2-y1) + '" fill="#ccc" opacity="0.7"/>';
     // Shoe
-    svg += '<line x1="' + (centerX - hw - WALL) + '" y1="' + y2 + '" x2="' + (centerX + hw + WALL) + '" y2="' + y2 + '" stroke="#666" stroke-width="2"/>';
-    svg += '<path d="M' + (centerX - hw - WALL - 4) + ',' + y2 + ' L' + (centerX - hw - WALL) + ',' + (y2 - 7) + '" stroke="#666" stroke-width="2" fill="none"/>';
-    svg += '<path d="M' + (centerX + hw + WALL + 4) + ',' + y2 + ' L' + (centerX + hw + WALL) + ',' + (y2 - 7) + '" stroke="#666" stroke-width="2" fill="none"/>';
-
-    // Label arrow on LEFT side
-    var ly = y2 - 3;
-    var arrowEnd = centerX - hw - WALL - 6;
-    var arrowStart = labelL - 5;
-    var label = cs.name;
-    if (cs.raw[1]) label += ' ' + cs.raw[1];
-    if (cs.raw[2]) label += ' ' + cs.raw[2];
-    label += ' @ ' + (cs.depth ? cs.depth + "'" : cs.raw[0]);
-    // Arrow line
-    svg += '<line x1="' + arrowStart + '" y1="' + ly + '" x2="' + arrowEnd + '" y2="' + ly + '" stroke="#333" stroke-width="0.8"/>';
-    // Arrowhead
-    svg += '<path d="M' + arrowEnd + ',' + ly + ' l-5,-2.5 l0,5 z" fill="#333"/>';
-    // Label text
-    svg += '<text x="' + (arrowStart - 3) + '" y="' + (ly + 3) + '" text-anchor="end" font-size="8" fill="#333" font-weight="600">' + esc(cs.name) + '</text>';
-    svg += '<text x="' + (arrowStart - 3) + '" y="' + (ly - 6) + '" text-anchor="end" font-size="7" fill="#666">' + esc((cs.raw[1]||'') + ' ' + (cs.raw[2]||'')) + '</text>';
-    svg += '<text x="' + (arrowStart - 3) + '" y="' + (ly + 12) + '" text-anchor="end" font-size="7" fill="#666">@ ' + (cs.depth ? cs.depth + "'" : cs.raw[0]) + '</text>';
+    s += '<line x1="' + (cx-hw-W) + '" y1="' + y2 + '" x2="' + (cx+hw+W) + '" y2="' + y2 + '" stroke="#555" stroke-width="2"/>';
+    s += '<line x1="' + (cx-hw-W-5) + '" y1="' + y2 + '" x2="' + (cx-hw-W) + '" y2="' + (y2-7) + '" stroke="#555" stroke-width="2"/>';
+    s += '<line x1="' + (cx+hw+W+5) + '" y1="' + y2 + '" x2="' + (cx+hw+W) + '" y2="' + (y2-7) + '" stroke="#555" stroke-width="2"/>';
+    // Label
+    var ly = y2 - 2;
+    s += '<line x1="42" y1="' + ly + '" x2="' + (cx-hw-W-7) + '" y2="' + ly + '" stroke="#333" stroke-width="0.7"/>';
+    s += '<polygon points="' + (cx-hw-W-7) + ',' + ly + ' ' + (cx-hw-W-12) + ',' + (ly-2.5) + ' ' + (cx-hw-W-12) + ',' + (ly+2.5) + '" fill="#333"/>';
+    s += '<text x="40" y="' + (ly-5) + '" text-anchor="end" font-size="8" fill="#222" font-weight="700">' + esc(cs.name) + '</text>';
+    s += '<text x="40" y="' + (ly+4) + '" text-anchor="end" font-size="7" fill="#666">' + esc((cs.raw[1]||'') + ' ' + (cs.raw[2]||'')) + " @ " + cs.depth + "'" + '</text>';
   }
 
   // Tubing
-  var tubingDepth = null;
+  var tubD = null;
   if (w.tt) {
-    var allD = w.tt.match(/to\s*([\d,]+)/gi);
-    if (allD) { for (var i=0;i<allD.length;i++) { var d=parseInt(allD[i].replace(/to\s*/i,'').replace(/,/g,'')); if(d>(tubingDepth||0)) tubingDepth=d; } }
-    if (!tubingDepth) { var tm=w.tt.match(/([\d,]+)'/); if(tm) tubingDepth=parseInt(tm[1].replace(/,/g,'')); }
+    var tm = w.tt.match(/to\s*([\d,]+)/gi);
+    if (tm) for (var i=0;i<tm.length;i++){var d=parseInt(tm[i].replace(/to\s*/i,'').replace(/,/g,''));if(d>(tubD||0))tubD=d;}
+    if (!tubD){tm=w.tt.match(/([\d,]+)'/);if(tm)tubD=parseInt(tm[1].replace(/,/g,''));}
   }
-  if (tubingDepth && tubingDepth > 100) {
-    var tby = dToY(tubingDepth);
-    // Tubing walls
-    svg += '<rect x="' + (centerX - 5 - WALL) + '" y="' + topM + '" width="' + WALL + '" height="' + (tby - topM) + '" fill="#777"/>';
-    svg += '<rect x="' + (centerX - 5 - WALL + 0.5) + '" y="' + topM + '" width="0.8" height="' + (tby - topM) + '" fill="#bbb" opacity="0.7"/>';
-    svg += '<rect x="' + (centerX + 5) + '" y="' + topM + '" width="' + WALL + '" height="' + (tby - topM) + '" fill="#777"/>';
-    svg += '<rect x="' + (centerX + 5 + 0.5) + '" y="' + topM + '" width="0.8" height="' + (tby - topM) + '" fill="#bbb" opacity="0.7"/>';
-    svg += '<rect x="' + (centerX - 5) + '" y="' + topM + '" width="10" height="' + (tby - topM) + '" fill="#eee" opacity="0.4"/>';
-    // Tubing label on RIGHT
-    var tlx = centerX + outerHW + 10;
-    svg += '<line x1="' + (centerX + 5 + WALL + 2) + '" y1="' + (tby - 3) + '" x2="' + (tlx - 2) + '" y2="' + (tby - 3) + '" stroke="#555" stroke-width="0.8"/>';
-    svg += '<path d="M' + (centerX + 5 + WALL + 2) + ',' + (tby - 3) + ' l5,-2.5 l0,5 z" fill="#555" transform="rotate(180,' + (centerX + 5 + WALL + 2) + ',' + (tby - 3) + ')"/>';
-    svg += '<text x="' + tlx + '" y="' + (tby - 6) + '" font-size="8" fill="#555" font-weight="600">Tubing</text>';
-    svg += '<text x="' + tlx + '" y="' + (tby + 4) + '" font-size="7" fill="#888">to ' + tubingDepth + "'" + '</text>';
+  if (tubD && tubD > 100) {
+    var tby = dToY(tubD);
+    s += '<rect x="' + (cx-6-W) + '" y="' + topM + '" width="' + W + '" height="' + (tby-topM) + '" fill="#777"/>';
+    s += '<rect x="' + (cx+6) + '" y="' + topM + '" width="' + W + '" height="' + (tby-topM) + '" fill="#777"/>';
+    s += '<rect x="' + (cx-6) + '" y="' + topM + '" width="12" height="' + (tby-topM) + '" fill="#e8e8e8" opacity="0.4"/>';
+    s += '<text x="' + (cx+fhw[0]+W+15) + '" y="' + (tby-2) + '" font-size="7.5" fill="#555" font-weight="600">Tubing to ' + tubD + "'" + '</text>';
   }
 
   // Perforations
   for (var i = 0; i < perfs.length; i++) {
-    var p = perfs[i];
-    var py1 = dToY(p.top), py2 = dToY(p.bot);
-    if (py2 - py1 < 4) py2 = py1 + 4;
-    var perfHw = 12;
-    for (var j = sorted.length - 1; j >= 0; j--) {
-      if (sorted[j].depth && sorted[j].depth >= p.top && sorted[j].size) { perfHw = sToW(sorted[j].size); break; }
+    var p = perfs[i], py1 = dToY(p.top), py2 = dToY(p.bot);
+    if (py2-py1 < 3) py2 = py1+3;
+    var phw = 20;
+    for (var j = strs.length-1; j >= 0; j--) if (strs[j].depth >= p.top) { phw = strs[j].hw; break; }
+    for (var py = py1+2; py <= py2-1; py += 5) {
+      s += '<line x1="' + (cx-phw-W) + '" y1="' + py + '" x2="' + (cx-phw-W-8) + '" y2="' + (py-3) + '" stroke="#c62828" stroke-width="1.5"/>';
+      s += '<line x1="' + (cx-phw-W) + '" y1="' + py + '" x2="' + (cx-phw-W-8) + '" y2="' + (py+3) + '" stroke="#c62828" stroke-width="1.5"/>';
+      s += '<line x1="' + (cx+phw+W) + '" y1="' + py + '" x2="' + (cx+phw+W+8) + '" y2="' + (py-3) + '" stroke="#c62828" stroke-width="1.5"/>';
+      s += '<line x1="' + (cx+phw+W) + '" y1="' + py + '" x2="' + (cx+phw+W+8) + '" y2="' + (py+3) + '" stroke="#c62828" stroke-width="1.5"/>';
     }
-    // Perf burst arrows on both sides
-    for (var py = py1 + 2; py <= py2 - 1; py += 5) {
-      // Left bursts
-      svg += '<line x1="' + (centerX - perfHw - WALL) + '" y1="' + py + '" x2="' + (centerX - perfHw - WALL - 7) + '" y2="' + (py - 2.5) + '" stroke="#c62828" stroke-width="1.3"/>';
-      svg += '<line x1="' + (centerX - perfHw - WALL) + '" y1="' + py + '" x2="' + (centerX - perfHw - WALL - 7) + '" y2="' + (py + 2.5) + '" stroke="#c62828" stroke-width="1.3"/>';
-      // Right bursts
-      svg += '<line x1="' + (centerX + perfHw + WALL) + '" y1="' + py + '" x2="' + (centerX + perfHw + WALL + 7) + '" y2="' + (py - 2.5) + '" stroke="#c62828" stroke-width="1.3"/>';
-      svg += '<line x1="' + (centerX + perfHw + WALL) + '" y1="' + py + '" x2="' + (centerX + perfHw + WALL + 7) + '" y2="' + (py + 2.5) + '" stroke="#c62828" stroke-width="1.3"/>';
-    }
-    // Perf label on LEFT with arrow
-    var pmid = (py1 + py2) / 2;
-    svg += '<text x="3" y="' + (pmid - 3) + '" font-size="7.5" fill="#c62828" font-weight="700">Perforation</text>';
-    svg += '<text x="3" y="' + (pmid + 6) + '" font-size="7" fill="#c62828">' + p.top + "'-" + p.bot + "'</text>";
-    svg += '<line x1="' + (labelL - 10) + '" y1="' + pmid + '" x2="' + (centerX - perfHw - WALL - 8) + '" y2="' + pmid + '" stroke="#c62828" stroke-width="0.8"/>';
-    svg += '<path d="M' + (centerX - perfHw - WALL - 8) + ',' + pmid + ' l-4,-2 l0,4 z" fill="#c62828"/>';
+    var pmid = (py1+py2)/2;
+    s += '<text x="40" y="' + (pmid-3) + '" text-anchor="end" font-size="7" fill="#c62828" font-weight="700">Perf</text>';
+    s += '<text x="40" y="' + (pmid+5) + '" text-anchor="end" font-size="6.5" fill="#c62828">' + p.top + "'-" + p.bot + "'" + '</text>';
   }
 
-  // TD marker
+  // TD
   if (td) {
     var tdy = dToY(td);
-    svg += '<line x1="' + (centerX - outerHW) + '" y1="' + tdy + '" x2="' + (centerX + outerHW) + '" y2="' + tdy + '" stroke="#000" stroke-width="2.5"/>';
-    // Cross-hatch at bottom to indicate rock
-    for (var hx = centerX - outerHW + 3; hx < centerX + outerHW; hx += 6) {
-      svg += '<line x1="' + hx + '" y1="' + tdy + '" x2="' + (hx - 3) + '" y2="' + (tdy + 5) + '" stroke="#666" stroke-width="0.5"/>';
-    }
-    var tdlx = centerX + outerHW + 10;
-    svg += '<text x="' + tdlx + '" y="' + (tdy + 4) + '" font-size="9" fill="#000" font-weight="700">TD ' + td + "'</text>";
+    s += '<line x1="' + (cx-75) + '" y1="' + tdy + '" x2="' + (cx+75) + '" y2="' + tdy + '" stroke="#000" stroke-width="2.5"/>';
+    for (var hx = cx-72; hx < cx+72; hx += 6) s += '<line x1="' + hx + '" y1="' + tdy + '" x2="' + (hx-3) + '" y2="' + (tdy+5) + '" stroke="#666" stroke-width="0.5"/>';
+    s += '<text x="' + (cx+80) + '" y="' + (tdy+4) + '" font-size="9" fill="#000" font-weight="700">TD ' + td + "'" + '</text>';
   }
 
-  // PBTD marker
+  // PBTD
   if (pbtd && pbtd !== td) {
     var pby = dToY(pbtd);
-    svg += '<line x1="' + (centerX - outerHW + 5) + '" y1="' + pby + '" x2="' + (centerX + outerHW - 5) + '" y2="' + pby + '" stroke="#555" stroke-width="1.5" stroke-dasharray="6,3"/>';
-    svg += '<text x="' + (centerX + outerHW + 10) + '" y="' + (pby + 3) + '" font-size="8" fill="#555" font-weight="600">PBTD ' + pbtd + "'</text>";
+    s += '<line x1="' + (cx-65) + '" y1="' + pby + '" x2="' + (cx+65) + '" y2="' + pby + '" stroke="#555" stroke-width="1.5" stroke-dasharray="5,3"/>';
+    s += '<text x="' + (cx+80) + '" y="' + (pby+3) + '" font-size="8" fill="#555" font-weight="600">PBTD ' + pbtd + "'" + '</text>';
   }
 
-  svg += '</svg>';
-  container.innerHTML = svg;
+  s += '</svg>';
+  container.innerHTML = s;
 }
 </script>
 </body>
