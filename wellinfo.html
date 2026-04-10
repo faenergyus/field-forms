@@ -47,8 +47,8 @@
     .well-header { font-size: 1.1rem; font-weight: 700; color: #1c4a1c; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #3a8a3a; }
     .well-layout { display: flex; flex-direction: column; gap: 24px; }
 
-    #wbdContainer { background: #fff; border-radius: 4px; padding: 8px; border: 2px solid #333; display: flex; align-items: flex-start; justify-content: center; overflow-x: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    #wbdContainer svg { max-width: 550px; width: 100%; height: auto; border: 1px solid #ddd; }
+    #wbdContainer { background: #fff; border-radius: 4px; padding: 4px; border: 2px solid #000; display: flex; align-items: flex-start; justify-content: center; overflow-x: auto; }
+    #wbdContainer svg { max-width: 500px; width: 100%; height: auto; }
 
     /* Well General Info Header — matches WBD reference */
     .well-general { background: #fff; border: 2px solid #333; margin-bottom: 20px; font-size: 0.8rem; }
@@ -356,9 +356,9 @@ function drawWBD(w) {
   var container = document.getElementById('wbdContainer');
   var ks = ['sc','ic','pc','ln'];
   var nms = ['Surface Csg','Intermediate Csg','Production Csg','Liner'];
-  var FHW = {0:50, 1:38, 2:28, 3:18};
+  var FHW = {0:55, 1:42, 2:30, 3:20};
   var TBG_HW = 8;
-  var WALL = 6;
+  var WALL = 8;
 
   var strs = [];
   for (var i = 0; i < 4; i++) {
@@ -410,11 +410,11 @@ function drawWBD(w) {
     var cs = sorted[i], y1 = gy, y2 = dToY(cs.depth), hw = cs.hw;
 
     // Left wall — dark band
-    s += '<rect x="' + (cx-hw-WALL) + '" y="' + y1 + '" width="' + WALL + '" height="' + (y2-y1) + '" fill="#444"/>';
-    s += '<rect x="' + (cx-hw-WALL+1.5) + '" y="' + y1 + '" width="' + (WALL-3) + '" height="' + (y2-y1) + '" fill="#888"/>';
+    s += '<rect x="' + (cx-hw-WALL) + '" y="' + y1 + '" width="' + WALL + '" height="' + (y2-y1) + '" fill="#222"/>';
+    s += '<rect x="' + (cx-hw-WALL+2) + '" y="' + y1 + '" width="' + (WALL-4) + '" height="' + (y2-y1) + '" fill="#777"/>';
     // Right wall
-    s += '<rect x="' + (cx+hw) + '" y="' + y1 + '" width="' + WALL + '" height="' + (y2-y1) + '" fill="#444"/>';
-    s += '<rect x="' + (cx+hw+1.5) + '" y="' + y1 + '" width="' + (WALL-3) + '" height="' + (y2-y1) + '" fill="#888"/>';
+    s += '<rect x="' + (cx+hw) + '" y="' + y1 + '" width="' + WALL + '" height="' + (y2-y1) + '" fill="#222"/>';
+    s += '<rect x="' + (cx+hw+2) + '" y="' + y1 + '" width="' + (WALL-4) + '" height="' + (y2-y1) + '" fill="#777"/>';
 
     // Shoe
     s += '<line x1="' + (cx-hw-WALL) + '" y1="' + y2 + '" x2="' + (cx+hw+WALL) + '" y2="' + y2 + '" stroke="#000" stroke-width="2.5"/>';
