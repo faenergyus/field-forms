@@ -45,11 +45,10 @@
 
     #wellDisplay { display: none; }
     .well-header { font-size: 1.1rem; font-weight: 700; color: #1c4a1c; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #3a8a3a; }
-    .well-layout { display: grid; grid-template-columns: 340px 1fr; gap: 24px; }
-    @media (max-width: 780px) { .well-layout { grid-template-columns: 1fr; } }
+    .well-layout { display: flex; flex-direction: column; gap: 24px; }
 
-    #wbdContainer { background: #fff; border-radius: 9px; padding: 16px; border: 1px solid #d8e8d8; min-height: 500px; display: flex; align-items: center; justify-content: center; }
-    #wbdContainer svg { width: 100%; height: auto; }
+    #wbdContainer { background: #fff; border-radius: 9px; padding: 16px; border: 1px solid #d8e8d8; display: flex; align-items: flex-start; justify-content: center; overflow-x: auto; }
+    #wbdContainer svg { max-width: 600px; width: 100%; height: auto; }
 
     /* Well General Info Header — matches WBD reference */
     .well-general { background: #fff; border: 2px solid #333; margin-bottom: 20px; font-size: 0.8rem; }
