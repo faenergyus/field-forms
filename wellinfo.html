@@ -391,9 +391,14 @@ function drawWBD(w) {
   var totalH = svgH - topM - botM;
   var cx = 250;
 
-  // Sqrt depth scale
-  // Power 1.5 — compresses top, expands bottom where the detail is
-  function dToY(d) { return topM + Math.pow(d / maxD, 1.5) * totalH; }
+  // Piecewise depth scale: top 500' = 7.5%, middle = 10%, bottom 10% = 82.5%
+  var botZoneStart = maxD * 0.75; // top of the detail zone (bottom 25% of depth)
+  var surfZone = Math.min(500, maxD * 0.1); // surface zone cutoff
+  function dToY(d) {
+    if (d <= surfZone) return topM + (d / surfZone) * (totalH * 0.075);
+    if (d <= botZoneStart) return topM + totalH * 0.075 + ((d - surfZone) / (botZoneStart - surfZone)) * (totalH * 0.1);
+    return topM + totalH * 0.175 + ((d - botZoneStart) / (maxD - botZoneStart)) * (totalH * 0.825);
+  }
 
   var s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + svgW + ' ' + svgH + '" style="font-family:Arial,sans-serif;background:#fff">';
 
