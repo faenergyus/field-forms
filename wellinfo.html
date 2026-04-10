@@ -418,14 +418,18 @@ function drawWBD(w) {
   s += '<line x1="140" y1="' + gy + '" x2="' + (svgW - 140) + '" y2="' + gy + '" stroke="#2266cc" stroke-width="3"/>';
   s += '<line x1="140" y1="' + (gy+4) + '" x2="' + (svgW-140) + '" y2="' + (gy+4) + '" stroke="#2266cc" stroke-width="2"/>';
 
-  // ─── CASING STRINGS ───
-  var sorted = strs.slice().sort(function(a,b){return b.or_ - a.or_;});
+  // ─── CASING STRINGS — each starts at previous shoe, not surface ───
+  // Sort by depth ascending (surface first, liner last)
+  var byDepth = strs.slice().sort(function(a,b){return a.depth - b.depth;});
+  var sorted = strs.slice().sort(function(a,b){return b.or_ - a.or_;}); // for outermost ref
 
-  for (var i = 0; i < sorted.length; i++) {
-    var cs = sorted[i], y1 = gy, y2 = dToY(cs.depth);
+  for (var i = 0; i < byDepth.length; i++) {
+    var cs = byDepth[i];
+    // Start Y: surface casing starts at GL, others start at previous casing shoe
+    var startD = (i === 0) ? 0 : byDepth[i-1].depth;
+    var y1 = (i === 0) ? gy : dToY(startD);
+    var y2 = dToY(cs.depth);
     var or_ = cs.or_, ir = cs.ir, wallW = or_ - ir;
-
-    // No annulus fill — shading reserved for cement info only
 
     // Left wall
     s += '<rect x="' + (cx-or_) + '" y="' + y1 + '" width="' + wallW + '" height="' + (y2-y1) + '" fill="#888"/>';
