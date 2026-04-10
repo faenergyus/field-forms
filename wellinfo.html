@@ -391,13 +391,13 @@ function drawWBD(w) {
   var totalH = svgH - topM - botM;
   var cx = 320;
 
-  // Piecewise depth scale: top 500' = 7.5%, middle = 10%, bottom 10% = 82.5%
-  var botZoneStart = maxD * 0.75; // top of the detail zone (bottom 25% of depth)
-  var surfZone = Math.min(500, maxD * 0.1); // surface zone cutoff
+  // Piecewise: top 500'=5%, middle=15%, bottom 25% of depth=80%
+  var botZoneStart = maxD * 0.75;
+  var surfZone = Math.min(500, maxD * 0.1);
   function dToY(d) {
-    if (d <= surfZone) return topM + (d / surfZone) * (totalH * 0.075);
-    if (d <= botZoneStart) return topM + totalH * 0.075 + ((d - surfZone) / (botZoneStart - surfZone)) * (totalH * 0.1);
-    return topM + totalH * 0.175 + ((d - botZoneStart) / (maxD - botZoneStart)) * (totalH * 0.825);
+    if (d <= surfZone) return topM + (d / surfZone) * (totalH * 0.05);
+    if (d <= botZoneStart) return topM + totalH * 0.05 + ((d - surfZone) / (botZoneStart - surfZone)) * (totalH * 0.15);
+    return topM + totalH * 0.20 + ((d - botZoneStart) / (maxD - botZoneStart)) * (totalH * 0.80);
   }
 
   var s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + svgW + ' ' + svgH + '" style="font-family:Arial,sans-serif;background:#fff">';
@@ -461,9 +461,7 @@ function drawWBD(w) {
     s += '<text x="' + (boxX + 5) + '" y="' + (boxY + 36) + '" font-size="9" fill="#333">Wt: ' + esc(cs.raw[2] || '--') + '</text>';
     s += '<text x="' + (boxX + 5) + '" y="' + (boxY + 47) + '" font-size="9" fill="#333">Set @: ' + cs.depth + "'" + '</text>';
     s += '<text x="' + (boxX + 5) + '" y="' + (boxY + 56) + '" font-size="8" fill="#666">Hole: ' + esc(cs.raw[3] || '--') + '</text>';
-    // Arrow from box to shoe
-    var shoeY = dToY(cs.depth);
-    s += '<line x1="' + (boxX + boxW) + '" y1="' + (boxY + boxH / 2) + '" x2="' + (cx - or_ - 5) + '" y2="' + shoeY + '" stroke="#999" stroke-width="0.5" stroke-dasharray="3,2"/>';
+    // No connecting lines — boxes are reference only
     boxY += boxH + boxGap;
   }
 
@@ -487,21 +485,23 @@ function drawWBD(w) {
     s += '<text x="' + (cx + outerR2 + 14) + '" y="' + (tby + 4) + '" font-size="7.5" fill="#333">End of Tubing ' + tubD + "'" + '</text>';
   }
 
-  // Perforations
+  // Perforations — close to wellbore, bigger text
   for (var i = 0; i < perfs.length; i++) {
     var p = perfs[i], py1 = dToY(p.top), py2 = dToY(p.bot);
-    if (py2 - py1 < 4) py2 = py1 + 4;
+    if (py2 - py1 < 5) py2 = py1 + 5;
     var phw = 20;
     for (var j = strs.length - 1; j >= 0; j--) if (strs[j].depth >= p.top) { phw = strs[j].or_; break; }
+    // Burst marks
     for (var py = py1 + 2; py <= py2 - 1; py += 4) {
-      s += '<line x1="' + (cx - phw) + '" y1="' + py + '" x2="' + (cx - phw - 10) + '" y2="' + (py - 3) + '" stroke="#000" stroke-width="1.2"/>';
-      s += '<line x1="' + (cx - phw) + '" y1="' + py + '" x2="' + (cx - phw - 10) + '" y2="' + (py + 3) + '" stroke="#000" stroke-width="1.2"/>';
-      s += '<line x1="' + (cx + phw) + '" y1="' + py + '" x2="' + (cx + phw + 10) + '" y2="' + (py - 3) + '" stroke="#000" stroke-width="1.2"/>';
-      s += '<line x1="' + (cx + phw) + '" y1="' + py + '" x2="' + (cx + phw + 10) + '" y2="' + (py + 3) + '" stroke="#000" stroke-width="1.2"/>';
+      s += '<line x1="' + (cx - phw) + '" y1="' + py + '" x2="' + (cx - phw - 12) + '" y2="' + (py - 3) + '" stroke="#000" stroke-width="1.5"/>';
+      s += '<line x1="' + (cx - phw) + '" y1="' + py + '" x2="' + (cx - phw - 12) + '" y2="' + (py + 3) + '" stroke="#000" stroke-width="1.5"/>';
+      s += '<line x1="' + (cx + phw) + '" y1="' + py + '" x2="' + (cx + phw + 12) + '" y2="' + (py - 3) + '" stroke="#000" stroke-width="1.5"/>';
+      s += '<line x1="' + (cx + phw) + '" y1="' + py + '" x2="' + (cx + phw + 12) + '" y2="' + (py + 3) + '" stroke="#000" stroke-width="1.5"/>';
     }
+    // Label — right next to the wellbore
     var pmid = (py1 + py2) / 2;
-    s += '<text x="10" y="' + (pmid - 3) + '" font-size="7.5" fill="#000" font-weight="700">Perforation</text>';
-    s += '<text x="10" y="' + (pmid + 6) + '" font-size="7" fill="#333">' + p.top + "' - " + p.bot + "'" + '</text>';
+    s += '<text x="' + (cx - phw - 16) + '" y="' + (pmid - 2) + '" text-anchor="end" font-size="9" fill="#000" font-weight="700">Perforation</text>';
+    s += '<text x="' + (cx - phw - 16) + '" y="' + (pmid + 9) + '" text-anchor="end" font-size="8.5" fill="#333">' + p.top + "' - " + p.bot + "'" + '</text>';
   }
 
   // PBTD
@@ -527,12 +527,32 @@ function drawWBD(w) {
     }
   }
 
-  // Depth scale right edge
-  var depthTick = maxD <= 2000 ? 500 : maxD <= 5000 ? 1000 : 2000;
-  for (var d = depthTick; d < maxD; d += depthTick) {
-    var ty = dToY(d);
-    s += '<line x1="' + (svgW - 8) + '" y1="' + ty + '" x2="' + (svgW - 3) + '" y2="' + ty + '" stroke="#aaa" stroke-width="0.5"/>';
-    s += '<text x="' + (svgW - 10) + '" y="' + (ty + 3) + '" text-anchor="end" font-size="6.5" fill="#aaa">' + d + "'" + '</text>';
+  // Rod & Tubing info — RIGHT side of wellbore
+  var outerR2 = sorted.length ? sorted[0].or_ : 90;
+  var infoX = cx + outerR2 + 18;
+  var infoY = gy + 15;
+  if (w.tt) {
+    s += '<text x="' + infoX + '" y="' + infoY + '" font-size="9" fill="#000" font-weight="700" text-decoration="underline">Tubing String</text>';
+    infoY += 12;
+    var tbLines = w.tt.split('\n');
+    for (var j = 0; j < Math.min(tbLines.length, 12); j++) {
+      var line = tbLines[j].trim();
+      if (!line) continue;
+      s += '<text x="' + infoX + '" y="' + infoY + '" font-size="7" fill="#333">' + esc(line.substring(0, 55)) + '</text>';
+      infoY += 9;
+    }
+  }
+  if (w.rr) {
+    infoY += 8;
+    s += '<text x="' + infoX + '" y="' + infoY + '" font-size="9" fill="#000" font-weight="700" text-decoration="underline">Rod String</text>';
+    infoY += 12;
+    var rdLines = w.rr.split('\n');
+    for (var j = 0; j < Math.min(rdLines.length, 10); j++) {
+      var line = rdLines[j].trim();
+      if (!line) continue;
+      s += '<text x="' + infoX + '" y="' + infoY + '" font-size="7" fill="#333">' + esc(line.substring(0, 55)) + '</text>';
+      infoY += 9;
+    }
   }
 
   s += '</svg>';
