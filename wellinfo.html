@@ -392,7 +392,8 @@ function drawWBD(w) {
   var cx = 250;
 
   // Sqrt depth scale
-  function dToY(d) { return topM + Math.sqrt(d / maxD) * totalH; }
+  // Power 1.5 — compresses top, expands bottom where the detail is
+  function dToY(d) { return topM + Math.pow(d / maxD, 1.5) * totalH; }
 
   var s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + svgW + ' ' + svgH + '" style="font-family:Arial,sans-serif;background:#fff">';
 
