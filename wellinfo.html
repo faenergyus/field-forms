@@ -303,165 +303,262 @@ function parsePerfs(s) {
 
 function drawWBD(w) {
   var container = document.getElementById('wbdContainer');
-
-  // Gather casing strings with parsed depths
-  var strings = [];
   var names = ['Surface','Intermediate','Production','Liner'];
   var keys = ['sc','ic','pc','ln'];
-  var colors = ['#4a9a4a','#9a7a3a','#3a6a8a','#8a5a3a'];
+  var colors = ['#2e7d32','#8d6e27','#1565c0','#6d4c41'];
+  var fills  = ['#a5d6a7','#ffe082','#90caf9','#bcaaa4'];
+
+  // Gather casing strings
+  var strings = [];
   for (var i = 0; i < 4; i++) {
     var c = w[keys[i]];
     if (!c) continue;
-    var depth = parseDepth(c[0]);
-    var size = parseSize(c[1]);
-    if (depth || size) {
-      strings.push({ name: names[i], depth: depth, size: size, weight: c[2], holeSize: parseSize(c[3]), color: colors[i], raw: c });
-    }
+    var depth = parseDepth(c[0]), size = parseSize(c[1]);
+    if (depth || size) strings.push({ name: names[i], depth: depth, size: size, weight: c[2], holeSize: parseSize(c[3]), color: colors[i], fill: fills[i], raw: c });
   }
+  var td = parseDepth(w.td), pbtd = parseDepth(w.pb), perfs = parsePerfs(w.pf);
 
-  var td = parseDepth(w.td);
-  var pbtd = parseDepth(w.pb);
-  var perfs = parsePerfs(w.pf);
-
-  // Need at least one casing string to draw
-  if (!strings.length) {
+  if (!strings.length && !td && !perfs.length) {
     container.innerHTML = '<div style="text-align:center;color:#999;font-size:0.85rem;padding:40px 0;">No wellbore data available</div>';
     return;
   }
 
-  // Find max depth for scaling
+  // Collect all key depths (features we want to show)
+  var features = []; // {depth, label, type}
+  features.push({depth: 0, type: 'surface'});
+  for (var i = 0; i < strings.length; i++) if (strings[i].depth) features.push({depth: strings[i].depth, type: 'shoe', idx: i});
+  for (var i = 0; i < perfs.length; i++) {
+    features.push({depth: perfs[i].top, type: 'perf_top', idx: i});
+    features.push({depth: perfs[i].bot, type: 'perf_bot', idx: i});
+  }
+  if (td) features.push({depth: td, type: 'td'});
+  if (pbtd) features.push({depth: pbtd, type: 'pbtd'});
+  features.sort(function(a,b) { return a.depth - b.depth; });
+
+  // Build segments: zones around features get full space, gaps get compressed with zigzag breaks
+  var ZONE_PAD = 80; // ft padding around each feature
+  var segments = []; // {startD, endD, pixels, isBreak}
+  var totalPixels = 0;
+  var svgW = 340, svgH = 750;
+  var topM = 50, botM = 30, leftM = 58, rightM = 20;
+  var availH = svgH - topM - botM;
   var maxDepth = 0;
-  for (var i = 0; i < strings.length; i++) { if (strings[i].depth && strings[i].depth > maxDepth) maxDepth = strings[i].depth; }
-  if (td && td > maxDepth) maxDepth = td;
-  if (pbtd && pbtd > maxDepth) maxDepth = pbtd;
-  for (var i = 0; i < perfs.length; i++) { if (perfs[i].bot > maxDepth) maxDepth = perfs[i].bot; }
+  for (var i = 0; i < features.length; i++) if (features[i].depth > maxDepth) maxDepth = features[i].depth;
   if (!maxDepth) maxDepth = 5000;
-  maxDepth = maxDepth * 1.05; // 5% padding
+  maxDepth *= 1.03;
 
-  // SVG dimensions
-  var svgW = 320, svgH = 700;
-  var topMargin = 40, botMargin = 30, leftMargin = 55, rightMargin = 20;
-  var drawH = svgH - topMargin - botMargin;
-  var centerX = leftMargin + (svgW - leftMargin - rightMargin) / 2;
-  var maxHalfW = (svgW - leftMargin - rightMargin) / 2 - 10;
+  // Merge nearby features into zones
+  var zones = []; // {top, bot} depth ranges that need detail
+  for (var i = 0; i < features.length; i++) {
+    var d = features[i].depth;
+    var zt = Math.max(0, d - ZONE_PAD);
+    var zb = d + ZONE_PAD;
+    if (zones.length && zt <= zones[zones.length-1].bot) {
+      zones[zones.length-1].bot = Math.max(zones[zones.length-1].bot, zb);
+    } else {
+      zones.push({top: zt, bot: zb});
+    }
+  }
 
-  // Depth to Y coordinate (linear scale)
-  function dToY(d) { return topMargin + (d / maxDepth) * drawH; }
+  // Build segment list: zone (proportional) | break (fixed 18px zigzag) | zone ...
+  var BREAK_PX = 18;
+  var breakCount = 0;
+  for (var i = 0; i < zones.length; i++) {
+    if (i > 0 && zones[i].top > zones[i-1].bot + 50) {
+      segments.push({startD: zones[i-1].bot, endD: zones[i].top, px: BREAK_PX, isBreak: true});
+      breakCount++;
+    }
+    segments.push({startD: zones[i].top, endD: Math.min(zones[i].bot, maxDepth), px: 0, isBreak: false});
+  }
 
-  // Size to half-width (proportional, max casing ~13.375" maps to maxHalfW)
-  var maxCasingSize = 0;
+  // Distribute remaining pixels proportionally among non-break segments
+  var totalDepthShown = 0;
+  for (var i = 0; i < segments.length; i++) if (!segments[i].isBreak) totalDepthShown += (segments[i].endD - segments[i].startD);
+  var availForZones = availH - breakCount * BREAK_PX;
+  for (var i = 0; i < segments.length; i++) {
+    if (!segments[i].isBreak) {
+      segments[i].px = Math.max(20, ((segments[i].endD - segments[i].startD) / totalDepthShown) * availForZones);
+    }
+  }
+
+  // Build cumulative Y positions
+  var segY = [topM];
+  for (var i = 0; i < segments.length; i++) segY.push(segY[i] + segments[i].px);
+
+  // Depth-to-Y mapping using segments
+  function dToY(d) {
+    for (var i = 0; i < segments.length; i++) {
+      if (d <= segments[i].endD) {
+        if (segments[i].isBreak) return segY[i] + segments[i].px / 2;
+        var frac = (d - segments[i].startD) / Math.max(1, segments[i].endD - segments[i].startD);
+        return segY[i] + frac * segments[i].px;
+      }
+    }
+    return segY[segY.length - 1];
+  }
+
+  // Size to half-width
+  var centerX = leftM + (svgW - leftM - rightM) / 2;
+  var maxHalfW = (svgW - leftM - rightM) / 2 - 30;
+  var maxSz = 0;
   for (var i = 0; i < strings.length; i++) {
     var hs = strings[i].holeSize || (strings[i].size ? strings[i].size * 1.3 : 0);
-    if (hs > maxCasingSize) maxCasingSize = hs;
+    if (hs > maxSz) maxSz = hs;
   }
-  if (maxCasingSize < 10) maxCasingSize = 14;
-  function sToW(sz) { return sz ? (sz / maxCasingSize) * maxHalfW : 20; }
+  if (maxSz < 10) maxSz = 14;
+  function sToW(sz) { return sz ? Math.max(8, (sz / maxSz) * maxHalfW) : 15; }
 
+  // Start SVG
   var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + svgW + ' ' + svgH + '">';
+  svg += '<defs>';
+  svg += '<pattern id="cement" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#e0d8c8"/><circle cx="1" cy="1" r="0.7" fill="#c0b8a0"/><circle cx="4" cy="4" r="0.7" fill="#c0b8a0"/></pattern>';
+  svg += '<pattern id="perfhatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="#c62828" stroke-width="1"/></pattern>';
+  svg += '</defs>';
+  svg += '<rect width="' + svgW + '" height="' + svgH + '" fill="#fafdf8" rx="8"/>';
 
-  // Background
-  svg += '<rect width="' + svgW + '" height="' + svgH + '" fill="#fafcfa" rx="6"/>';
-
-  // Ground surface
-  svg += '<line x1="' + leftMargin + '" y1="' + topMargin + '" x2="' + (svgW - rightMargin) + '" y2="' + topMargin + '" stroke="#6a4a2a" stroke-width="2"/>';
-  // Hatch marks for ground
-  for (var gx = leftMargin; gx < svgW - rightMargin; gx += 8) {
-    svg += '<line x1="' + gx + '" y1="' + topMargin + '" x2="' + (gx - 4) + '" y2="' + (topMargin - 6) + '" stroke="#6a4a2a" stroke-width="0.8"/>';
+  // Ground surface with gradient
+  svg += '<rect x="' + leftM + '" y="' + (topM - 16) + '" width="' + (svgW - leftM - rightM) + '" height="16" fill="#8d6e63" opacity="0.3" rx="0"/>';
+  for (var gx = leftM; gx < svgW - rightM; gx += 7) {
+    svg += '<line x1="' + gx + '" y1="' + topM + '" x2="' + (gx - 4) + '" y2="' + (topM - 7) + '" stroke="#5d4037" stroke-width="0.7" opacity="0.5"/>';
   }
-  svg += '<text x="' + (leftMargin - 4) + '" y="' + (topMargin + 4) + '" text-anchor="end" font-size="9" fill="#6a4a2a" font-weight="600">0\'</text>';
+  svg += '<line x1="' + leftM + '" y1="' + topM + '" x2="' + (svgW - rightM) + '" y2="' + topM + '" stroke="#5d4037" stroke-width="2"/>';
+  svg += '<text x="' + (leftM - 5) + '" y="' + (topM + 4) + '" text-anchor="end" font-size="9" fill="#5d4037" font-weight="700" font-family="monospace">GL</text>';
 
-  // Depth ticks
-  var tickInterval = maxDepth <= 2000 ? 500 : maxDepth <= 5000 ? 1000 : 2000;
-  for (var d = tickInterval; d < maxDepth; d += tickInterval) {
-    var ty = dToY(d);
-    svg += '<line x1="' + (leftMargin - 3) + '" y1="' + ty + '" x2="' + (leftMargin + 3) + '" y2="' + ty + '" stroke="#aaa" stroke-width="0.5"/>';
-    svg += '<text x="' + (leftMargin - 5) + '" y="' + (ty + 3) + '" text-anchor="end" font-size="8" fill="#888">' + d + '\'</text>';
+  // Draw zigzag breaks
+  for (var i = 0; i < segments.length; i++) {
+    if (!segments[i].isBreak) continue;
+    var by = segY[i];
+    var bh = segments[i].px;
+    var bmid = by + bh / 2;
+    // White mask
+    svg += '<rect x="' + (leftM - 10) + '" y="' + by + '" width="' + (svgW - leftM + 10 - rightM + 10) + '" height="' + bh + '" fill="#fafdf8"/>';
+    // Zigzag lines top and bottom
+    var zigW = svgW - leftM - rightM + 20;
+    var zigX = leftM - 10;
+    for (var z = 0; z < 2; z++) {
+      var zy = z === 0 ? by + 2 : by + bh - 2;
+      var path = 'M' + zigX + ',' + zy;
+      for (var zx = zigX; zx < zigX + zigW; zx += 8) {
+        path += ' l4,-4 l4,4';
+      }
+      svg += '<path d="' + path + '" fill="none" stroke="#999" stroke-width="1"/>';
+    }
+    // Depth labels for the break
+    svg += '<text x="' + (leftM - 5) + '" y="' + (by + 4) + '" text-anchor="end" font-size="7" fill="#999" font-family="monospace">' + Math.round(segments[i].startD) + "'</text>";
+    svg += '<text x="' + (leftM - 5) + '" y="' + (by + bh) + '" text-anchor="end" font-size="7" fill="#999" font-family="monospace">' + Math.round(segments[i].endD) + "'</text>";
   }
 
-  // Draw hole walls and casing strings (outer to inner)
-  // Sort by size descending so largest draws first
-  var sorted = strings.slice().sort(function(a, b) { return (b.size || 0) - (a.size || 0); });
+  // Draw casing strings (largest first)
+  var sorted = strings.slice().sort(function(a,b) { return (b.size||0) - (a.size||0); });
 
   for (var i = 0; i < sorted.length; i++) {
     var cs = sorted[i];
     if (!cs.depth) continue;
-    var y1 = topMargin;
+    var y1 = topM;
     var y2 = dToY(cs.depth);
     var hw = sToW(cs.size || 5);
-    var hhw = cs.holeSize ? sToW(cs.holeSize) : hw + 8;
+    var hhw = cs.holeSize ? sToW(cs.holeSize) : hw + 6;
 
-    // Hole wall (light rock color)
-    svg += '<rect x="' + (centerX - hhw) + '" y="' + y1 + '" width="' + (hhw * 2) + '" height="' + (y2 - y1) + '" fill="#e8dcc8" opacity="0.3"/>';
+    // Cement annulus (between hole wall and casing, bottom portion)
+    var cementTop = y1 + (y2 - y1) * 0.4;
+    svg += '<rect x="' + (centerX - hhw) + '" y="' + cementTop + '" width="' + ((hhw - hw)) + '" height="' + (y2 - cementTop) + '" fill="url(#cement)"/>';
+    svg += '<rect x="' + (centerX + hw) + '" y="' + cementTop + '" width="' + ((hhw - hw)) + '" height="' + (y2 - cementTop) + '" fill="url(#cement)"/>';
 
-    // Casing string
-    svg += '<rect x="' + (centerX - hw) + '" y="' + y1 + '" width="' + (hw * 2) + '" height="' + (y2 - y1) + '" fill="' + cs.color + '" opacity="0.25" stroke="' + cs.color + '" stroke-width="1.5" rx="1"/>';
+    // Casing body (slightly transparent fill with solid walls)
+    svg += '<rect x="' + (centerX - hw) + '" y="' + y1 + '" width="' + (hw * 2) + '" height="' + (y2 - y1) + '" fill="' + cs.fill + '" opacity="0.35"/>';
 
-    // Casing walls (left and right lines)
-    svg += '<line x1="' + (centerX - hw) + '" y1="' + y1 + '" x2="' + (centerX - hw) + '" y2="' + y2 + '" stroke="' + cs.color + '" stroke-width="2"/>';
-    svg += '<line x1="' + (centerX + hw) + '" y1="' + y1 + '" x2="' + (centerX + hw) + '" y2="' + y2 + '" stroke="' + cs.color + '" stroke-width="2"/>';
+    // Casing walls — thick left and right lines
+    svg += '<line x1="' + (centerX - hw) + '" y1="' + y1 + '" x2="' + (centerX - hw) + '" y2="' + y2 + '" stroke="' + cs.color + '" stroke-width="2.5"/>';
+    svg += '<line x1="' + (centerX + hw) + '" y1="' + y1 + '" x2="' + (centerX + hw) + '" y2="' + y2 + '" stroke="' + cs.color + '" stroke-width="2.5"/>';
 
-    // Shoe (bottom cap)
-    svg += '<line x1="' + (centerX - hw - 4) + '" y1="' + y2 + '" x2="' + (centerX - hw) + '" y2="' + (y2 - 5) + '" stroke="' + cs.color + '" stroke-width="2"/>';
-    svg += '<line x1="' + (centerX + hw + 4) + '" y1="' + y2 + '" x2="' + (centerX + hw) + '" y2="' + (y2 - 5) + '" stroke="' + cs.color + '" stroke-width="2"/>';
-    svg += '<line x1="' + (centerX - hw - 4) + '" y1="' + y2 + '" x2="' + (centerX + hw + 4) + '" y2="' + y2 + '" stroke="' + cs.color + '" stroke-width="1.5"/>';
+    // Float shoe (guide shoe symbol)
+    svg += '<path d="M' + (centerX - hw - 5) + ',' + y2 + ' L' + (centerX - hw) + ',' + (y2 - 6) + '" stroke="' + cs.color + '" stroke-width="2.5" fill="none"/>';
+    svg += '<path d="M' + (centerX + hw + 5) + ',' + y2 + ' L' + (centerX + hw) + ',' + (y2 - 6) + '" stroke="' + cs.color + '" stroke-width="2.5" fill="none"/>';
+    svg += '<line x1="' + (centerX - hw - 5) + '" y1="' + y2 + '" x2="' + (centerX + hw + 5) + '" y2="' + y2 + '" stroke="' + cs.color + '" stroke-width="2"/>';
 
-    // Label on right side
-    var label = cs.name;
-    if (cs.raw[1]) label += ' ' + cs.raw[1];
+    // Label with connecting line
+    var ly = y2 - 4;
+    var lx = centerX + hhw + 8;
+    var label = '';
+    if (cs.raw[1]) label += cs.raw[1];
     if (cs.raw[2]) label += ' ' + cs.raw[2];
-    label += ' @ ' + (typeof cs.depth === 'number' ? cs.depth + "'" : cs.raw[0]);
-    svg += '<text x="' + (centerX + hw + 7) + '" y="' + (y2 - 2) + '" font-size="7.5" fill="' + cs.color + '" font-weight="600">' + esc(label) + '</text>';
+    var depthLabel = cs.depth ? cs.depth + "'" : cs.raw[0];
+    svg += '<line x1="' + (centerX + hw + 2) + '" y1="' + ly + '" x2="' + (lx - 2) + '" y2="' + ly + '" stroke="' + cs.color + '" stroke-width="0.5" stroke-dasharray="2,2"/>';
+    svg += '<text x="' + lx + '" y="' + (ly - 1) + '" font-size="8" fill="' + cs.color + '" font-weight="700" font-family="sans-serif">' + esc(cs.name) + '</text>';
+    svg += '<text x="' + lx + '" y="' + (ly + 9) + '" font-size="7.5" fill="#555" font-family="sans-serif">' + esc(label) + ' @ ' + depthLabel + '</text>';
   }
 
   // Perforations
   for (var i = 0; i < perfs.length; i++) {
     var p = perfs[i];
-    var py1 = dToY(p.top);
-    var py2 = dToY(p.bot);
-    // Find innermost casing width at this depth
-    var perfHw = 15;
-    for (var j = 0; j < sorted.length; j++) {
-      if (sorted[j].depth && sorted[j].depth >= p.top) {
-        perfHw = sToW(sorted[j].size || 5);
-      }
+    var py1 = dToY(p.top), py2 = dToY(p.bot);
+    if (py2 - py1 < 3) py2 = py1 + 3;
+    // Find innermost casing at perf depth
+    var perfHw = 12;
+    for (var j = sorted.length - 1; j >= 0; j--) {
+      if (sorted[j].depth && sorted[j].depth >= p.top && sorted[j].size) { perfHw = sToW(sorted[j].size); break; }
     }
-    // Draw perf bursts on both sides
-    for (var py = py1; py <= py2; py += 6) {
-      svg += '<line x1="' + (centerX - perfHw - 2) + '" y1="' + py + '" x2="' + (centerX - perfHw - 8) + '" y2="' + (py - 2) + '" stroke="#c0392b" stroke-width="1.2"/>';
-      svg += '<line x1="' + (centerX - perfHw - 2) + '" y1="' + py + '" x2="' + (centerX - perfHw - 8) + '" y2="' + (py + 2) + '" stroke="#c0392b" stroke-width="1.2"/>';
-      svg += '<line x1="' + (centerX + perfHw + 2) + '" y1="' + py + '" x2="' + (centerX + perfHw + 8) + '" y2="' + (py - 2) + '" stroke="#c0392b" stroke-width="1.2"/>';
-      svg += '<line x1="' + (centerX + perfHw + 2) + '" y1="' + py + '" x2="' + (centerX + perfHw + 8) + '" y2="' + (py + 2) + '" stroke="#c0392b" stroke-width="1.2"/>';
+    // Hatched perf zone on casing walls
+    svg += '<rect x="' + (centerX - perfHw - 8) + '" y="' + py1 + '" width="8" height="' + (py2 - py1) + '" fill="url(#perfhatch)" opacity="0.8"/>';
+    svg += '<rect x="' + (centerX + perfHw) + '" y="' + py1 + '" width="8" height="' + (py2 - py1) + '" fill="url(#perfhatch)" opacity="0.8"/>';
+    // Perf burst marks
+    for (var py = py1 + 2; py <= py2 - 1; py += 5) {
+      svg += '<line x1="' + (centerX - perfHw - 8) + '" y1="' + py + '" x2="' + (centerX - perfHw - 13) + '" y2="' + (py - 2) + '" stroke="#c62828" stroke-width="1.2"/>';
+      svg += '<line x1="' + (centerX - perfHw - 8) + '" y1="' + py + '" x2="' + (centerX - perfHw - 13) + '" y2="' + (py + 2) + '" stroke="#c62828" stroke-width="1.2"/>';
+      svg += '<line x1="' + (centerX + perfHw + 8) + '" y1="' + py + '" x2="' + (centerX + perfHw + 13) + '" y2="' + (py - 2) + '" stroke="#c62828" stroke-width="1.2"/>';
+      svg += '<line x1="' + (centerX + perfHw + 8) + '" y1="' + py + '" x2="' + (centerX + perfHw + 13) + '" y2="' + (py + 2) + '" stroke="#c62828" stroke-width="1.2"/>';
     }
-    // Perf label on left
-    svg += '<text x="' + (centerX - perfHw - 12) + '" y="' + ((py1 + py2) / 2 + 3) + '" text-anchor="end" font-size="7" fill="#c0392b" font-weight="600">' + p.top + '-' + p.bot + '\'</text>';
+    // Label
+    svg += '<text x="' + (centerX - perfHw - 16) + '" y="' + ((py1 + py2) / 2 + 3) + '" text-anchor="end" font-size="7" fill="#c62828" font-weight="700" font-family="monospace">' + p.top + '-' + p.bot + "'</text>";
   }
 
-  // TD line
-  if (td) {
-    var tdy = dToY(td);
-    svg += '<line x1="' + (leftMargin + 10) + '" y1="' + tdy + '" x2="' + (svgW - rightMargin - 10) + '" y2="' + tdy + '" stroke="#333" stroke-width="1.5"/>';
-    svg += '<text x="' + (svgW - rightMargin - 8) + '" y="' + (tdy - 3) + '" text-anchor="end" font-size="8" fill="#333" font-weight="700">TD ' + td + '\'</text>';
-  }
-
-  // PBTD line
-  if (pbtd && pbtd !== td) {
-    var pby = dToY(pbtd);
-    svg += '<line x1="' + (leftMargin + 10) + '" y1="' + pby + '" x2="' + (svgW - rightMargin - 10) + '" y2="' + pby + '" stroke="#333" stroke-width="1" stroke-dasharray="4,3"/>';
-    svg += '<text x="' + (svgW - rightMargin - 8) + '" y="' + (pby - 3) + '" text-anchor="end" font-size="8" fill="#555" font-weight="600">PBTD ' + pbtd + '\'</text>';
-  }
-
-  // Tubing (thin line inside innermost casing)
+  // Tubing string
   var tubingDepth = null;
   if (w.tt) {
-    var tm = w.tt.match(/to\s*([\d,]+)/i);
-    if (!tm) tm = w.tt.match(/([\d,]+)'/);
-    if (tm) tubingDepth = parseInt(tm[1].replace(/,/g, ''));
+    var allDepths = w.tt.match(/to\s*([\d,]+)/gi);
+    if (allDepths) {
+      for (var i = 0; i < allDepths.length; i++) {
+        var d = parseInt(allDepths[i].replace(/to\s*/i,'').replace(/,/g,''));
+        if (d > (tubingDepth || 0)) tubingDepth = d;
+      }
+    }
+    if (!tubingDepth) { var tm = w.tt.match(/([\d,]+)'/); if (tm) tubingDepth = parseInt(tm[1].replace(/,/g,'')); }
   }
   if (tubingDepth && tubingDepth > 100) {
     var tby = dToY(tubingDepth);
-    svg += '<line x1="' + (centerX - 3) + '" y1="' + topMargin + '" x2="' + (centerX - 3) + '" y2="' + tby + '" stroke="#666" stroke-width="1.5"/>';
-    svg += '<line x1="' + (centerX + 3) + '" y1="' + topMargin + '" x2="' + (centerX + 3) + '" y2="' + tby + '" stroke="#666" stroke-width="1.5"/>';
-    svg += '<text x="' + (centerX) + '" y="' + (tby + 10) + '" text-anchor="middle" font-size="7" fill="#666">Tbg ' + tubingDepth + '\'</text>';
+    svg += '<rect x="' + (centerX - 4) + '" y="' + topM + '" width="8" height="' + (tby - topM) + '" fill="#78909c" opacity="0.3" rx="1"/>';
+    svg += '<line x1="' + (centerX - 4) + '" y1="' + topM + '" x2="' + (centerX - 4) + '" y2="' + tby + '" stroke="#546e7a" stroke-width="1.5"/>';
+    svg += '<line x1="' + (centerX + 4) + '" y1="' + topM + '" x2="' + (centerX + 4) + '" y2="' + tby + '" stroke="#546e7a" stroke-width="1.5"/>';
+    svg += '<text x="' + centerX + '" y="' + (tby + 11) + '" text-anchor="middle" font-size="7.5" fill="#546e7a" font-weight="600">Tbg ' + tubingDepth + "'</text>";
+  }
+
+  // TD marker
+  if (td) {
+    var tdy = dToY(td);
+    svg += '<line x1="' + (leftM + 5) + '" y1="' + tdy + '" x2="' + (svgW - rightM - 5) + '" y2="' + tdy + '" stroke="#212121" stroke-width="2"/>';
+    svg += '<rect x="' + (svgW - rightM - 62) + '" y="' + (tdy - 10) + '" width="58" height="13" fill="#212121" rx="2"/>';
+    svg += '<text x="' + (svgW - rightM - 33) + '" y="' + (tdy - 1) + '" text-anchor="middle" font-size="8" fill="#fff" font-weight="700" font-family="monospace">TD ' + td + "'</text>";
+  }
+
+  // PBTD marker
+  if (pbtd && pbtd !== td) {
+    var pby = dToY(pbtd);
+    svg += '<line x1="' + (leftM + 5) + '" y1="' + pby + '" x2="' + (svgW - rightM - 5) + '" y2="' + pby + '" stroke="#555" stroke-width="1.5" stroke-dasharray="5,3"/>';
+    svg += '<text x="' + (svgW - rightM - 6) + '" y="' + (pby - 3) + '" text-anchor="end" font-size="7.5" fill="#555" font-weight="700" font-family="monospace">PBTD ' + pbtd + "'</text>";
+  }
+
+  // Depth scale for non-break segments
+  for (var si = 0; si < segments.length; si++) {
+    if (segments[si].isBreak) continue;
+    var sd = segments[si].endD - segments[si].startD;
+    var interval = sd <= 200 ? 50 : sd <= 500 ? 100 : sd <= 2000 ? 500 : 1000;
+    var startTick = Math.ceil(segments[si].startD / interval) * interval;
+    for (var d = startTick; d <= segments[si].endD; d += interval) {
+      if (d === 0) continue;
+      var ty = dToY(d);
+      svg += '<line x1="' + (leftM - 3) + '" y1="' + ty + '" x2="' + (leftM + 2) + '" y2="' + ty + '" stroke="#bbb" stroke-width="0.5"/>';
+      svg += '<text x="' + (leftM - 5) + '" y="' + (ty + 3) + '" text-anchor="end" font-size="7" fill="#999" font-family="monospace">' + d + "'</text>";
+    }
   }
 
   svg += '</svg>';
