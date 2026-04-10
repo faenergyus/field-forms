@@ -440,12 +440,12 @@ function drawWBD(w) {
     s += '<rect x="' + (cx+or_-2) + '" y="' + y1 + '" width="2" height="' + (y2-y1) + '" fill="#555"/>';
     s += '<rect x="' + (cx+ir) + '" y="' + y1 + '" width="1.5" height="' + (y2-y1) + '" fill="#bbb"/>';
 
-    // Shoe — flared guide shoe on each side only, no line across wellbore
-    s += '<line x1="' + (cx-or_-8) + '" y1="' + (y2+3) + '" x2="' + (cx-or_) + '" y2="' + (y2-10) + '" stroke="#555" stroke-width="2.5"/>';
-    s += '<line x1="' + (cx+or_+8) + '" y1="' + (y2+3) + '" x2="' + (cx+or_) + '" y2="' + (y2-10) + '" stroke="#555" stroke-width="2.5"/>';
-    // Bottom cap on the wall only (left and right)
-    s += '<line x1="' + (cx-or_) + '" y1="' + y2 + '" x2="' + (cx-ir) + '" y2="' + y2 + '" stroke="#555" stroke-width="2"/>';
-    s += '<line x1="' + (cx+ir) + '" y1="' + y2 + '" x2="' + (cx+or_) + '" y2="' + y2 + '" stroke="#555" stroke-width="2"/>';
+    // Shoe — black filled triangles pointing down on each side
+    // Left triangle
+    s += '<polygon points="' + (cx-ir) + ',' + (y2-8) + ' ' + (cx-or_) + ',' + (y2-8) + ' ' + (cx-or_-6) + ',' + (y2+4) + '" fill="#000"/>';
+    // Right triangle
+    s += '<polygon points="' + (cx+ir) + ',' + (y2-8) + ' ' + (cx+or_) + ',' + (y2-8) + ' ' + (cx+or_+6) + ',' + (y2+4) + '" fill="#000"/>';
+    // (shoe cap removed — triangles only)
 
     // Depth label at shoe — right side
     s += '<text x="' + (cx+or_+12) + '" y="' + (y2+4) + '" font-size="10" fill="#333">' + cs.depth + "'" + '</text>';
@@ -465,21 +465,34 @@ function drawWBD(w) {
     s += '<rect x="' + (cx-7) + '" y="' + gy + '" width="14" height="' + (tby-gy) + '" fill="#eee" opacity="0.3"/>';
   }
 
-  // ─── ROD STRING + PUMP ───
-  var pumpD = tubD; // pump sits at end of tubing
+  // ─── ROD STRING + PUMP — on RIGHT side of wellbore center ───
+  var pumpD = tubD;
   if (w.rr && pumpD && pumpD > 100) {
     var pumpY = dToY(pumpD);
-    // Rod line from surface to pump
-    s += '<line x1="' + cx + '" y1="' + gy + '" x2="' + cx + '" y2="' + (pumpY - 2) + '" stroke="#000" stroke-width="2"/>';
-    // Polished rod at surface (wider section)
-    s += '<rect x="' + (cx - 3) + '" y="' + gy + '" width="6" height="12" fill="#444" rx="1"/>';
-    // Pump body — visible rectangle straddling the rod
-    s += '<rect x="' + (cx - 12) + '" y="' + pumpY + '" width="24" height="16" fill="#666" stroke="#000" stroke-width="1.5" rx="2"/>';
-    s += '<text x="' + cx + '" y="' + (pumpY + 11) + '" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">PUMP</text>';
-    // Pump label — left side next to rod info
+    var rodX = cx + 2; // slightly right of center
+    // Rod string line
+    s += '<line x1="' + rodX + '" y1="' + gy + '" x2="' + rodX + '" y2="' + (pumpY - 2) + '" stroke="#000" stroke-width="2"/>';
+    // Polished rod at surface
+    s += '<rect x="' + (rodX - 3) + '" y="' + gy + '" width="6" height="10" fill="#333" rx="1"/>';
+
+    // Rod Pump symbol — barrel with standing valve and traveling valve
+    var pW = 14, pH = 30; // pump width/height
+    var px = rodX - pW/2;
+    // Barrel (outer rectangle)
+    s += '<rect x="' + px + '" y="' + pumpY + '" width="' + pW + '" height="' + pH + '" fill="#fff" stroke="#000" stroke-width="1.5" rx="1"/>';
+    // Plunger inside barrel (inner rectangle)
+    s += '<rect x="' + (px+2) + '" y="' + (pumpY+2) + '" width="' + (pW-4) + '" height="' + (pH/2-2) + '" fill="#aaa" stroke="#000" stroke-width="0.8"/>';
+    // Traveling valve — small triangle at top of plunger pointing up
+    s += '<polygon points="' + rodX + ',' + (pumpY+2) + ' ' + (rodX-4) + ',' + (pumpY+8) + ' ' + (rodX+4) + ',' + (pumpY+8) + '" fill="#000"/>';
+    // Standing valve — small triangle at bottom pointing up
+    s += '<polygon points="' + rodX + ',' + (pumpY+pH-8) + ' ' + (rodX-4) + ',' + (pumpY+pH-2) + ' ' + (rodX+4) + ',' + (pumpY+pH-2) + '" fill="#000"/>';
+    // Cross marks on valves
+    s += '<line x1="' + (rodX-3) + '" y1="' + (pumpY+pH/2) + '" x2="' + (rodX+3) + '" y2="' + (pumpY+pH/2) + '" stroke="#000" stroke-width="1"/>';
+
+    // Label on RIGHT
     var innerCsg = byDepth.length ? byDepth[byDepth.length-1].or_ : 30;
-    s += '<text x="' + (cx - innerCsg - 18) + '" y="' + (pumpY + 4) + '" text-anchor="end" font-size="10" fill="#000" font-weight="700">Pump</text>';
-    s += '<text x="' + (cx - innerCsg - 18) + '" y="' + (pumpY + 15) + '" text-anchor="end" font-size="9" fill="#333">@ ' + pumpD + "'" + '</text>';
+    s += '<text x="' + (cx + innerCsg + 14) + '" y="' + (pumpY + 10) + '" font-size="10" fill="#000" font-weight="700">Rod Pump</text>';
+    s += '<text x="' + (cx + innerCsg + 14) + '" y="' + (pumpY + 22) + '" font-size="9" fill="#333">@ ' + pumpD + "'" + '</text>';
   }
 
   // ─── PERFORATIONS ───
