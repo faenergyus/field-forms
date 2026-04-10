@@ -442,11 +442,11 @@ function drawWBD(w) {
     s += '<rect x="' + (cx+or_-2) + '" y="' + y1 + '" width="2" height="' + (y2-y1) + '" fill="#555"/>';
     s += '<rect x="' + (cx+ir) + '" y="' + y1 + '" width="1.5" height="' + (y2-y1) + '" fill="#bbb"/>';
 
-    // Shoe — black filled triangles pointing down on each side
-    // Left triangle
-    s += '<polygon points="' + (cx-ir) + ',' + (y2-8) + ' ' + (cx-or_) + ',' + (y2-8) + ' ' + (cx-or_-6) + ',' + (y2+4) + '" fill="#000"/>';
-    // Right triangle
-    s += '<polygon points="' + (cx+ir) + ',' + (y2-8) + ' ' + (cx+or_) + ',' + (y2-8) + ' ' + (cx+or_+6) + ',' + (y2+4) + '" fill="#000"/>';
+    // Shoe — right triangles with vertical edge along casing wall
+    // Left shoe: vertical on inner edge (cx-ir side), hypotenuse goes down-outward
+    s += '<polygon points="' + (cx-ir) + ',' + y2 + ' ' + (cx-ir) + ',' + (y2+10) + ' ' + (cx-or_-6) + ',' + (y2+10) + '" fill="#000"/>';
+    // Right shoe: vertical on inner edge (cx+ir side), hypotenuse goes down-outward
+    s += '<polygon points="' + (cx+ir) + ',' + y2 + ' ' + (cx+ir) + ',' + (y2+10) + ' ' + (cx+or_+6) + ',' + (y2+10) + '" fill="#000"/>';
     // (shoe cap removed — triangles only)
 
     // Depth label at shoe — right side
@@ -567,28 +567,7 @@ function drawWBD(w) {
       infoY += 11;
     }
   }
-  // Pump info right after tubing
-  if (w.rr && pumpD) {
-    infoY += 8;
-    s += '<text x="' + infoX + '" y="' + infoY + '" font-size="11" fill="#000" font-weight="700" text-decoration="underline">Pump Details</text>';
-    infoY += 14;
-    // Extract pump line from rod data
-    var pumpLine = '';
-    if (w.rr) {
-      var pLines = w.rr.split('\n');
-      for (var j = 0; j < pLines.length; j++) {
-        if (pLines[j].toUpperCase().indexOf('PUMP') >= 0) { pumpLine = pLines[j].trim(); break; }
-      }
-    }
-    s += '<text x="' + infoX + '" y="' + infoY + '" font-size="9" fill="#333">Type: Rod Pump</text>';
-    infoY += 12;
-    s += '<text x="' + infoX + '" y="' + infoY + '" font-size="9" fill="#333">Depth: ' + pumpD + "'" + '</text>';
-    infoY += 12;
-    if (pumpLine) {
-      s += '<text x="' + infoX + '" y="' + infoY + '" font-size="8.5" fill="#333">' + esc(pumpLine.substring(0,50)) + '</text>';
-      infoY += 12;
-    }
-  }
+  // Rod String
   if (w.rr) {
     infoY += 8;
     s += '<text x="' + infoX + '" y="' + infoY + '" font-size="11" fill="#000" font-weight="700" text-decoration="underline">Rod String</text>';
@@ -599,6 +578,25 @@ function drawWBD(w) {
       if (!line) continue;
       s += '<text x="' + infoX + '" y="' + infoY + '" font-size="8.5" fill="#333">' + esc(line.substring(0,50)) + '</text>';
       infoY += 11;
+    }
+  }
+  // Pump Details — below rod string
+  if (w.rr && pumpD) {
+    infoY += 8;
+    s += '<text x="' + infoX + '" y="' + infoY + '" font-size="11" fill="#000" font-weight="700" text-decoration="underline">Pump Details</text>';
+    infoY += 14;
+    var pumpLine = '';
+    var pLines = w.rr.split('\n');
+    for (var j = 0; j < pLines.length; j++) {
+      if (pLines[j].toUpperCase().indexOf('PUMP') >= 0) { pumpLine = pLines[j].trim(); break; }
+    }
+    s += '<text x="' + infoX + '" y="' + infoY + '" font-size="9" fill="#333">Type: Rod Pump</text>';
+    infoY += 12;
+    s += '<text x="' + infoX + '" y="' + infoY + '" font-size="9" fill="#333">Depth: ' + pumpD + "'" + '</text>';
+    infoY += 12;
+    if (pumpLine) {
+      s += '<text x="' + infoX + '" y="' + infoY + '" font-size="8.5" fill="#333">' + esc(pumpLine.substring(0,50)) + '</text>';
+      infoY += 12;
     }
   }
 
