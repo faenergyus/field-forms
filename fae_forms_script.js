@@ -20,7 +20,7 @@ var DRIVE_FOLDER_NAME = 'FAE Field Forms Photos';
 var FORM_CONFIGS = {
   gwi: {
     sheetName: 'Gas Well Inspection',
-    cols: ['Timestamp','Inspected By','Date','Well Site','Has Power?','Has PU?','PU Runs?','Has Rods?','Has Compressor?','Suction Setpts','Discharge Limits','Discharge Press','Has Tanks?','Tanks Hooked?','Tank Details','Has Separator?','Sep Liquid?','Tubing Valve','Casing Valve','Piping','Leaks Found?','Insp Method','Leaks Fixed?','Casing Press','Tubing Press','Flow Rate MCFD','Static Press','Flow Time min','Build Time min','FAP ft','Photos']
+    cols: ['Timestamp','Inspected By','Inspection Date','Well Site','Upload Photos','Has Power?','Has PU?','Has Rods?','PU Runs?','Has Compressor?','Suction Setpts','Discharge Limits','Discharge Press','Has Tanks?','Tanks Hooked?','Tank Details','Tubing Valve','Casing Valve','Piping','Casing Press','Tubing Press','Flow Rate MCFD','Static Press','Flow Time min','Build Time min','Leaks Found?','Sonic Camera?','Insp Method','Has Separator?','Sep Liquid?','FAP ft','Leaks Fixed?']
   },
   fap: {
     sheetName: 'Form Responses 1',
@@ -32,11 +32,11 @@ var FORM_CONFIGS = {
   },
   pumpup: {
     sheetName: 'Pump Up Responses',
-    cols: ['Timestamp','Performed By','Date','Well Name','Runtime %','Strokes to 500','Holds 500?','Pumping Press','Tagging?','Casing Press','Check Valve?','Oil Cut','SPM','Notes','Photos']
+    cols: ['Timestamp','Well Name','Runtime %','Strokes to 500','Holds 500?','','Pumping Press','Tagging?','Casing Press','Oil Cut','SPM','Notes','Test Date','Performed By','Photos','Additional Photo','Check Valve?']
   },
   grounding: {
     sheetName: 'Grounding',
-    cols: ['Timestamp','Pumper','Date','Well Name','Grounded?','Equip Present?','Comment','Photos']
+    cols: ['Timestamp','Pumper','','Well Name','Inspection Date','Is Grounded?','Grounding equipment present?','Comment','Photos']
   },
   wellsite: {
     sheetName: 'Well Inspection Report',
@@ -46,11 +46,11 @@ var FORM_CONFIGS = {
 
 // --- Field key order (matches cols after Timestamp, before Photos) ---
 var FIELD_ORDER = {
-  gwi:      ['inspectedBy','inspDate','wellSite','power','pumpUnit','puRun','rods','compressor','suction','dischargeLimits','dischargePressure','tanks','tanksHooked','tankDetails','separator','sepLiquid','tubingValve','casingValve','piping','leaks','inspMethod','leaksFixed','casingPressure','tubingPressure','flowRate','staticPressure','flowTime','buildTime','fap'],
+  gwi:      ['inspectedBy','inspDate','wellSite','__photos__','power','pumpUnit','rods','puRun','compressor','suction','dischargeLimits','dischargePressure','tanks','tanksHooked','tankDetails','tubingValve','casingValve','piping','casingPressure','tubingPressure','flowRate','staticPressure','flowTime','buildTime','leaks','','inspMethod','separator','sepLiquid','fap','leaksFixed'],
   fap:      ['fapDate','wellName','fap','runtimePct','comment','spm','fapDate','__photos_results__','fapShotBy','engineerComment','__photos_wave__'],
-  facility: ['inspectedBy','inspDate','facilityName','stainedPad','oosTanks','windSock','firewall','firewallComments','pumpContain','pumpEmpty','sign','signComments','thiefHatch','trash','trashComments','dartsSeals','stencilled','leakMethod','leaksFound','leaksFixed1','leaksFixed2','valveNote','oxygenPPM','envConcerns'],
-  pumpup:   ['testPerformedBy','testDate','wellName','runTimePct','strokesTo500','holds500','pumpingPressure','tagging','casingPressure','checkValve','oilCut','spm','notes'],
-  grounding:['pumper','inspDate','wellName','grounded','equipPresent','comment'],
+  facility: ['inspectedBy','inspDate','facilityName','stainedPad','oosTanks','windSock','firewall','firewallComments','pumpContain','pumpEmpty','sign','signComments','thiefHatch','trash','trashComments','dartsSeals','stencilled','','oxygenPPM','valveNote','leakMethod','leaksFound','leaksFixed1','leaksFixed2','envConcerns'],
+  pumpup:   ['wellName','runTimePct','strokesTo500','holds500','','pumpingPressure','tagging','casingPressure','oilCut','spm','notes','testDate','testPerformedBy','__photos__','','checkValve'],
+  grounding:['pumper','','wellName','inspDate','grounded','equipPresent','comment'],
   wellsite: ['wellSite','inspectedBy','inspDate','stainedPad','trash','beltGuard','wellSign','padBrush','unusedEquip','comment','__photos__','oxygenPPM','envConcerns','wellheadParts','injectionScreen']
 };
 

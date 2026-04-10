@@ -121,14 +121,14 @@
             <div class="photo-grid" id="resultsPhotoGrid">
               <div class="photo-add" id="addResultsBtn">+</div>
             </div>
-            <input type="file" id="resultsPhotoInput" accept="image/*" multiple style="display:none">
+            <input type="file" id="resultsPhotoInput" accept="image/*" style="display:none">
           </div>
           <div class="photo-col">
             <div class="photo-label">Wave Photo</div>
             <div class="photo-grid" id="wavePhotoGrid">
               <div class="photo-add" id="addWaveBtn">+</div>
             </div>
-            <input type="file" id="wavePhotoInput" accept="image/*" multiple style="display:none">
+            <input type="file" id="wavePhotoInput" accept="image/*" style="display:none">
           </div>
         </div>
       </div>
@@ -328,7 +328,8 @@ let waveFiles = [];
 function setupPhotoGrid(addBtnId, inputId, filesArr, gridId) {
   document.getElementById(addBtnId).addEventListener('click', () => document.getElementById(inputId).click());
   document.getElementById(inputId).addEventListener('change', function() {
-    for (const file of this.files) filesArr.push(file);
+    filesArr.length = 0;
+    if (this.files[0]) filesArr.push(this.files[0]);
     this.value = '';
     renderGrid(gridId, filesArr);
   });
@@ -352,12 +353,14 @@ function renderGrid(gridId, filesArr) {
     thumb.appendChild(img); thumb.appendChild(rm);
     grid.appendChild(thumb);
   });
-  const addBtn = document.createElement('div');
-  addBtn.className = 'photo-add';
-  addBtn.textContent = '+';
-  const inputId = gridId === 'resultsPhotoGrid' ? 'resultsPhotoInput' : 'wavePhotoInput';
-  addBtn.onclick = () => document.getElementById(inputId).click();
-  grid.appendChild(addBtn);
+  if (filesArr.length === 0) {
+    const addBtn = document.createElement('div');
+    addBtn.className = 'photo-add';
+    addBtn.textContent = '+';
+    const inputId = gridId === 'resultsPhotoGrid' ? 'resultsPhotoInput' : 'wavePhotoInput';
+    addBtn.onclick = () => document.getElementById(inputId).click();
+    grid.appendChild(addBtn);
+  }
 }
 
 function fileToBase64(file) {
