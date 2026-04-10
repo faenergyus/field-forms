@@ -420,20 +420,25 @@ function drawWBD(w) {
     var or_ = cs.or_, ir = cs.ir;
     var wallW = or_ - ir;
 
-    // Left wall band — thick gray with 3D shading
-    s += '<rect x="' + (cx - or_) + '" y="' + y1 + '" width="' + wallW + '" height="' + (y2 - y1) + '" fill="#999"/>';
-    s += '<rect x="' + (cx - or_) + '" y="' + y1 + '" width="2" height="' + (y2 - y1) + '" fill="#666"/>';  // dark outer edge
-    s += '<rect x="' + (cx - ir - 1) + '" y="' + y1 + '" width="2" height="' + (y2 - y1) + '" fill="#bbb"/>';  // light inner edge
+    // Bore fill — light gray background for the annular space
+    s += '<rect x="' + (cx - or_) + '" y="' + y1 + '" width="' + (or_ * 2) + '" height="' + (y2 - y1) + '" fill="#e0e0e0"/>';
+    // White interior (between this casing's inner walls)
+    s += '<rect x="' + (cx - ir) + '" y="' + y1 + '" width="' + (ir * 2) + '" height="' + (y2 - y1) + '" fill="#fff"/>';
+
+    // Left wall band — dark gray pipe wall
+    s += '<rect x="' + (cx - or_) + '" y="' + y1 + '" width="' + wallW + '" height="' + (y2 - y1) + '" fill="#777"/>';
+    s += '<rect x="' + (cx - or_) + '" y="' + y1 + '" width="2" height="' + (y2 - y1) + '" fill="#444"/>';
+    s += '<rect x="' + (cx - ir - 1) + '" y="' + y1 + '" width="1.5" height="' + (y2 - y1) + '" fill="#aaa"/>';
 
     // Right wall band
-    s += '<rect x="' + (cx + ir) + '" y="' + y1 + '" width="' + wallW + '" height="' + (y2 - y1) + '" fill="#999"/>';
-    s += '<rect x="' + (cx + or_ - 2) + '" y="' + y1 + '" width="2" height="' + (y2 - y1) + '" fill="#666"/>';
-    s += '<rect x="' + (cx + ir) + '" y="' + y1 + '" width="2" height="' + (y2 - y1) + '" fill="#bbb"/>';
+    s += '<rect x="' + (cx + ir) + '" y="' + y1 + '" width="' + wallW + '" height="' + (y2 - y1) + '" fill="#777"/>';
+    s += '<rect x="' + (cx + or_ - 2) + '" y="' + y1 + '" width="2" height="' + (y2 - y1) + '" fill="#444"/>';
+    s += '<rect x="' + (cx + ir) + '" y="' + y1 + '" width="1.5" height="' + (y2 - y1) + '" fill="#aaa"/>';
 
     // Shoe — bottom bracket
-    s += '<rect x="' + (cx - or_) + '" y="' + y2 + '" width="' + (or_ * 2) + '" height="3" fill="#777"/>';
-    s += '<line x1="' + (cx - or_ - 8) + '" y1="' + (y2 + 3) + '" x2="' + (cx - or_) + '" y2="' + (y2 - 10) + '" stroke="#777" stroke-width="2.5"/>';
-    s += '<line x1="' + (cx + or_ + 8) + '" y1="' + (y2 + 3) + '" x2="' + (cx + or_) + '" y2="' + (y2 - 10) + '" stroke="#777" stroke-width="2.5"/>';
+    s += '<rect x="' + (cx - or_) + '" y="' + y2 + '" width="' + (or_ * 2) + '" height="3" fill="#555"/>';
+    s += '<line x1="' + (cx - or_ - 8) + '" y1="' + (y2 + 3) + '" x2="' + (cx - or_) + '" y2="' + (y2 - 10) + '" stroke="#555" stroke-width="2.5"/>';
+    s += '<line x1="' + (cx + or_ + 8) + '" y1="' + (y2 + 3) + '" x2="' + (cx + or_) + '" y2="' + (y2 - 10) + '" stroke="#555" stroke-width="2.5"/>';
 
     // Label — left side with arrow
     var ly = y2;
