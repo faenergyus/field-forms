@@ -244,47 +244,10 @@ function renderWellInfo(name) {
   var w = WELL_DATA[name];
   if (!w) { w = {}; }
   document.getElementById('wellDisplay').style.display = 'block';
-  document.getElementById('wellHeader').textContent = name;
+  document.getElementById('wellHeader').style.display = 'none';
 
-  // General info header
-  var g = w;
-  var loc = g.loc || '';
-  var locParts = loc.match(/(\d+\w?)\s+(\d+\w?)\s+(\d+\w?)/);
-  var twp = locParts ? locParts[1] : '', rng = locParts ? locParts[2] : '', sec = locParts ? locParts[3] : '';
-  var genHtml = '<div class="well-general">';
-  genHtml += '<div class="well-general-title">' + esc(name) + '</div>';
-  genHtml += '<div class="well-general-grid">';
-  genHtml += '<div class="wg-cell"><span class="wg-label">API:</span> <span class="wg-val">' + v(g.api) + '</span></div>';
-  genHtml += '<div class="wg-cell"><span class="wg-label">Status:</span> <span class="wg-val">' + v(g.st) + '</span></div>';
-  genHtml += '<div class="wg-cell"><span class="wg-label">Type:</span> <span class="wg-val">' + v(g.ty) + '</span></div>';
-  genHtml += '</div>';
-  genHtml += '<div class="well-general-grid">';
-  genHtml += '<div class="wg-cell"><span class="wg-label">Twp:</span> <span class="wg-val">' + v(twp) + '</span></div>';
-  genHtml += '<div class="wg-cell"><span class="wg-label">Rng:</span> <span class="wg-val">' + v(rng) + '</span></div>';
-  genHtml += '<div class="wg-cell"><span class="wg-label">Sec:</span> <span class="wg-val">' + v(sec) + '</span></div>';
-  genHtml += '</div>';
-  genHtml += '<div class="well-general-grid">';
-  genHtml += '<div class="wg-cell"><span class="wg-label">County:</span> <span class="wg-val">Lea</span></div>';
-  genHtml += '<div class="wg-cell"><span class="wg-label">State:</span> <span class="wg-val">NM</span></div>';
-  genHtml += '<div class="wg-cell"><span class="wg-label">Lease:</span> <span class="wg-val">' + v(g.lt) + '</span></div>';
-  genHtml += '</div>';
-  genHtml += '<div class="well-general-grid">';
-  genHtml += '<div class="wg-cell"><span class="wg-label">Company:</span> <span class="wg-val">' + v(g.co) + '</span></div>';
-  genHtml += '<div class="wg-cell"><span class="wg-label">Unit:</span> <span class="wg-val">' + v(g.unit) + '</span></div>';
-  genHtml += '<div class="wg-cell"><span class="wg-label">Stop:</span> <span class="wg-val">' + v(g.stop) + '</span></div>';
-  genHtml += '</div>';
-  genHtml += '<div class="well-general-grid">';
-  genHtml += '<div class="wg-cell"><span class="wg-label">Pumper:</span> <span class="wg-val">' + v(g.pmpr) + '</span></div>';
-  genHtml += '<div class="wg-cell"><span class="wg-label">Engineer:</span> <span class="wg-val">' + v(g.engr) + '</span></div>';
-  genHtml += '<div class="wg-cell"><span class="wg-label">Formation:</span> <span class="wg-val">' + v(g.pool) + '</span></div>';
-  genHtml += '</div>';
-  if (g.dr) {
-    genHtml += '<div class="well-general-grid two">';
-    genHtml += '<div class="wg-cell" style="grid-column:1/-1"><span class="wg-label">Depth Rights:</span> <span class="wg-val">' + esc(g.dr) + '</span></div>';
-    genHtml += '</div>';
-  }
-  genHtml += '</div>';
-  document.getElementById('wellGeneral').innerHTML = genHtml;
+  // Header info is on the SVG now — clear the HTML header
+  document.getElementById('wellGeneral').innerHTML = '';
 
   var html = '';
   html += '<div class="data-card"><h3>General</h3><div class="data-grid">' +
