@@ -356,15 +356,17 @@ function drawWBD(w) {
   var container = document.getElementById('wbdContainer');
   var ks = ['sc','ic','pc','ln'];
   var nms = ['Surface Csg','Intermediate Csg','Production Csg','Liner'];
-  var fhw = [70, 55, 40, 28];
-  var W = 4;
+  // Fixed half-widths for nested look (outer to inner)
+  var FHW = {0:50, 1:38, 2:28, 3:18};
+  var TBG_HW = 8; // tubing half-width
+  var WALL = 5;   // casing wall band thickness
 
   var strs = [];
   for (var i = 0; i < 4; i++) {
     var c = w[ks[i]];
     if (!c) continue;
     var depth = parseDepth(c[0]);
-    if (depth) strs.push({name:nms[i], depth:depth, raw:c, hw:fhw[i]});
+    if (depth) strs.push({name:nms[i], depth:depth, raw:c, hw:FHW[i], idx:i});
   }
   var td = parseDepth(w.td), pbtd = parseDepth(w.pb), perfs = parsePerfs(w.pf);
 
@@ -373,99 +375,197 @@ function drawWBD(w) {
     return;
   }
 
+  // Sort by depth ascending for processing
+  strs.sort(function(a,b){return a.depth - b.depth;});
+
+  // Max depth
   var maxD = 0;
   for (var i = 0; i < strs.length; i++) if (strs[i].depth > maxD) maxD = strs[i].depth;
   if (td && td > maxD) maxD = td;
   if (pbtd && pbtd > maxD) maxD = pbtd;
   for (var i = 0; i < perfs.length; i++) if (perfs[i].bot > maxD) maxD = perfs[i].bot;
   if (!maxD) maxD = 5000;
-  maxD *= 1.05;
 
-  var svgW = 400, topM = 50, botM = 20, svgH = 700;
-  var cx = svgW / 2 + 20;
-  function dToY(d) { return topM + (d / maxD) * (svgH - topM - botM); }
+  // Compressed depth scale: surface zone gets 15%, rest gets 85%
+  var surfD = strs.length ? strs[0].depth * 1.3 : maxD * 0.15;
+  if (surfD < 200) surfD = 200;
+  if (surfD > maxD * 0.3) surfD = maxD * 0.3;
 
-  var s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + svgW + ' ' + svgH + '" style="font-family:Arial,sans-serif;background:#fff">';
+  var svgW = 500, svgH = 800;
+  var topM = 25, botM = 15;
+  var totalH = svgH - topM - botM;
+  var surfH = totalH * 0.12;  // 12% for surface zone
+  var deepH = totalH * 0.88;  // 88% for deep zone
+  var cx = 250; // center of wellbore
 
-  // Ground
-  s += '<line x1="40" y1="' + topM + '" x2="' + (svgW-10) + '" y2="' + topM + '" stroke="#5d4037" stroke-width="3"/>';
-  for (var gx = 45; gx < svgW-10; gx += 7) s += '<line x1="' + gx + '" y1="' + topM + '" x2="' + (gx-4) + '" y2="' + (topM-6) + '" stroke="#8B7355" stroke-width="0.8"/>';
-
-  // Depth ticks
-  var ti = maxD <= 1500 ? 200 : maxD <= 4000 ? 500 : 1000;
-  for (var d = ti; d < maxD; d += ti) {
-    var ty = dToY(d);
-    s += '<line x1="38" y1="' + ty + '" x2="44" y2="' + ty + '" stroke="#bbb" stroke-width="0.5"/>';
-    s += '<text x="36" y="' + (ty+3) + '" text-anchor="end" font-size="7" fill="#999">' + d + "'" + '</text>';
+  function dToY(d) {
+    if (d <= surfD) return topM + (d / surfD) * surfH;
+    return topM + surfH + ((d - surfD) / (maxD * 1.05 - surfD)) * deepH;
   }
 
-  // Casings — outer first
-  strs.sort(function(a,b){return b.hw - a.hw;});
-  for (var i = 0; i < strs.length; i++) {
-    var cs = strs[i], y1 = topM, y2 = dToY(cs.depth), hw = cs.hw;
-    // Left wall
-    s += '<rect x="' + (cx-hw-W) + '" y="' + y1 + '" width="' + W + '" height="' + (y2-y1) + '" fill="#888"/>';
-    s += '<rect x="' + (cx-hw-W+1) + '" y="' + y1 + '" width="1.5" height="' + (y2-y1) + '" fill="#ccc" opacity="0.7"/>';
-    // Right wall
-    s += '<rect x="' + (cx+hw) + '" y="' + y1 + '" width="' + W + '" height="' + (y2-y1) + '" fill="#888"/>';
-    s += '<rect x="' + (cx+hw+1) + '" y="' + y1 + '" width="1.5" height="' + (y2-y1) + '" fill="#ccc" opacity="0.7"/>';
-    // Shoe
-    s += '<line x1="' + (cx-hw-W) + '" y1="' + y2 + '" x2="' + (cx+hw+W) + '" y2="' + y2 + '" stroke="#555" stroke-width="2"/>';
-    s += '<line x1="' + (cx-hw-W-5) + '" y1="' + y2 + '" x2="' + (cx-hw-W) + '" y2="' + (y2-7) + '" stroke="#555" stroke-width="2"/>';
-    s += '<line x1="' + (cx+hw+W+5) + '" y1="' + y2 + '" x2="' + (cx+hw+W) + '" y2="' + (y2-7) + '" stroke="#555" stroke-width="2"/>';
-    // Label
-    var ly = y2 - 2;
-    s += '<line x1="42" y1="' + ly + '" x2="' + (cx-hw-W-7) + '" y2="' + ly + '" stroke="#333" stroke-width="0.7"/>';
-    s += '<polygon points="' + (cx-hw-W-7) + ',' + ly + ' ' + (cx-hw-W-12) + ',' + (ly-2.5) + ' ' + (cx-hw-W-12) + ',' + (ly+2.5) + '" fill="#333"/>';
-    s += '<text x="40" y="' + (ly-5) + '" text-anchor="end" font-size="8" fill="#222" font-weight="700">' + esc(cs.name) + '</text>';
-    s += '<text x="40" y="' + (ly+4) + '" text-anchor="end" font-size="7" fill="#666">' + esc((cs.raw[1]||'') + ' ' + (cs.raw[2]||'')) + " @ " + cs.depth + "'" + '</text>';
+  // Start SVG
+  var s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + svgW + ' ' + svgH + '" style="font-family:Arial,sans-serif">';
+  s += '<rect width="' + svgW + '" height="' + svgH + '" fill="#fff"/>';
+
+  // Title
+  s += '<text x="' + cx + '" y="16" text-anchor="middle" font-size="11" font-weight="700" fill="#111">CURRENT</text>';
+
+  // Ground surface line
+  var groundY = topM;
+  s += '<line x1="50" y1="' + groundY + '" x2="' + (svgW-50) + '" y2="' + groundY + '" stroke="#333" stroke-width="2"/>';
+
+  // Draw casings — outermost first (sort by hw descending)
+  var sorted = strs.slice().sort(function(a,b){return b.hw - a.hw;});
+
+  for (var i = 0; i < sorted.length; i++) {
+    var cs = sorted[i];
+    var y1 = groundY, y2 = dToY(cs.depth);
+    var hw = cs.hw;
+
+    // Left wall band (thick gray rectangle)
+    s += '<rect x="' + (cx - hw - WALL) + '" y="' + y1 + '" width="' + WALL + '" height="' + (y2 - y1) + '" fill="#555"/>';
+    s += '<rect x="' + (cx - hw - WALL + 1) + '" y="' + y1 + '" width="' + (WALL - 2) + '" height="' + (y2 - y1) + '" fill="#999"/>';
+    s += '<line x1="' + (cx - hw - 1) + '" y1="' + y1 + '" x2="' + (cx - hw - 1) + '" y2="' + y2 + '" stroke="#444" stroke-width="0.5"/>';
+
+    // Right wall band
+    s += '<rect x="' + (cx + hw) + '" y="' + y1 + '" width="' + WALL + '" height="' + (y2 - y1) + '" fill="#555"/>';
+    s += '<rect x="' + (cx + hw + 1) + '" y="' + y1 + '" width="' + (WALL - 2) + '" height="' + (y2 - y1) + '" fill="#999"/>';
+    s += '<line x1="' + (cx + hw + WALL) + '" y1="' + y1 + '" x2="' + (cx + hw + WALL) + '" y2="' + y2 + '" stroke="#444" stroke-width="0.5"/>';
+
+    // Float shoe — bracket shape at bottom
+    s += '<line x1="' + (cx - hw - WALL) + '" y1="' + y2 + '" x2="' + (cx + hw + WALL) + '" y2="' + y2 + '" stroke="#333" stroke-width="2"/>';
+    s += '<line x1="' + (cx - hw - WALL - 6) + '" y1="' + (y2 + 1) + '" x2="' + (cx - hw - WALL) + '" y2="' + (y2 - 8) + '" stroke="#333" stroke-width="1.5"/>';
+    s += '<line x1="' + (cx + hw + WALL + 6) + '" y1="' + (y2 + 1) + '" x2="' + (cx + hw + WALL) + '" y2="' + (y2 - 8) + '" stroke="#333" stroke-width="1.5"/>';
+
+    // Label — LEFT side with arrow
+    var ly = y2;
+    var arrowTip = cx - hw - WALL - 8;
+    s += '<line x1="10" y1="' + ly + '" x2="' + arrowTip + '" y2="' + ly + '" stroke="#333" stroke-width="0.7"/>';
+    s += '<polygon points="' + arrowTip + ',' + ly + ' ' + (arrowTip - 5) + ',' + (ly - 2) + ' ' + (arrowTip - 5) + ',' + (ly + 2) + '" fill="#333"/>';
+    s += '<text x="8" y="' + (ly - 6) + '" font-size="8" fill="#111" font-weight="700">' + esc(cs.name) + '</text>';
+    var detail = '';
+    if (cs.raw[1]) detail += cs.raw[1];
+    if (cs.raw[2]) detail += '  ' + cs.raw[2];
+    s += '<text x="8" y="' + (ly + 3) + '" font-size="7" fill="#555">' + esc(detail) + '</text>';
+    s += '<text x="8" y="' + (ly + 12) + '" font-size="7" fill="#555">Set @ ' + cs.depth + "'" + '</text>';
   }
 
-  // Tubing
+  // Tubing — thin double line inside production casing
   var tubD = null;
   if (w.tt) {
     var tm = w.tt.match(/to\s*([\d,]+)/gi);
-    if (tm) for (var i=0;i<tm.length;i++){var d=parseInt(tm[i].replace(/to\s*/i,'').replace(/,/g,''));if(d>(tubD||0))tubD=d;}
-    if (!tubD){tm=w.tt.match(/([\d,]+)'/);if(tm)tubD=parseInt(tm[1].replace(/,/g,''));}
+    if (tm) for (var i = 0; i < tm.length; i++) {
+      var d = parseInt(tm[i].replace(/to\s*/i, '').replace(/,/g, ''));
+      if (d > (tubD || 0)) tubD = d;
+    }
+    if (!tubD) { tm = w.tt.match(/([\d,]+)'/); if (tm) tubD = parseInt(tm[1].replace(/,/g, '')); }
   }
   if (tubD && tubD > 100) {
     var tby = dToY(tubD);
-    s += '<rect x="' + (cx-6-W) + '" y="' + topM + '" width="' + W + '" height="' + (tby-topM) + '" fill="#777"/>';
-    s += '<rect x="' + (cx+6) + '" y="' + topM + '" width="' + W + '" height="' + (tby-topM) + '" fill="#777"/>';
-    s += '<rect x="' + (cx-6) + '" y="' + topM + '" width="12" height="' + (tby-topM) + '" fill="#e8e8e8" opacity="0.4"/>';
-    s += '<text x="' + (cx+fhw[0]+W+15) + '" y="' + (tby-2) + '" font-size="7.5" fill="#555" font-weight="600">Tubing to ' + tubD + "'" + '</text>';
+    // Tubing walls
+    s += '<rect x="' + (cx - TBG_HW - 2) + '" y="' + groundY + '" width="2" height="' + (tby - groundY) + '" fill="#666"/>';
+    s += '<rect x="' + (cx + TBG_HW) + '" y="' + groundY + '" width="2" height="' + (tby - groundY) + '" fill="#666"/>';
+    // Light fill between tubing walls
+    s += '<rect x="' + (cx - TBG_HW) + '" y="' + groundY + '" width="' + (TBG_HW * 2) + '" height="' + (tby - groundY) + '" fill="#eee" opacity="0.3"/>';
+    // RIGHT label
+    s += '<text x="' + (cx + (sorted.length ? sorted[0].hw : 55) + WALL + 12) + '" y="' + (tby + 3) + '" font-size="7" fill="#444">End of Tubing ' + tubD + "'" + '</text>';
   }
 
-  // Perforations
+  // Perforations — burst marks + left label
   for (var i = 0; i < perfs.length; i++) {
-    var p = perfs[i], py1 = dToY(p.top), py2 = dToY(p.bot);
-    if (py2-py1 < 3) py2 = py1+3;
+    var p = perfs[i];
+    var py1 = dToY(p.top), py2 = dToY(p.bot);
+    if (py2 - py1 < 4) py2 = py1 + 4;
+    // Find innermost casing hw at this depth
     var phw = 20;
-    for (var j = strs.length-1; j >= 0; j--) if (strs[j].depth >= p.top) { phw = strs[j].hw; break; }
-    for (var py = py1+2; py <= py2-1; py += 5) {
-      s += '<line x1="' + (cx-phw-W) + '" y1="' + py + '" x2="' + (cx-phw-W-8) + '" y2="' + (py-3) + '" stroke="#c62828" stroke-width="1.5"/>';
-      s += '<line x1="' + (cx-phw-W) + '" y1="' + py + '" x2="' + (cx-phw-W-8) + '" y2="' + (py+3) + '" stroke="#c62828" stroke-width="1.5"/>';
-      s += '<line x1="' + (cx+phw+W) + '" y1="' + py + '" x2="' + (cx+phw+W+8) + '" y2="' + (py-3) + '" stroke="#c62828" stroke-width="1.5"/>';
-      s += '<line x1="' + (cx+phw+W) + '" y1="' + py + '" x2="' + (cx+phw+W+8) + '" y2="' + (py+3) + '" stroke="#c62828" stroke-width="1.5"/>';
+    for (var j = strs.length - 1; j >= 0; j--) if (strs[j].depth >= p.top) { phw = strs[j].hw; break; }
+    // Burst marks on both sides
+    for (var py = py1 + 2; py <= py2 - 1; py += 4) {
+      // Left
+      s += '<line x1="' + (cx - phw - WALL) + '" y1="' + py + '" x2="' + (cx - phw - WALL - 9) + '" y2="' + (py - 3) + '" stroke="#333" stroke-width="1"/>';
+      s += '<line x1="' + (cx - phw - WALL) + '" y1="' + py + '" x2="' + (cx - phw - WALL - 9) + '" y2="' + (py + 3) + '" stroke="#333" stroke-width="1"/>';
+      // Right
+      s += '<line x1="' + (cx + phw + WALL) + '" y1="' + py + '" x2="' + (cx + phw + WALL + 9) + '" y2="' + (py - 3) + '" stroke="#333" stroke-width="1"/>';
+      s += '<line x1="' + (cx + phw + WALL) + '" y1="' + py + '" x2="' + (cx + phw + WALL + 9) + '" y2="' + (py + 3) + '" stroke="#333" stroke-width="1"/>';
     }
-    var pmid = (py1+py2)/2;
-    s += '<text x="40" y="' + (pmid-3) + '" text-anchor="end" font-size="7" fill="#c62828" font-weight="700">Perf</text>';
-    s += '<text x="40" y="' + (pmid+5) + '" text-anchor="end" font-size="6.5" fill="#c62828">' + p.top + "'-" + p.bot + "'" + '</text>';
+    // Left label
+    var pmid = (py1 + py2) / 2;
+    s += '<text x="8" y="' + (pmid - 3) + '" font-size="7" fill="#333" font-weight="700">Perforation</text>';
+    s += '<text x="8" y="' + (pmid + 5) + '" font-size="6.5" fill="#555">' + p.top + "' - " + p.bot + "'" + '</text>';
+    // Arrow
+    s += '<line x1="55" y1="' + pmid + '" x2="' + (cx - phw - WALL - 10) + '" y2="' + pmid + '" stroke="#333" stroke-width="0.5" stroke-dasharray="2,2"/>';
+  }
+
+  // PBTD
+  if (pbtd) {
+    var pby = dToY(pbtd);
+    s += '<line x1="' + (cx - 60) + '" y1="' + pby + '" x2="' + (cx + 60) + '" y2="' + pby + '" stroke="#333" stroke-width="1.5" stroke-dasharray="6,3"/>';
+    s += '<text x="8" y="' + (pby + 3) + '" font-size="8" fill="#333" font-weight="700">PBTD ' + pbtd + "'" + '</text>';
   }
 
   // TD
   if (td) {
     var tdy = dToY(td);
-    s += '<line x1="' + (cx-75) + '" y1="' + tdy + '" x2="' + (cx+75) + '" y2="' + tdy + '" stroke="#000" stroke-width="2.5"/>';
-    for (var hx = cx-72; hx < cx+72; hx += 6) s += '<line x1="' + hx + '" y1="' + tdy + '" x2="' + (hx-3) + '" y2="' + (tdy+5) + '" stroke="#666" stroke-width="0.5"/>';
-    s += '<text x="' + (cx+80) + '" y="' + (tdy+4) + '" font-size="9" fill="#000" font-weight="700">TD ' + td + "'" + '</text>';
+    s += '<line x1="' + (cx - 65) + '" y1="' + tdy + '" x2="' + (cx + 65) + '" y2="' + tdy + '" stroke="#000" stroke-width="3"/>';
+    // Cross-hatch below TD
+    for (var hx = cx - 62; hx < cx + 62; hx += 5) {
+      s += '<line x1="' + hx + '" y1="' + tdy + '" x2="' + (hx - 3) + '" y2="' + (tdy + 4) + '" stroke="#555" stroke-width="0.5"/>';
+    }
+    s += '<text x="' + (cx + 70) + '" y="' + (tdy + 4) + '" font-size="9" fill="#000" font-weight="700">TD ' + td + "'" + '</text>';
   }
 
-  // PBTD
-  if (pbtd && pbtd !== td) {
-    var pby = dToY(pbtd);
-    s += '<line x1="' + (cx-65) + '" y1="' + pby + '" x2="' + (cx+65) + '" y2="' + pby + '" stroke="#555" stroke-width="1.5" stroke-dasharray="5,3"/>';
-    s += '<text x="' + (cx+80) + '" y="' + (pby+3) + '" font-size="8" fill="#555" font-weight="600">PBTD ' + pbtd + "'" + '</text>';
+  // Depth scale on far left
+  var depthTick = maxD <= 2000 ? 500 : maxD <= 5000 ? 1000 : 2000;
+  for (var d = depthTick; d < maxD; d += depthTick) {
+    var ty = dToY(d);
+    s += '<line x1="' + (svgW - 8) + '" y1="' + ty + '" x2="' + (svgW - 3) + '" y2="' + ty + '" stroke="#aaa" stroke-width="0.5"/>';
+    s += '<text x="' + (svgW - 10) + '" y="' + (ty + 3) + '" text-anchor="end" font-size="6" fill="#aaa">' + d + "'" + '</text>';
+  }
+
+  // Equipment table — RIGHT side (Description, Qty, Length, Depth)
+  if (w.tt || w.rr) {
+    var tblX = cx + (sorted.length ? sorted[0].hw : 55) + WALL + 12;
+    var tblY = groundY + 20;
+    var tblW = svgW - tblX - 8;
+    if (tblW > 60) {
+      s += '<text x="' + tblX + '" y="' + tblY + '" font-size="7" fill="#333" font-weight="700" text-decoration="underline">Description</text>';
+      tblY += 10;
+      if (w.tt) {
+        var tbLines = w.tt.split('\n');
+        for (var i = 0; i < Math.min(tbLines.length, 8); i++) {
+          var line = tbLines[i].trim();
+          if (!line) continue;
+          s += '<text x="' + tblX + '" y="' + tblY + '" font-size="5.5" fill="#444">' + esc(line.substring(0, 50)) + '</text>';
+          tblY += 8;
+        }
+      }
+      if (w.rr) {
+        tblY += 4;
+        s += '<text x="' + tblX + '" y="' + tblY + '" font-size="7" fill="#333" font-weight="700" text-decoration="underline">Rod String</text>';
+        tblY += 10;
+        var rdLines = w.rr.split('\n');
+        for (var i = 0; i < Math.min(rdLines.length, 6); i++) {
+          var line = rdLines[i].trim();
+          if (!line) continue;
+          s += '<text x="' + tblX + '" y="' + tblY + '" font-size="5.5" fill="#444">' + esc(line.substring(0, 50)) + '</text>';
+          tblY += 8;
+        }
+      }
+    }
+  }
+
+  // Casing spec boxes — LEFT side
+  var specY = groundY + 20;
+  for (var i = 0; i < sorted.length; i++) {
+    var cs = sorted[i];
+    if (i > 0) specY += 8;
+    s += '<rect x="4" y="' + specY + '" width="85" height="50" fill="none" stroke="#ccc" stroke-width="0.5" rx="2"/>';
+    s += '<text x="6" y="' + (specY + 9) + '" font-size="7" fill="#333" font-weight="700">' + esc(cs.name) + '</text>';
+    s += '<text x="6" y="' + (specY + 19) + '" font-size="6" fill="#555">Size: ' + esc(cs.raw[1] || '--') + '</text>';
+    s += '<text x="6" y="' + (specY + 28) + '" font-size="6" fill="#555">Wt: ' + esc(cs.raw[2] || '--') + '</text>';
+    s += '<text x="6" y="' + (specY + 37) + '" font-size="6" fill="#555">Set @: ' + cs.depth + "'" + '</text>';
+    s += '<text x="6" y="' + (specY + 46) + '" font-size="6" fill="#555">Hole: ' + esc(cs.raw[3] || '--') + '</text>';
+    specY += 52;
   }
 
   s += '</svg>';
