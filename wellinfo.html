@@ -367,67 +367,69 @@ function drawWBD(w) {
 
   var s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + svgW + ' ' + svgH + '" style="font-family:Arial,sans-serif;background:#fff">';
 
-  // ─── HEADER ───
-  // Well name large
-  var g = w; // merged data has both general and wellbore
-  s += '<text x="' + cx + '" y="18" text-anchor="middle" font-size="16" font-weight="700" fill="#000">' + esc(document.getElementById('wellHeader').textContent) + '</text>';
+  // ─── HEADER — form-style grid matching reference ───
+  var g = w;
+  var wellName = document.getElementById('wellInput').value || '';
+  var loc = g.loc || '';
+  var locParts = loc.match(/(\d+\w?)\s+(\d+\w?)\s+(\d+\w?)/);
+  var twp = locParts ? locParts[1] : '', rng = locParts ? locParts[2] : '', sec = locParts ? locParts[3] : '';
+  var apiFormatted = g.api ? g.api.replace(/(\d{2})(\d{3})(\d+)/, '$1-$2-$3') : '';
 
-  // Header grid — 2 rows
-  var hdrY = 28;
-  var col1 = 10, col2 = 180, col3 = 350, col4 = 520;
-  var hlbl = 'font-size="9" fill="#666"';
-  var hval = 'font-size="11" fill="#000" font-weight="600"';
-  // Row 1
-  s += '<text x="' + col1 + '" y="' + hdrY + '" ' + hlbl + '>API:</text>';
-  s += '<text x="' + (col1+25) + '" y="' + hdrY + '" ' + hval + '>' + esc(g.api||'--') + '</text>';
-  s += '<text x="' + col2 + '" y="' + hdrY + '" ' + hlbl + '>Status:</text>';
-  s += '<text x="' + (col2+38) + '" y="' + hdrY + '" ' + hval + '>' + esc(g.st||'--') + '</text>';
-  s += '<text x="' + col3 + '" y="' + hdrY + '" ' + hlbl + '>Type:</text>';
-  s += '<text x="' + (col3+30) + '" y="' + hdrY + '" ' + hval + '>' + esc(g.ty||'--') + '</text>';
-  s += '<text x="' + col4 + '" y="' + hdrY + '" ' + hlbl + '>Formation:</text>';
-  s += '<text x="' + (col4+58) + '" y="' + hdrY + '" ' + hval + '>' + esc(g.pool||'--') + '</text>';
-  hdrY += 14;
-  // Row 2
-  s += '<text x="' + col1 + '" y="' + hdrY + '" ' + hlbl + '>Location:</text>';
-  s += '<text x="' + (col1+48) + '" y="' + hdrY + '" ' + hval + '>' + esc(g.loc||'--') + '</text>';
-  s += '<text x="' + col2 + '" y="' + hdrY + '" ' + hlbl + '>Company:</text>';
-  s += '<text x="' + (col2+50) + '" y="' + hdrY + '" ' + hval + '>' + esc(g.co||'--') + '</text>';
-  s += '<text x="' + col3 + '" y="' + hdrY + '" ' + hlbl + '>Pumper:</text>';
-  s += '<text x="' + (col3+42) + '" y="' + hdrY + '" ' + hval + '>' + esc(g.pmpr||'--') + '</text>';
-  s += '<text x="' + col4 + '" y="' + hdrY + '" ' + hlbl + '>Engineer:</text>';
-  s += '<text x="' + (col4+50) + '" y="' + hdrY + '" ' + hval + '>' + esc(g.engr||'--') + '</text>';
-  hdrY += 14;
-  // Row 3 — dates
-  s += '<text x="' + col1 + '" y="' + hdrY + '" ' + hlbl + '>Spud Date:</text>';
-  s += '<text x="' + (col1+55) + '" y="' + hdrY + '" ' + hval + '>' + esc(g.sd||'--') + '</text>';
-  s += '<text x="' + col2 + '" y="' + hdrY + '" ' + hlbl + '>WBD Date:</text>';
-  s += '<text x="' + (col2+52) + '" y="' + hdrY + '" ' + hval + '>' + esc(g.wd||'--') + '</text>';
-  s += '<text x="' + col3 + '" y="' + hdrY + '" ' + hlbl + '>Lease:</text>';
-  s += '<text x="' + (col3+34) + '" y="' + hdrY + '" ' + hval + '>' + esc(g.lt||'--') + '</text>';
-  s += '<text x="' + col4 + '" y="' + hdrY + '" ' + hlbl + '>Stop:</text>';
-  s += '<text x="' + (col4+28) + '" y="' + hdrY + '" ' + hval + '>' + esc(g.stop||'--') + '</text>';
+  var lbl = 'font-size="9" fill="#000" font-weight="700"';
+  var val = 'font-size="10" fill="#000"';
+  var rh = 16; // row height
 
-  // Separator line
-  s += '<line x1="5" y1="' + (hdrY+8) + '" x2="' + (svgW-5) + '" y2="' + (hdrY+8) + '" stroke="#000" stroke-width="1.5"/>';
+  // Helper: draw a field with label + underlined value
+  function hdrField(x, y, label, value, lineW) {
+    s += '<text x="' + x + '" y="' + y + '" ' + lbl + '>' + label + '</text>';
+    var vx = x + label.length * 5.5 + 4;
+    s += '<text x="' + vx + '" y="' + y + '" ' + val + '>' + esc(value || '') + '</text>';
+    s += '<line x1="' + vx + '" y1="' + (y + 2) + '" x2="' + (x + lineW) + '" y2="' + (y + 2) + '" stroke="#000" stroke-width="0.5"/>';
+  }
 
-  // ─── CURRENT label ───
-  s += '<text x="' + cx + '" y="' + (topM - 5) + '" text-anchor="middle" font-size="13" font-weight="700" fill="#000">CURRENT</text>';
+  // Row 1: Well Name (wide) | Lease No | Lease Type
+  var ry = 14;
+  hdrField(5, ry, 'Well Name:', wellName, 270);
+  hdrField(280, ry, 'Lease No:', '', 380);
+  hdrField(395, ry, 'Lease Type:', g.lt || '', 500);
+  s += '<text x="510" y="' + ry + '" ' + val + '>' + esc(g.ty || '') + '</text>';
+
+  // Row 2: Township | Range | Sec | Location
+  ry += rh;
+  hdrField(5, ry, 'Township:', twp, 90);
+  hdrField(100, ry, 'Range:', rng, 175);
+  hdrField(185, ry, 'Sec:', sec, 240);
+  hdrField(395, ry, 'Location:', '', svgW - 10);
+
+  // Row 3: County | State | API | Formation
+  ry += rh;
+  hdrField(5, ry, 'County:', 'Lea', 90);
+  hdrField(100, ry, 'State:', 'NM', 175);
+  hdrField(185, ry, 'API:', apiFormatted, 340);
+  hdrField(395, ry, 'Formation:', g.pool || '', svgW - 10);
+
+  // Header border
+  s += '<line x1="3" y1="' + (ry + 6) + '" x2="' + (svgW - 3) + '" y2="' + (ry + 6) + '" stroke="#000" stroke-width="1.5"/>';
+
+  // Spud/WBD dates + CURRENT label
+  ry += rh + 4;
+  s += '<text x="5" y="' + ry + '" font-size="9" fill="#000">Spud Date: ' + esc(g.sd || '--') + '</text>';
+  s += '<text x="140" y="' + ry + '" font-size="9" fill="#000">WBD Date: ' + esc(g.wd || '--') + '</text>';
+  s += '<text x="' + cx + '" y="' + ry + '" text-anchor="middle" font-size="13" font-weight="700" fill="#000">CURRENT</text>';
+  s += '<text x="' + (svgW - 5) + '" y="' + ry + '" text-anchor="end" font-size="9" fill="#000">Pumper: ' + esc(g.pmpr || '--') + '  |  Engineer: ' + esc(g.engr || '--') + '</text>';
 
   // ─── GROUND SURFACE ───
   var gy = topM;
   s += '<line x1="140" y1="' + gy + '" x2="' + (svgW - 140) + '" y2="' + gy + '" stroke="#2266cc" stroke-width="3"/>';
   s += '<line x1="140" y1="' + (gy+4) + '" x2="' + (svgW-140) + '" y2="' + (gy+4) + '" stroke="#2266cc" stroke-width="2"/>';
 
-  // ─── CASING STRINGS — each starts at previous shoe, not surface ───
-  // Sort by depth ascending (surface first, liner last)
+  // ─── CASING STRINGS — all start from surface unless noted ───
   var byDepth = strs.slice().sort(function(a,b){return a.depth - b.depth;});
   var sorted = strs.slice().sort(function(a,b){return b.or_ - a.or_;}); // for outermost ref
 
   for (var i = 0; i < byDepth.length; i++) {
     var cs = byDepth[i];
-    // Start Y: surface casing starts at GL, others start at previous casing shoe
-    var startD = (i === 0) ? 0 : byDepth[i-1].depth;
-    var y1 = (i === 0) ? gy : dToY(startD);
+    var y1 = gy; // all casings assumed to run to surface
     var y2 = dToY(cs.depth);
     var or_ = cs.or_, ir = cs.ir, wallW = or_ - ir;
 
@@ -519,7 +521,7 @@ function drawWBD(w) {
     // Cement plug — solid gray fill from PBTD to TD
     var plugHW = byDepth.length ? byDepth[byDepth.length-1].ir : 18;
     s += '<rect x="' + (cx - plugHW) + '" y="' + pby + '" width="' + (plugHW * 2) + '" height="' + (tdy - pby) + '" fill="#999"/>';
-    s += '<text x="' + (cx) + '" y="' + ((pby + tdy) / 2 + 4) + '" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">CEMENT</text>';
+    // No text label — cement plug is assumed
     // PBTD label
     s += '<text x="' + (cx - plugHW - 12) + '" y="' + (pby + 4) + '" text-anchor="end" font-size="11" fill="#000" font-weight="700">PBTD ' + pbtd + "'" + '</text>';
   } else if (pbtd) {
@@ -537,20 +539,20 @@ function drawWBD(w) {
   }
 
   // ─── CASING SPEC BOXES — LEFT ───
-  var boxX = 5, boxW = 135, boxH = 62, boxGap = 6;
+  var boxX = 5, boxW = 140, boxH = 78, boxGap = 8;
   var boxY = gy + 12;
   for (var i = 0; i < sorted.length; i++) {
     var cs = sorted[i];
     s += '<rect x="' + boxX + '" y="' + boxY + '" width="' + boxW + '" height="' + boxH + '" fill="#fff" stroke="#666" stroke-width="1" rx="2"/>';
-    s += '<text x="' + (boxX+5) + '" y="' + (boxY+14) + '" font-size="11" fill="#000" font-weight="700">' + esc(cs.name) + '</text>';
-    s += '<text x="' + (boxX+5) + '" y="' + (boxY+27) + '" font-size="10" fill="#333">Size: ' + esc(cs.raw[1]||'--') + '</text>';
-    s += '<text x="' + (boxX+5) + '" y="' + (boxY+39) + '" font-size="10" fill="#333">Wt: ' + esc(cs.raw[2]||'--') + '</text>';
-    s += '<text x="' + (boxX+5) + '" y="' + (boxY+51) + '" font-size="10" fill="#333">Set @: ' + cs.depth + "'" + '</text>';
-    s += '<text x="' + (boxX+5) + '" y="' + (boxY+61) + '" font-size="9" fill="#666">Hole: ' + esc(cs.raw[3]||'--') + '</text>';
+    s += '<text x="' + (boxX+6) + '" y="' + (boxY+15) + '" font-size="12" fill="#000" font-weight="700">' + esc(cs.name) + '</text>';
+    s += '<text x="' + (boxX+6) + '" y="' + (boxY+30) + '" font-size="11" fill="#333">Size: ' + esc(cs.raw[1]||'--') + '</text>';
+    s += '<text x="' + (boxX+6) + '" y="' + (boxY+44) + '" font-size="11" fill="#333">Wt: ' + esc(cs.raw[2]||'--') + '</text>';
+    s += '<text x="' + (boxX+6) + '" y="' + (boxY+58) + '" font-size="11" fill="#333">Set @: ' + cs.depth + "'" + '</text>';
+    s += '<text x="' + (boxX+6) + '" y="' + (boxY+72) + '" font-size="11" fill="#333">Hole Size: ' + esc(cs.raw[3]||'--') + '</text>';
     boxY += boxH + boxGap;
   }
 
-  // ─── TUBING/ROD INFO — RIGHT ───
+  // ─── TUBING/PUMP/ROD INFO — RIGHT side, pump under tubing ───
   var outerR2 = sorted.length ? sorted[0].or_ : 60;
   var infoX = cx + outerR2 + 20;
   var infoY = gy + 15;
@@ -565,8 +567,30 @@ function drawWBD(w) {
       infoY += 11;
     }
   }
+  // Pump info right after tubing
+  if (w.rr && pumpD) {
+    infoY += 8;
+    s += '<text x="' + infoX + '" y="' + infoY + '" font-size="11" fill="#000" font-weight="700" text-decoration="underline">Pump Details</text>';
+    infoY += 14;
+    // Extract pump line from rod data
+    var pumpLine = '';
+    if (w.rr) {
+      var pLines = w.rr.split('\n');
+      for (var j = 0; j < pLines.length; j++) {
+        if (pLines[j].toUpperCase().indexOf('PUMP') >= 0) { pumpLine = pLines[j].trim(); break; }
+      }
+    }
+    s += '<text x="' + infoX + '" y="' + infoY + '" font-size="9" fill="#333">Type: Rod Pump</text>';
+    infoY += 12;
+    s += '<text x="' + infoX + '" y="' + infoY + '" font-size="9" fill="#333">Depth: ' + pumpD + "'" + '</text>';
+    infoY += 12;
+    if (pumpLine) {
+      s += '<text x="' + infoX + '" y="' + infoY + '" font-size="8.5" fill="#333">' + esc(pumpLine.substring(0,50)) + '</text>';
+      infoY += 12;
+    }
+  }
   if (w.rr) {
-    infoY += 10;
+    infoY += 8;
     s += '<text x="' + infoX + '" y="' + infoY + '" font-size="11" fill="#000" font-weight="700" text-decoration="underline">Rod String</text>';
     infoY += 14;
     var rdLines = w.rr.split('\n');
