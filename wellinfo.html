@@ -440,10 +440,12 @@ function drawWBD(w) {
     s += '<rect x="' + (cx+or_-2) + '" y="' + y1 + '" width="2" height="' + (y2-y1) + '" fill="#555"/>';
     s += '<rect x="' + (cx+ir) + '" y="' + y1 + '" width="1.5" height="' + (y2-y1) + '" fill="#bbb"/>';
 
-    // Shoe
-    s += '<rect x="' + (cx-or_) + '" y="' + y2 + '" width="' + (or_*2) + '" height="3" fill="#555"/>';
+    // Shoe — flared guide shoe on each side only, no line across wellbore
     s += '<line x1="' + (cx-or_-8) + '" y1="' + (y2+3) + '" x2="' + (cx-or_) + '" y2="' + (y2-10) + '" stroke="#555" stroke-width="2.5"/>';
     s += '<line x1="' + (cx+or_+8) + '" y1="' + (y2+3) + '" x2="' + (cx+or_) + '" y2="' + (y2-10) + '" stroke="#555" stroke-width="2.5"/>';
+    // Bottom cap on the wall only (left and right)
+    s += '<line x1="' + (cx-or_) + '" y1="' + y2 + '" x2="' + (cx-ir) + '" y2="' + y2 + '" stroke="#555" stroke-width="2"/>';
+    s += '<line x1="' + (cx+ir) + '" y1="' + y2 + '" x2="' + (cx+or_) + '" y2="' + y2 + '" stroke="#555" stroke-width="2"/>';
 
     // Depth label at shoe — right side
     s += '<text x="' + (cx+or_+12) + '" y="' + (y2+4) + '" font-size="10" fill="#333">' + cs.depth + "'" + '</text>';
@@ -463,19 +465,21 @@ function drawWBD(w) {
     s += '<rect x="' + (cx-7) + '" y="' + gy + '" width="14" height="' + (tby-gy) + '" fill="#eee" opacity="0.3"/>';
   }
 
-  // ─── ROD STRING + PUMP (runs to tubing depth) ───
-  if (w.rr && tubD && tubD > 100) {
-    var pumpD = tubD; // pump sits at end of tubing
+  // ─── ROD STRING + PUMP ───
+  var pumpD = tubD; // pump sits at end of tubing
+  if (w.rr && pumpD && pumpD > 100) {
     var pumpY = dToY(pumpD);
     // Rod line from surface to pump
     s += '<line x1="' + cx + '" y1="' + gy + '" x2="' + cx + '" y2="' + (pumpY - 2) + '" stroke="#000" stroke-width="2"/>';
     // Polished rod at surface (wider section)
     s += '<rect x="' + (cx - 3) + '" y="' + gy + '" width="6" height="12" fill="#444" rx="1"/>';
-    // Pump body
-    s += '<rect x="' + (cx - 10) + '" y="' + pumpY + '" width="20" height="14" fill="#666" stroke="#000" stroke-width="1.5" rx="2"/>';
-    s += '<text x="' + cx + '" y="' + (pumpY + 10) + '" text-anchor="middle" font-size="7" fill="#fff" font-weight="700">PUMP</text>';
-    // Label on right
-    s += '<text x="' + (cx + outerR2 + 20) + '" y="' + (pumpY + 8) + '" font-size="10" fill="#000" font-weight="600">Pump @ ' + pumpD + "'" + '</text>';
+    // Pump body — visible rectangle straddling the rod
+    s += '<rect x="' + (cx - 12) + '" y="' + pumpY + '" width="24" height="16" fill="#666" stroke="#000" stroke-width="1.5" rx="2"/>';
+    s += '<text x="' + cx + '" y="' + (pumpY + 11) + '" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">PUMP</text>';
+    // Pump label — left side next to rod info
+    var innerCsg = byDepth.length ? byDepth[byDepth.length-1].or_ : 30;
+    s += '<text x="' + (cx - innerCsg - 18) + '" y="' + (pumpY + 4) + '" text-anchor="end" font-size="10" fill="#000" font-weight="700">Pump</text>';
+    s += '<text x="' + (cx - innerCsg - 18) + '" y="' + (pumpY + 15) + '" text-anchor="end" font-size="9" fill="#333">@ ' + pumpD + "'" + '</text>';
   }
 
   // ─── PERFORATIONS ───
@@ -495,11 +499,20 @@ function drawWBD(w) {
     s += '<text x="' + (cx-phw-18) + '" y="' + (pmid+11) + '" text-anchor="end" font-size="9.5" fill="#333">' + p.top + "' - " + p.bot + "'" + '</text>';
   }
 
-  // ─── PBTD ───
-  if (pbtd) {
+  // ─── PBTD + CEMENT PLUG ───
+  if (pbtd && td && pbtd < td) {
+    var pby = dToY(pbtd);
+    var tdy = dToY(td);
+    // Cement plug — solid gray fill from PBTD to TD
+    var plugHW = byDepth.length ? byDepth[byDepth.length-1].ir : 18;
+    s += '<rect x="' + (cx - plugHW) + '" y="' + pby + '" width="' + (plugHW * 2) + '" height="' + (tdy - pby) + '" fill="#999"/>';
+    s += '<text x="' + (cx) + '" y="' + ((pby + tdy) / 2 + 4) + '" text-anchor="middle" font-size="8" fill="#fff" font-weight="700">CEMENT</text>';
+    // PBTD label
+    s += '<text x="' + (cx - plugHW - 12) + '" y="' + (pby + 4) + '" text-anchor="end" font-size="11" fill="#000" font-weight="700">PBTD ' + pbtd + "'" + '</text>';
+  } else if (pbtd) {
     var pby = dToY(pbtd);
     s += '<line x1="' + (cx-70) + '" y1="' + pby + '" x2="' + (cx+70) + '" y2="' + pby + '" stroke="#000" stroke-width="1.5" stroke-dasharray="6,3"/>';
-    s += '<text x="' + (cx-phw-18) + '" y="' + (pby+4) + '" text-anchor="end" font-size="11" fill="#000" font-weight="700">PBTD ' + pbtd + "'" + '</text>';
+    s += '<text x="10" y="' + (pby+4) + '" font-size="11" fill="#000" font-weight="700">PBTD ' + pbtd + "'" + '</text>';
   }
 
   // ─── TD ───
