@@ -280,7 +280,16 @@ function renderWellInfo(name) {
     }
   }
 
+  // Default to first version that has actual data (casings, perfs, or TD/PBTD)
   currentVersionIdx = 0;
+  for (var vi = 0; vi < versions.length; vi++) {
+    var vr = versions[vi];
+    var hasData = (vr.csg && vr.csg.length) || (vr.pf && vr.pf.length) || vr.td || vr.pb;
+    if (hasData) { currentVersionIdx = vi; break; }
+  }
+  if (versions.length > 0) {
+    document.getElementById('versionSelect').value = currentVersionIdx;
+  }
   renderVersion();
   document.getElementById('wellDisplay').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
