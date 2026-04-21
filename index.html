@@ -514,7 +514,7 @@
 
   <footer>
     Forty Acres Energy &nbsp;·&nbsp; Field Operations &nbsp;·&nbsp; Internal Use Only
-    <div class="data-note">Dashboard data from Google Sheets · Updated 2026-04-20 23:05</div>
+    <div class="data-note">Dashboard data from Google Sheets · Updated 2026-04-21 00:05</div>
   </footer>
 </div>
 
@@ -545,10 +545,10 @@ const CHART_DEFS = [
 
 const ZERO = () => ({ total: 0, byPumper: {}, wellsByPumper: {} });
 
-const DATA = {  // auto-refreshed 2026-04-20 23:05
+const DATA = {  // auto-refreshed 2026-04-21 00:05
   pastweek: {
     avo      : ZERO(),
-    gwi      : { total: 1, byPumper: { 'Raul': 1 }, wellsByPumper: { 'Raul': ["CARLSON A FEDERAL #001"] } },
+    gwi      : ZERO(),
     fap      : ZERO(),
     pumpup   : ZERO(),
     wellsite : ZERO(),
@@ -579,7 +579,7 @@ const DATA = {  // auto-refreshed 2026-04-20 23:05
 };
 
 // <<PUMPER_TASKS_START>>
-const PUMPER_TASKS = {  // auto-refreshed 2026-04-20 23:05
+const PUMPER_TASKS = {  // auto-refreshed 2026-04-21 00:05
   currentWeek: {
     date: "4/20/2026",
     tasks: {
@@ -664,8 +664,8 @@ const PUMPER_TASKS = {  // auto-refreshed 2026-04-20 23:05
 // <<PUMPER_TASKS_END>>
 
 // <<PRICES_START>>
-const PRICES = {  // auto-refreshed 2026-04-20 23:05
-  wti:  {price:86.59, chg:-3.02, date:"4/20/2026"},
+const PRICES = {  // auto-refreshed 2026-04-21 00:05
+  wti:  {price:86.49, chg:-3.12, date:"4/21/2026"},
   waha: {price:-4.81, chg:2.56, date:"4/20/2026"}
 };
 // <<PRICES_END>>
