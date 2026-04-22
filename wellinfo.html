@@ -390,20 +390,36 @@ function drawWBD(w) {
   if (!maxD) maxD = 5000;
   maxD *= 1.05;
 
-  // Layout — portrait, like an 8.5x11 page
-  var svgW = 680, svgH = 1100;
+  // Layout — height scales with content density so sparse wells don't waste space
+  var svgW = 680;
   var topM = 90; // room for header
   var botM = 20;
-  var totalH = svgH - topM - botM;
   var cx = 340; // wellbore center
 
-  // Piecewise scale: top 5%, mid 15%, bottom 80%
+  // Count features in bottom zone to decide height
   var botZoneStart = maxD * 0.75;
   var surfZone = Math.min(500, maxD * 0.1);
+  var botFeatures = 0;
+  for (var i = 0; i < strs.length; i++) if (strs[i].depth >= botZoneStart) botFeatures++;
+  for (var i = 0; i < perfs.length; i++) if (perfs[i].top >= botZoneStart) botFeatures++;
+  if (td && td >= botZoneStart) botFeatures++;
+  if (pbtd && pbtd >= botZoneStart) botFeatures++;
+  var plList_ = w.pl || [];
+  for (var i = 0; i < plList_.length; i++) { var pd = parseDepth(plList_[i].dp); if (pd && pd >= botZoneStart) botFeatures++; }
+
+  // Bottom zone needs ~50px per feature minimum, min 100px
+  var botH = Math.max(100, botFeatures * 50);
+  // Middle zone compressed: 80px
+  var midH = 80;
+  // Surface zone: 60px
+  var surfH_ = 60;
+  var totalH = surfH_ + midH + botH;
+  var svgH = topM + totalH + botM;
+
   function dToY(d) {
-    if (d <= surfZone) return topM + (d / surfZone) * (totalH * 0.05);
-    if (d <= botZoneStart) return topM + totalH * 0.05 + ((d - surfZone) / (botZoneStart - surfZone)) * (totalH * 0.15);
-    return topM + totalH * 0.20 + ((d - botZoneStart) / (maxD - botZoneStart)) * (totalH * 0.80);
+    if (d <= surfZone) return topM + (d / surfZone) * surfH_;
+    if (d <= botZoneStart) return topM + surfH_ + ((d - surfZone) / (botZoneStart - surfZone)) * midH;
+    return topM + surfH_ + midH + ((d - botZoneStart) / (maxD - botZoneStart)) * botH;
   }
 
   var s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + svgW + ' ' + svgH + '" style="font-family:Arial,sans-serif;background:#fff">';
