@@ -494,9 +494,10 @@ function drawWBD(w) {
     s += '<text x="' + (cx+or_+12) + '" y="' + (y2+4) + '" font-size="10" fill="#333">' + cs.depth + "'" + '</text>';
   }
 
-  // ─── TUBING — from new tb array ───
-  var tubD = null;
+  // ─── TUBING + ROD lists (declared early so pump logic below can use them) ───
   var tbList = w.tb || [];
+  var rdList = w.rd || [];
+  var tubD = null;
   for (var i = 0; i < tbList.length; i++) {
     var d = parseDepth(tbList[i].dp);
     if (d && d > (tubD || 0)) tubD = d;
@@ -609,8 +610,7 @@ function drawWBD(w) {
       }
     }
   }
-  // Rod String
-  var rdList = w.rd || [];
+  // Rod String (rdList declared earlier)
   if (rdList.length) {
     infoY += 8;
     s += '<text x="' + infoX + '" y="' + infoY + '" font-size="11" fill="#000" font-weight="700" text-decoration="underline">Rod String</text>';
