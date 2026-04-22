@@ -258,7 +258,10 @@ function renderWellInfo(name) {
   document.getElementById('dataCards').innerHTML = '';
 
   // Version selector
-  var versions = w.v || [];
+  // Only show versions that have actual data (casings, perfs, or TD/PBTD)
+  var versions = (w.v || []).filter(function(vr) {
+    return (vr.csg && vr.csg.length) || (vr.pf && vr.pf.length) || (vr.pl && vr.pl.length) || vr.td || vr.pb;
+  });
   var sel = document.getElementById('versionSelect');
   var vDiv = document.getElementById('versionSelector');
   if (versions.length > 1) {
