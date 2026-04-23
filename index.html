@@ -514,7 +514,7 @@
 
   <footer>
     Forty Acres Energy &nbsp;·&nbsp; Field Operations &nbsp;·&nbsp; Internal Use Only
-    <div class="data-note">Dashboard data from Google Sheets · Updated 2026-04-22 23:05</div>
+    <div class="data-note">Dashboard data from Google Sheets · Updated 2026-04-23 00:05</div>
   </footer>
 </div>
 
@@ -545,7 +545,7 @@ const CHART_DEFS = [
 
 const ZERO = () => ({ total: 0, byPumper: {}, wellsByPumper: {} });
 
-const DATA = {  // auto-refreshed 2026-04-22 23:05
+const DATA = {  // auto-refreshed 2026-04-23 00:05
   pastweek: {
     avo      : ZERO(),
     gwi      : ZERO(),
@@ -569,7 +569,7 @@ const DATA = {  // auto-refreshed 2026-04-22 23:05
   lastyear: {
     avo      : ZERO(),
     gwi      : ZERO(),
-    fap      : ZERO(),
+    fap      : { total: 405, byPumper: { 'Jason': 195, 'Waldo': 74, 'Henry': 104, 'Armando': 7, 'Wynn': 3, 'Gary': 1, 'Andy': 16, 'Raul': 5 }, wellsByPumper: { 'Jason': ["ATLANTIC STATE #003", "BAYLUS CADE FEDERAL #004", "BAYLUS CADE FEDERAL #006", "BERTIE WHITMIRE #008", "BERTIE WHITMIRE #009", "BRITT A 6 #005", "BRITT B 8 #002", "C E LAMUNYON #025", "C E LAMUNYON #037", "C E LAMUNYON #040", "C E LAMUNYON #044", "C E LAMUNYON #053", "C E LAMUNYON #062", "C E LAMUNYON #068", "C E LAMUNYON #073", "C E LAMUNYON #074", "C E LAMUNYON #075", "CLOWER STATE #001", "DANCIGER #001", "E C HILL A #007", "E C HILL B FEDERAL #015", "E C HILL B FEDERAL #017", "E C HILL B FEDERAL #018", "ELLIOTT #001", "ELLIOTT #002", "ELLIOTT B 20 #001", "ELLIOTT B 20 #002", "ELLIOTT B 20 #003", "EMERY KING NW #001", "EVA E BLINEBRY FEDERAL #004", "FEDERAL 714 #003", "G G TRAVIS #004", "GILLULLY B FEDERAL RA A #010", "JACK B 30 #001", "JACK B 30 #002", "JACK B 30 #003", "LOCKHART B 31 #005", "MCQUATTERS COM #004", "MEYER B 31 A #001", "SEETON #004", "SHELL D STATE COM #013", "STATE A A/C 1 #043", "STATE A A/C 1 #046", "STATE A A/C 1 #048", "STATE A A/C 1 #061", "STATE A A/C 1 #064", "STATE A A/C 1 #081", "STATE A A/C 2 #023", "STATE A A/C 2 #024", "STATE A A/C 2 #026", "STATE A A/C 2 #030", "STATE C TR 11 #007", "STATE C TR 11 #008", "STATE C TR 11 #009", "STATE E #002", "TRAVIS #005", "VACUUM 31 #001", "WATKINS #003", "WELLS A #007", "WEST EUMONT UNIT #102", "WEST EUMONT UNIT #104", "WEST EUMONT UNIT #106", "WEST EUMONT UNIT #507", "WEST EUMONT UNIT #509", "WEST EUMONT UNIT #513", "WEST EUMONT UNIT #514", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #519", "ZATTU CUSHING #001"], 'Waldo': ["ARNOTT RAMSAY NCT-B #006", "ARNOTT RAMSAY NCT-B #008", "ARNOTT RAMSAY NCT-B #009", "ARNOTT RAMSAY NCT-B #010", "ARNOTT RAMSAY NCT-B #012", "ARNOTT RAMSAY NCT-B #020", "ARNOTT RAMSAY NCT-B #021", "C D WOOLWORTH #010", "FARNSWORTH 4 #002", "FARNSWORTH 4 #003", "FARNSWORTH 4 #010", "WATKINS #003", "WELLS A #007", "ZATTU CUSHING #001", "ZATTU CUSHING #002"], 'Henry': ["WEST EUMONT UNIT #102", "WEST EUMONT UNIT #103", "WEST EUMONT UNIT #104", "WEST EUMONT UNIT #106", "WEST EUMONT UNIT #130", "WEST EUMONT UNIT #131", "WEST EUMONT UNIT #202", "WEST EUMONT UNIT #203", "WEST EUMONT UNIT #204", "WEST EUMONT UNIT #206", "WEST EUMONT UNIT #209", "WEST EUMONT UNIT #210", "WEST EUMONT UNIT #215", "WEST EUMONT UNIT #216", "WEST EUMONT UNIT #217", "WEST EUMONT UNIT #220", "WEST EUMONT UNIT #401", "WEST EUMONT UNIT #402", "WEST EUMONT UNIT #411", "WEST EUMONT UNIT #417", "WEST EUMONT UNIT #418", "WEST EUMONT UNIT #509", "WEST EUMONT UNIT #510", "WEST EUMONT UNIT #511", "WEST EUMONT UNIT #512", "WEST EUMONT UNIT #513", "WEST EUMONT UNIT #514", "WEST EUMONT UNIT #515", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #520", "WEST EUMONT UNIT #521", "WEST EUMONT UNIT #528"], 'Armando': ["ELLIOTT B 20 #003", "STATE A A/C 1 #043", "STATE A A/C 1 #061", "STATE A A/C 2 #004", "STATE A A/C 2 #023", "STATE A A/C 2 #024", "STATE A A/C 2 #030"], 'Wynn': ["ELLIOTT B 20 #001", "ELLIOTT B 20 #002", "ELLIOTT B 20 #003"], 'Gary': ["MEYER B 31 A #001"], 'Andy': ["C E LAMUNYON #040", "C E LAMUNYON #042", "C E LAMUNYON #044", "C E LAMUNYON #053", "C E LAMUNYON #059", "C E LAMUNYON #060", "C E LAMUNYON #074", "E C HILL A #007", "E C HILL B FEDERAL #015", "M K STEWART #005", "SEETON #001", "SEETON #002", "SEETON #003", "SEETON #004"], 'Raul': ["C D WOOLWORTH #004", "C D WOOLWORTH #005", "C D WOOLWORTH #006", "C D WOOLWORTH #007", "C D WOOLWORTH #008"] } },
     pumpup   : { total: 1, byPumper: { 'Waldo': 1 }, wellsByPumper: { 'Waldo': ["ARNOTT RAMSAY NCT-B #010"] } },
     wellsite : { total: 8, byPumper: { 'Eli': 2, 'Rogelio': 6 }, wellsByPumper: { 'Eli': ["C E LAMUNYON #030", "C E LAMUNYON #056"], 'Rogelio': ["ADELE SOWELL #001", "CARLSON A FEDERAL #001", "HUSKY WOOLWORTH #001", "SHELL D STATE COM #013", "TERRA CARLSON B FEDERAL #001", "WELLS FEDERAL #018"] } },
     facility : ZERO(),
@@ -579,7 +579,7 @@ const DATA = {  // auto-refreshed 2026-04-22 23:05
 };
 
 // <<PUMPER_TASKS_START>>
-const PUMPER_TASKS = {  // auto-refreshed 2026-04-22 23:05
+const PUMPER_TASKS = {  // auto-refreshed 2026-04-23 00:05
   currentWeek: {
     date: "4/20/2026",
     tasks: {
@@ -664,8 +664,8 @@ const PUMPER_TASKS = {  // auto-refreshed 2026-04-22 23:05
 // <<PUMPER_TASKS_END>>
 
 // <<PRICES_START>>
-const PRICES = {  // auto-refreshed 2026-04-22 23:05
-  wti:  {price:94.55, chg:1.59, date:"4/22/2026"},
+const PRICES = {  // auto-refreshed 2026-04-23 00:05
+  wti:  {price:94.2, chg:1.24, date:"4/23/2026"},
   waha: {price:-3.57, chg:0.14, date:"4/22/2026"}
 };
 // <<PRICES_END>>
