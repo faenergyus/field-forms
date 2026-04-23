@@ -47,8 +47,8 @@
     .well-header { font-size: 1.1rem; font-weight: 700; color: #1c4a1c; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #3a8a3a; }
     .well-layout { display: flex; flex-direction: column; gap: 24px; }
 
-    #wbdContainer { background: #fff; border-radius: 4px; padding: 4px; border: 2px solid #000; display: flex; align-items: flex-start; justify-content: center; overflow-x: auto; }
-    #wbdContainer svg { width: 100%; height: auto; }
+    #wbdContainer { background: #e8e8e8; padding: 20px 0; display: flex; align-items: flex-start; justify-content: center; }
+    #wbdContainer svg { width: 100%; max-width: 850px; height: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.2); background: #fff; }
 
     /* Well General Info Header — matches WBD reference */
     .well-general { background: #fff; border: 2px solid #333; margin-bottom: 20px; font-size: 0.8rem; }
@@ -340,34 +340,20 @@ function parsePerfs(s) {
 
 function drawWBD(w) {
   var container = document.getElementById('wbdContainer');
-  // Hide the data cards — everything goes on the diagram
   document.getElementById('dataCards').innerHTML = '';
 
-  var typeOR = {'Surface':60,'Intermediate':48,'Production':36,'Liner':24,'Open Hole':20};
-  var typeIR = {'Surface':48,'Intermediate':38,'Production':28,'Liner':18,'Open Hole':14};
-  var typeNames = {'Surface':'Surface Csg','Intermediate':'Intermediate Csg','Production':'Production Csg','Liner':'Liner','Open Hole':'Open Hole'};
-
-  // Build casing strings from new structure
+  // Parse casings
   var strs = [];
   var csgList = w.csg || [];
   for (var i = 0; i < csgList.length; i++) {
     var c = csgList[i];
-    var ctype = (c.ty || '').split(' ')[0]; // "Surface", "Intermediate", etc
+    var ctype = (c.ty || '').split(' ')[0];
     var depth = parseDepth(c.dp);
-    if (depth) strs.push({
-      name: typeNames[ctype] || ctype,
-      depth: depth,
-      raw: [c.dp, c.sz, c.wt, c.hs], // [depth, size, weight, holeSize] for labels
-      or_: typeOR[ctype] || 36,
-      ir: typeIR[ctype] || 28,
-      idx: i,
-      grade: c.gr,
-      cement: c.cs,
-      toc: c.tc,
-    });
+    if (depth || c.sz) strs.push({type: ctype, depth: depth, raw: c});
   }
-  var td = parseDepth(w.td), pbtd = parseDepth(w.pb);
-  // Perforations from new structure (array of {t, b} objects)
+  strs.sort(function(a, b){return (a.depth || 99999) - (b.depth || 99999);});
+
+  // Parse perfs
   var perfs = [];
   var pfList = w.pf || [];
   for (var i = 0; i < pfList.length; i++) {
@@ -375,56 +361,40 @@ function drawWBD(w) {
     if (t && b) perfs.push({top: t, bot: b, spf: pfList[i].spf, zone: pfList[i].z, sq: pfList[i].sq});
   }
 
+  var td = parseDepth(w.td), pbtd = parseDepth(w.pb);
+
   if (!strs.length && !td && !perfs.length) {
     container.innerHTML = '<div style="text-align:center;color:#999;padding:40px 0;">No wellbore data available</div>';
     return;
   }
 
-  strs.sort(function(a,b){return a.depth - b.depth;});
+  // ── 8.5x11 page at 100dpi ──
+  var svgW = 850, svgH = 1100;
 
+  // Layout regions
+  var hdrTop = 12, hdrH = 70;           // header block 12-82
+  var bodyTop = 90, bodyBot = 1060;     // wellbore + side panels
+  var wbTop = 110, wbBot = 1020;        // wellbore drawing area
+  var wbLeft = 280, wbRight = 570;      // wellbore horizontal extent
+  var cx = (wbLeft + wbRight) / 2;
+
+  // Determine max depth
   var maxD = 0;
-  for (var i = 0; i < strs.length; i++) if (strs[i].depth > maxD) maxD = strs[i].depth;
+  for (var i = 0; i < strs.length; i++) if (strs[i].depth && strs[i].depth > maxD) maxD = strs[i].depth;
   if (td && td > maxD) maxD = td;
   if (pbtd && pbtd > maxD) maxD = pbtd;
   for (var i = 0; i < perfs.length; i++) if (perfs[i].bot > maxD) maxD = perfs[i].bot;
   if (!maxD) maxD = 5000;
-  maxD *= 1.05;
+  maxD *= 1.02;
 
-  // Layout — height scales with content density so sparse wells don't waste space
-  var svgW = 680;
-  var topM = 90; // room for header
-  var botM = 20;
-  var cx = 340; // wellbore center
-
-  // Count features in bottom zone to decide height
-  var botZoneStart = maxD * 0.75;
-  var surfZone = Math.min(500, maxD * 0.1);
-  var botFeatures = 0;
-  for (var i = 0; i < strs.length; i++) if (strs[i].depth >= botZoneStart) botFeatures++;
-  for (var i = 0; i < perfs.length; i++) if (perfs[i].top >= botZoneStart) botFeatures++;
-  if (td && td >= botZoneStart) botFeatures++;
-  if (pbtd && pbtd >= botZoneStart) botFeatures++;
-  var plList_ = w.pl || [];
-  for (var i = 0; i < plList_.length; i++) { var pd = parseDepth(plList_[i].dp); if (pd && pd >= botZoneStart) botFeatures++; }
-
-  // Bottom zone needs ~50px per feature minimum, min 100px
-  var botH = Math.max(100, botFeatures * 50);
-  // Middle zone compressed: 80px
-  var midH = 80;
-  // Surface zone: 60px
-  var surfH_ = 60;
-  var totalH = surfH_ + midH + botH;
-  var svgH = topM + totalH + botM;
-
-  function dToY(d) {
-    if (d <= surfZone) return topM + (d / surfZone) * surfH_;
-    if (d <= botZoneStart) return topM + surfH_ + ((d - surfZone) / (botZoneStart - surfZone)) * midH;
-    return topM + surfH_ + midH + ((d - botZoneStart) / (maxD - botZoneStart)) * botH;
-  }
+  function dToY(d) { return wbTop + (d / maxD) * (wbBot - wbTop); }
 
   var s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + svgW + ' ' + svgH + '" style="font-family:Arial,sans-serif;background:#fff">';
 
-  // ─── HEADER — form-style grid matching reference ───
+  // ── Page border ──
+  s += '<rect x="1" y="1" width="' + (svgW-2) + '" height="' + (svgH-2) + '" fill="none" stroke="#000" stroke-width="1"/>';
+
+  // ── HEADER — form-style grid ──
   var g = w;
   var wellName = document.getElementById('wellInput').value || '';
   var loc = g.loc || '';
@@ -432,260 +402,220 @@ function drawWBD(w) {
   var twp = locParts ? locParts[1] : '', rng = locParts ? locParts[2] : '', sec = locParts ? locParts[3] : '';
   var apiFormatted = g.api ? g.api.replace(/(\d{2})(\d{3})(\d+)/, '$1-$2-$3') : '';
 
-  var lbl = 'font-size="9" fill="#000" font-weight="700"';
-  var val = 'font-size="10" fill="#000"';
-  var rh = 16; // row height
+  // Header grid lines
+  var r1 = hdrTop + 20, r2 = hdrTop + 40, r3 = hdrTop + 60;
+  s += '<line x1="1" y1="' + (hdrTop) + '" x2="' + (svgW-1) + '" y2="' + (hdrTop) + '" stroke="#000" stroke-width="0.8"/>';
+  s += '<line x1="1" y1="' + (r1) + '" x2="' + (svgW-1) + '" y2="' + (r1) + '" stroke="#000" stroke-width="0.5"/>';
+  s += '<line x1="1" y1="' + (r2) + '" x2="' + (svgW-1) + '" y2="' + (r2) + '" stroke="#000" stroke-width="0.5"/>';
+  s += '<line x1="1" y1="' + (r3) + '" x2="' + (svgW-1) + '" y2="' + (r3) + '" stroke="#000" stroke-width="1.2"/>';
 
-  // Helper: draw a field with label + underlined value
-  function hdrField(x, y, label, value, lineW) {
-    s += '<text x="' + x + '" y="' + y + '" ' + lbl + '>' + label + '</text>';
-    var vx = x + label.length * 5.5 + 4;
-    s += '<text x="' + vx + '" y="' + y + '" ' + val + '>' + esc(value || '') + '</text>';
-    s += '<line x1="' + vx + '" y1="' + (y + 2) + '" x2="' + (x + lineW) + '" y2="' + (y + 2) + '" stroke="#000" stroke-width="0.5"/>';
+  function hdrCell(x, y, w2, label, value, bold) {
+    s += '<line x1="' + x + '" y1="' + (y-20) + '" x2="' + x + '" y2="' + y + '" stroke="#000" stroke-width="0.5"/>';
+    s += '<text x="' + (x+4) + '" y="' + (y-7) + '" font-size="9" fill="#000" font-weight="700">' + label + '</text>';
+    var vx = x + 4 + label.length * 5.5;
+    var attr = bold ? 'font-weight="700"' : '';
+    s += '<text x="' + vx + '" y="' + (y-7) + '" font-size="10" fill="#000" ' + attr + '>' + esc(value || '') + '</text>';
   }
 
-  // Row 1: Well Name (wide) | Lease No | Lease Type
-  var ry = 14;
-  hdrField(5, ry, 'Well Name:', wellName, 270);
-  hdrField(280, ry, 'Lease No:', '', 380);
-  hdrField(395, ry, 'Lease Type:', g.lt || '', 500);
-  s += '<text x="510" y="' + ry + '" ' + val + '>' + esc(g.ty || '') + '</text>';
-
+  // Row 1: Well Name | Lease No | Lease Type
+  hdrCell(1, r1, 380, 'Well Name:', wellName, true);
+  hdrCell(380, r1, 170, 'Lease No:', '');
+  hdrCell(550, r1, 300, 'Lease Type:', g.lt || '');
   // Row 2: Township | Range | Sec | Location
-  ry += rh;
-  hdrField(5, ry, 'Township:', twp, 90);
-  hdrField(100, ry, 'Range:', rng, 175);
-  hdrField(185, ry, 'Sec:', sec, 240);
-  hdrField(395, ry, 'Location:', '', svgW - 10);
-
+  hdrCell(1, r2, 130, 'Township:', twp);
+  hdrCell(130, r2, 130, 'Range:', rng);
+  hdrCell(260, r2, 120, 'Sec:', sec);
+  hdrCell(380, r2, 170, 'Location:', g.loc || '');
+  hdrCell(550, r2, 300, 'Lease Type:', '');
   // Row 3: County | State | API | Formation
-  ry += rh;
-  hdrField(5, ry, 'County:', 'Lea', 90);
-  hdrField(100, ry, 'State:', 'NM', 175);
-  hdrField(185, ry, 'API:', apiFormatted, 340);
-  hdrField(395, ry, 'Formation:', g.pool || '', svgW - 10);
+  hdrCell(1, r3, 130, 'County:', g.co || 'Lea');
+  hdrCell(130, r3, 130, 'State:', g.stx || 'NM');
+  hdrCell(260, r3, 120, 'API:', apiFormatted);
+  hdrCell(550, r3, 300, 'Formation:', g.pool || g.fm || '');
 
-  // Header border
-  s += '<line x1="3" y1="' + (ry + 6) + '" x2="' + (svgW - 3) + '" y2="' + (ry + 6) + '" stroke="#000" stroke-width="1.5"/>';
+  // CURRENT label
+  s += '<text x="' + (cx) + '" y="' + (hdrTop + 78) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#000">CURRENT</text>';
 
-  // Spud/WBD dates + CURRENT label
-  ry += rh + 4;
-  s += '<text x="5" y="' + ry + '" font-size="9" fill="#000">Spud Date: ' + esc(g.sd || '--') + '</text>';
-  s += '<text x="140" y="' + ry + '" font-size="9" fill="#000">WBD Date: ' + esc(g.wd || '--') + '</text>';
-  s += '<text x="' + cx + '" y="' + ry + '" text-anchor="middle" font-size="13" font-weight="700" fill="#000">CURRENT</text>';
-  s += '<text x="' + (svgW - 5) + '" y="' + ry + '" text-anchor="end" font-size="9" fill="#000">Pumper: ' + esc(g.pmpr || '--') + '  |  Engineer: ' + esc(g.engr || '--') + '</text>';
+  // ── LEFT: Casing spec boxes ──
+  // Classic layout: Size / Wt&Thd / Grade / Set @ / Sxs cnt / Circ / TOC / Hole Size
+  var boxX = 20, boxW = 210, boxRowH = 14;
+  var boxY = bodyTop + 20;
 
-  // ─── GROUND SURFACE ───
-  var gy = topM;
-  s += '<line x1="140" y1="' + gy + '" x2="' + (svgW - 140) + '" y2="' + gy + '" stroke="#2266cc" stroke-width="3"/>';
-  s += '<line x1="140" y1="' + (gy+4) + '" x2="' + (svgW-140) + '" y2="' + (gy+4) + '" stroke="#2266cc" stroke-width="2"/>';
-
-  // ─── CASING STRINGS — all start from surface unless noted ───
-  var byDepth = strs.slice().sort(function(a,b){return a.depth - b.depth;});
-  var sorted = strs.slice().sort(function(a,b){return b.or_ - a.or_;}); // for outermost ref
-
-  for (var i = 0; i < byDepth.length; i++) {
-    var cs = byDepth[i];
-    var y1 = gy; // all casings assumed to run to surface
-    var y2 = dToY(cs.depth);
-    var or_ = cs.or_, ir = cs.ir, wallW = or_ - ir;
-
-    // Left wall
-    s += '<rect x="' + (cx-or_) + '" y="' + y1 + '" width="' + wallW + '" height="' + (y2-y1) + '" fill="#888"/>';
-    s += '<rect x="' + (cx-or_) + '" y="' + y1 + '" width="2" height="' + (y2-y1) + '" fill="#555"/>';
-    s += '<rect x="' + (cx-ir-1) + '" y="' + y1 + '" width="1.5" height="' + (y2-y1) + '" fill="#bbb"/>';
-    // Right wall
-    s += '<rect x="' + (cx+ir) + '" y="' + y1 + '" width="' + wallW + '" height="' + (y2-y1) + '" fill="#888"/>';
-    s += '<rect x="' + (cx+or_-2) + '" y="' + y1 + '" width="2" height="' + (y2-y1) + '" fill="#555"/>';
-    s += '<rect x="' + (cx+ir) + '" y="' + y1 + '" width="1.5" height="' + (y2-y1) + '" fill="#bbb"/>';
-
-    // Shoe — right triangles with vertical edge along casing wall
-    // Left shoe: vertical on inner edge (cx-ir side), hypotenuse goes down-outward
-    s += '<polygon points="' + (cx-ir) + ',' + y2 + ' ' + (cx-ir) + ',' + (y2+10) + ' ' + (cx-or_-6) + ',' + (y2+10) + '" fill="#000"/>';
-    // Right shoe: vertical on inner edge (cx+ir side), hypotenuse goes down-outward
-    s += '<polygon points="' + (cx+ir) + ',' + y2 + ' ' + (cx+ir) + ',' + (y2+10) + ' ' + (cx+or_+6) + ',' + (y2+10) + '" fill="#000"/>';
-    // (shoe cap removed — triangles only)
-
-    // Depth label at shoe — right side
-    s += '<text x="' + (cx+or_+12) + '" y="' + (y2+4) + '" font-size="10" fill="#333">' + cs.depth + "'" + '</text>';
-  }
-
-  // ─── TUBING + ROD lists (declared early so pump logic below can use them) ───
-  var tbList = w.tb || [];
-  var rdList = w.rd || [];
-  var tubD = null;
-  for (var i = 0; i < tbList.length; i++) {
-    var d = parseDepth(tbList[i].dp);
-    if (d && d > (tubD || 0)) tubD = d;
-  }
-  if (tubD && tubD > 100) {
-    var tby = dToY(tubD);
-    s += '<rect x="' + (cx-10) + '" y="' + gy + '" width="3" height="' + (tby-gy) + '" fill="#666"/>';
-    s += '<rect x="' + (cx+7) + '" y="' + gy + '" width="3" height="' + (tby-gy) + '" fill="#666"/>';
-    s += '<rect x="' + (cx-7) + '" y="' + gy + '" width="14" height="' + (tby-gy) + '" fill="#eee" opacity="0.3"/>';
-  }
-
-  // ─── ROD STRING + PUMP — on RIGHT side of wellbore center ───
-  var pumpD = tubD;
-  if (rdList.length && pumpD && pumpD > 100) {
-    var pumpY = dToY(pumpD);
-    var rodX = cx + 2; // slightly right of center
-    // Rod string line
-    s += '<line x1="' + rodX + '" y1="' + gy + '" x2="' + rodX + '" y2="' + (pumpY - 2) + '" stroke="#000" stroke-width="2"/>';
-    // Polished rod at surface
-    s += '<rect x="' + (rodX - 3) + '" y="' + gy + '" width="6" height="10" fill="#333" rx="1"/>';
-
-    // Rod Pump symbol — barrel with standing valve and traveling valve
-    var pW = 14, pH = 30; // pump width/height
-    var px = rodX - pW/2;
-    // Barrel (outer rectangle)
-    s += '<rect x="' + px + '" y="' + pumpY + '" width="' + pW + '" height="' + pH + '" fill="#fff" stroke="#000" stroke-width="1.5" rx="1"/>';
-    // Plunger inside barrel (inner rectangle)
-    s += '<rect x="' + (px+2) + '" y="' + (pumpY+2) + '" width="' + (pW-4) + '" height="' + (pH/2-2) + '" fill="#aaa" stroke="#000" stroke-width="0.8"/>';
-    // Traveling valve — small triangle at top of plunger pointing up
-    s += '<polygon points="' + rodX + ',' + (pumpY+2) + ' ' + (rodX-4) + ',' + (pumpY+8) + ' ' + (rodX+4) + ',' + (pumpY+8) + '" fill="#000"/>';
-    // Standing valve — small triangle at bottom pointing up
-    s += '<polygon points="' + rodX + ',' + (pumpY+pH-8) + ' ' + (rodX-4) + ',' + (pumpY+pH-2) + ' ' + (rodX+4) + ',' + (pumpY+pH-2) + '" fill="#000"/>';
-    // Cross marks on valves
-    s += '<line x1="' + (rodX-3) + '" y1="' + (pumpY+pH/2) + '" x2="' + (rodX+3) + '" y2="' + (pumpY+pH/2) + '" stroke="#000" stroke-width="1"/>';
-
-    // Label on RIGHT
-    var innerCsg = byDepth.length ? byDepth[byDepth.length-1].or_ : 30;
-    s += '<text x="' + (cx + innerCsg + 14) + '" y="' + (pumpY + 10) + '" font-size="10" fill="#000" font-weight="700">Rod Pump</text>';
-    s += '<text x="' + (cx + innerCsg + 14) + '" y="' + (pumpY + 22) + '" font-size="9" fill="#333">@ ' + pumpD + "'" + '</text>';
-  }
-
-  // ─── PERFORATIONS ───
-  for (var i = 0; i < perfs.length; i++) {
-    var p = perfs[i], py1 = dToY(p.top), py2 = dToY(p.bot);
-    if (py2-py1 < 5) py2 = py1+5;
-    var phw = 20;
-    for (var j = strs.length-1; j >= 0; j--) if (strs[j].depth >= p.top) { phw = strs[j].or_; break; }
-    for (var py = py1+2; py <= py2-1; py += 4) {
-      s += '<line x1="' + (cx-phw) + '" y1="' + py + '" x2="' + (cx-phw-14) + '" y2="' + (py-3) + '" stroke="#000" stroke-width="1.5"/>';
-      s += '<line x1="' + (cx-phw) + '" y1="' + py + '" x2="' + (cx-phw-14) + '" y2="' + (py+3) + '" stroke="#000" stroke-width="1.5"/>';
-      s += '<line x1="' + (cx+phw) + '" y1="' + py + '" x2="' + (cx+phw+14) + '" y2="' + (py-3) + '" stroke="#000" stroke-width="1.5"/>';
-      s += '<line x1="' + (cx+phw) + '" y1="' + py + '" x2="' + (cx+phw+14) + '" y2="' + (py+3) + '" stroke="#000" stroke-width="1.5"/>';
+  var csgTypes = [];
+  for (var i = 0; i < strs.length; i++) {
+    if (strs[i].type === 'Surface' || strs[i].type === 'Intermediate' ||
+        strs[i].type === 'Production' || strs[i].type === 'Liner') {
+      csgTypes.push(strs[i]);
     }
-    var pmid = (py1+py2)/2;
-    s += '<text x="' + (cx-phw-18) + '" y="' + (pmid-1) + '" text-anchor="end" font-size="10" fill="#000" font-weight="700">Perforation</text>';
-    s += '<text x="' + (cx-phw-18) + '" y="' + (pmid+11) + '" text-anchor="end" font-size="9.5" fill="#333">' + p.top + "' - " + p.bot + "'" + '</text>';
   }
 
-  // ─── PBTD + CEMENT PLUG ───
-  if (pbtd && td && pbtd < td) {
-    var pby = dToY(pbtd);
-    var tdy = dToY(td);
-    // Cement plug — solid gray fill from PBTD to TD
-    var plugHW = byDepth.length ? byDepth[byDepth.length-1].ir : 18;
-    s += '<rect x="' + (cx - plugHW) + '" y="' + pby + '" width="' + (plugHW * 2) + '" height="' + (tdy - pby) + '" fill="#999"/>';
-    // No text label — cement plug is assumed
-    // PBTD label
-    s += '<text x="' + (cx - plugHW - 12) + '" y="' + (pby + 4) + '" text-anchor="end" font-size="11" fill="#000" font-weight="700">PBTD ' + pbtd + "'" + '</text>';
-  } else if (pbtd) {
-    var pby = dToY(pbtd);
-    s += '<line x1="' + (cx-70) + '" y1="' + pby + '" x2="' + (cx+70) + '" y2="' + pby + '" stroke="#000" stroke-width="1.5" stroke-dasharray="6,3"/>';
-    s += '<text x="10" y="' + (pby+4) + '" font-size="11" fill="#000" font-weight="700">PBTD ' + pbtd + "'" + '</text>';
+  for (var i = 0; i < csgTypes.length; i++) {
+    var cs = csgTypes[i];
+    // Box title (italic underlined)
+    s += '<text x="' + boxX + '" y="' + boxY + '" font-size="10" font-weight="700" fill="#000" font-style="italic" text-decoration="underline">' + esc(cs.type) + ' Csg</text>';
+    boxY += boxRowH;
+    // Field rows
+    var fields = [
+      ['Size:', cs.raw.sz],
+      ['Wt.&Thd:', cs.raw.wt],
+      ['Grade:', cs.raw.gr],
+      ['Set @:', cs.depth ? cs.depth.toLocaleString() : ''],
+      ['Sxs cnt:', cs.raw.cs],
+      ['Circ:', cs.raw.tc && cs.raw.tc.toLowerCase().indexOf('surface') >= 0 ? 'Yes' : ''],
+      ['TOC:', cs.raw.tc],
+      ['Hole Size:', cs.raw.hs],
+    ];
+    for (var k = 0; k < fields.length; k++) {
+      s += '<text x="' + boxX + '" y="' + boxY + '" font-size="9" fill="#000" font-weight="700">' + fields[k][0] + '</text>';
+      // Value underlined
+      var vx = boxX + 70;
+      var vv = fields[k][1] || '';
+      s += '<text x="' + vx + '" y="' + boxY + '" font-size="9" fill="#000">' + esc(vv) + '</text>';
+      s += '<line x1="' + vx + '" y1="' + (boxY+2) + '" x2="' + (boxX + 170) + '" y2="' + (boxY+2) + '" stroke="#000" stroke-width="0.4"/>';
+      boxY += boxRowH;
+    }
+    boxY += 8; // gap between boxes
   }
 
-  // ─── TD ───
-  if (td) {
-    var tdy = dToY(td);
-    s += '<line x1="' + (cx-80) + '" y1="' + tdy + '" x2="' + (cx+80) + '" y2="' + tdy + '" stroke="#000" stroke-width="3"/>';
-    for (var hx = cx-77; hx < cx+77; hx += 5) s += '<line x1="' + hx + '" y1="' + tdy + '" x2="' + (hx-3) + '" y2="' + (tdy+5) + '" stroke="#555" stroke-width="0.6"/>';
-    s += '<text x="' + (cx+85) + '" y="' + (tdy+4) + '" font-size="12" fill="#000" font-weight="700">TD ' + td + "'" + '</text>';
+  // ── RIGHT: KB/DF/GL/dates ──
+  var rX = 600, rY = bodyTop + 20;
+  function rightCell(label, value, bold) {
+    s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000" font-weight="700">' + label + '</text>';
+    var vx = rX + 90;
+    s += '<text x="' + vx + '" y="' + rY + '" font-size="10" fill="#000" ' + (bold ? 'font-weight="700"' : '') + '>' + esc(value || '') + '</text>';
+    s += '<line x1="' + vx + '" y1="' + (rY+2) + '" x2="' + (rX + 220) + '" y2="' + (rY+2) + '" stroke="#000" stroke-width="0.4"/>';
+    rY += 15;
+  }
+  rightCell('KB:', g.kb || '');
+  rightCell('DF:', g.df || '');
+  rightCell('GL:', g.gl || '', true);
+  rightCell('Spud Date:', g.sd || '', true);
+  rightCell('Compl. Date:', g.cd || '', true);
+
+  // ── WELLBORE DIAGRAM ──
+  var OR = {'Surface': 45, 'Intermediate': 35, 'Production': 25, 'Liner': 18};
+  var IR = {'Surface': 38, 'Intermediate': 29, 'Production': 20, 'Liner': 14};
+
+  // Ground surface
+  var gy = wbTop;
+  s += '<line x1="' + (wbLeft) + '" y1="' + gy + '" x2="' + (wbRight) + '" y2="' + gy + '" stroke="#000" stroke-width="2"/>';
+  // Surface hatching
+  for (var gx = wbLeft + 3; gx < wbRight; gx += 5) {
+    s += '<line x1="' + gx + '" y1="' + gy + '" x2="' + (gx-3) + '" y2="' + (gy-4) + '" stroke="#000" stroke-width="0.6"/>';
   }
 
-  // ─── CASING SPEC BOXES — LEFT ───
-  var boxX = 5, boxW = 140, boxH = 78, boxGap = 8;
-  var boxY = gy + 12;
+  // Draw casings — all from surface (as user said earlier)
+  var sorted = csgTypes.slice().sort(function(a,b){return (OR[b.type]||25) - (OR[a.type]||25);});
   for (var i = 0; i < sorted.length; i++) {
     var cs = sorted[i];
-    s += '<rect x="' + boxX + '" y="' + boxY + '" width="' + boxW + '" height="' + boxH + '" fill="#fff" stroke="#666" stroke-width="1" rx="2"/>';
-    s += '<text x="' + (boxX+6) + '" y="' + (boxY+15) + '" font-size="12" fill="#000" font-weight="700">' + esc(cs.name) + '</text>';
-    s += '<text x="' + (boxX+6) + '" y="' + (boxY+30) + '" font-size="11" fill="#333">Size: ' + esc(cs.raw[1]||'--') + '</text>';
-    s += '<text x="' + (boxX+6) + '" y="' + (boxY+44) + '" font-size="11" fill="#333">Wt: ' + esc(cs.raw[2]||'--') + '</text>';
-    s += '<text x="' + (boxX+6) + '" y="' + (boxY+58) + '" font-size="11" fill="#333">Set @: ' + cs.depth + "'" + '</text>';
-    s += '<text x="' + (boxX+6) + '" y="' + (boxY+72) + '" font-size="11" fill="#333">Hole Size: ' + esc(cs.raw[3]||'--') + '</text>';
-    boxY += boxH + boxGap;
+    if (!cs.depth) continue;
+    var y1 = gy, y2 = dToY(cs.depth);
+    var or_ = OR[cs.type] || 25;
+    var ir = IR[cs.type] || 18;
+    var wallW = or_ - ir;
+
+    // Walls — gray bands
+    s += '<rect x="' + (cx-or_) + '" y="' + y1 + '" width="' + wallW + '" height="' + (y2-y1) + '" fill="#b0b0b0" stroke="#000" stroke-width="0.5"/>';
+    s += '<rect x="' + (cx+ir) + '" y="' + y1 + '" width="' + wallW + '" height="' + (y2-y1) + '" fill="#b0b0b0" stroke="#000" stroke-width="0.5"/>';
+
+    // Right-triangle shoe along inner wall
+    s += '<polygon points="' + (cx-ir) + ',' + y2 + ' ' + (cx-ir) + ',' + (y2+12) + ' ' + (cx-or_-6) + ',' + (y2+12) + '" fill="#000"/>';
+    s += '<polygon points="' + (cx+ir) + ',' + y2 + ' ' + (cx+ir) + ',' + (y2+12) + ' ' + (cx+or_+6) + ',' + (y2+12) + '" fill="#000"/>';
   }
 
-  // ─── TUBING/ROD/PUMP INFO — RIGHT side ───
-  var outerR2 = sorted.length ? sorted[0].or_ : 60;
-  var infoX = cx + outerR2 + 20;
-  var infoY = gy + 15;
-  if (tbList.length) {
-    s += '<text x="' + infoX + '" y="' + infoY + '" font-size="11" fill="#000" font-weight="700" text-decoration="underline">Tubing String</text>';
-    infoY += 14;
-    for (var j = 0; j < Math.min(tbList.length, 12); j++) {
-      var tb = tbList[j];
-      var line = (tb.d || '') + (tb.dp ? ' to ' + tb.dp + "'" : '') + (tb.jt ? ' (' + tb.jt + ' jts)' : '');
-      if (line.trim()) {
-        s += '<text x="' + infoX + '" y="' + infoY + '" font-size="8.5" fill="#333">' + esc(line.substring(0,55)) + '</text>';
-        infoY += 11;
+  // ── PERFORATIONS (drawn on diagram right side with brackets) ──
+  for (var i = 0; i < perfs.length; i++) {
+    var p = perfs[i];
+    var py1 = dToY(p.top), py2 = dToY(p.bot);
+    if (py2 - py1 < 3) py2 = py1 + 3;
+    var innerHW = 20;
+    for (var j = sorted.length - 1; j >= 0; j--) {
+      if (sorted[j].depth >= p.top) { innerHW = IR[sorted[j].type] || 20; break; }
+    }
+    // Hatched bracket on both sides
+    for (var py = py1; py <= py2; py += 3) {
+      s += '<line x1="' + (cx - innerHW - 3) + '" y1="' + py + '" x2="' + (cx - innerHW - 9) + '" y2="' + py + '" stroke="#000" stroke-width="1"/>';
+      s += '<line x1="' + (cx + innerHW + 3) + '" y1="' + py + '" x2="' + (cx + innerHW + 9) + '" y2="' + py + '" stroke="#000" stroke-width="1"/>';
+    }
+  }
+
+  // ── CEMENT PLUG between PBTD and TD ──
+  if (pbtd && td && pbtd < td) {
+    var pby = dToY(pbtd), tdy = dToY(td);
+    var plugHW = csgTypes.length ? IR[csgTypes[csgTypes.length-1].type] || 20 : 20;
+    s += '<rect x="' + (cx - plugHW) + '" y="' + pby + '" width="' + (plugHW*2) + '" height="' + (tdy - pby) + '" fill="#999"/>';
+  }
+
+  // PBTD dashed line + label
+  if (pbtd) {
+    var pby = dToY(pbtd);
+    s += '<line x1="' + (wbLeft - 20) + '" y1="' + pby + '" x2="' + (wbRight + 20) + '" y2="' + pby + '" stroke="#000" stroke-width="1" stroke-dasharray="4,3"/>';
+    s += '<text x="' + (cx) + '" y="' + (pby + 14) + '" text-anchor="middle" font-size="10" fill="#000" font-weight="700">PBTD ' + pbtd.toLocaleString() + "'" + '</text>';
+  }
+
+  // TD
+  if (td) {
+    var tdy = dToY(td);
+    s += '<line x1="' + (wbLeft - 20) + '" y1="' + tdy + '" x2="' + (wbRight + 20) + '" y2="' + tdy + '" stroke="#000" stroke-width="2"/>';
+    s += '<text x="' + (wbRight + 25) + '" y="' + (tdy + 4) + '" font-size="10" fill="#000" font-weight="700">TD ' + td.toLocaleString() + "'" + '</text>';
+  }
+
+  // ── PERFORATIONS LIST (left, below casing boxes) ──
+  var perfLX = 20, perfLY = boxY + 5;
+  if (perfs.length) {
+    // Group by formation/zone if present
+    var formHeader = g.pool || g.fm || '';
+    if (formHeader) {
+      s += '<text x="' + perfLX + '" y="' + perfLY + '" font-size="10" font-weight="700" fill="#000">' + esc(formHeader.toUpperCase()) + '</text>';
+      perfLY += 14;
+    }
+    // Group perfs
+    var by_spf = {};
+    for (var i = 0; i < perfs.length; i++) {
+      var spfk = perfs[i].spf || '';
+      if (!by_spf[spfk]) by_spf[spfk] = [];
+      by_spf[spfk].push(perfs[i]);
+    }
+    var keys = Object.keys(by_spf).sort();
+    for (var k = 0; k < keys.length; k++) {
+      var label = keys[k] ? 'Perfs @' + keys[k] + 'spf -' : 'Perfs -';
+      s += '<text x="' + perfLX + '" y="' + perfLY + '" font-size="9" font-weight="700" fill="#000">' + label + '</text>';
+      perfLY += 11;
+      // List perfs on wrapped lines
+      var txt = '';
+      var plist = by_spf[keys[k]];
+      var lineItems = [];
+      for (var j = 0; j < plist.length; j++) {
+        lineItems.push(plist[j].top + '-' + plist[j].bot);
       }
-    }
-  }
-  // Rod String (rdList declared earlier)
-  if (rdList.length) {
-    infoY += 8;
-    s += '<text x="' + infoX + '" y="' + infoY + '" font-size="11" fill="#000" font-weight="700" text-decoration="underline">Rod String</text>';
-    infoY += 14;
-    for (var j = 0; j < Math.min(rdList.length, 12); j++) {
-      var rd = rdList[j];
-      var line = (rd.d || '') + (rd.ct ? ' x' + rd.ct : '') + (rd.ln ? ' ' + rd.ln : '') + (rd.dp ? ' to ' + rd.dp + "'" : '');
-      if (line.trim()) {
-        s += '<text x="' + infoX + '" y="' + infoY + '" font-size="8.5" fill="#333">' + esc(line.substring(0,55)) + '</text>';
-        infoY += 11;
+      // Wrap to 35 char lines
+      var lines = [];
+      var line = '';
+      for (var j = 0; j < lineItems.length; j++) {
+        var part = lineItems[j] + (j < lineItems.length - 1 ? ', ' : '');
+        if ((line + part).length > 35) { lines.push(line); line = part; }
+        else line += part;
       }
-    }
-  }
-  // Pump Details — below rod string
-  if (rdList.length && pumpD) {
-    infoY += 8;
-    s += '<text x="' + infoX + '" y="' + infoY + '" font-size="11" fill="#000" font-weight="700" text-decoration="underline">Pump Details</text>';
-    infoY += 14;
-    // Find pump in rod data
-    var pumpDesc = '';
-    for (var j = 0; j < rdList.length; j++) {
-      if (rdList[j].d && rdList[j].d.toUpperCase().indexOf('PUMP') >= 0) { pumpDesc = rdList[j].d; break; }
-    }
-    s += '<text x="' + infoX + '" y="' + infoY + '" font-size="9" fill="#333">Type: Rod Pump</text>';
-    infoY += 12;
-    s += '<text x="' + infoX + '" y="' + infoY + '" font-size="9" fill="#333">Depth: ' + pumpD + "'" + '</text>';
-    infoY += 12;
-    if (pumpDesc) {
-      s += '<text x="' + infoX + '" y="' + infoY + '" font-size="8.5" fill="#333">' + esc(pumpDesc.substring(0,55)) + '</text>';
-      infoY += 12;
-    }
-  }
-  // Plugs
-  var plList = w.pl || [];
-  if (plList.length) {
-    infoY += 8;
-    s += '<text x="' + infoX + '" y="' + infoY + '" font-size="11" fill="#000" font-weight="700" text-decoration="underline">Plugs</text>';
-    infoY += 14;
-    for (var j = 0; j < Math.min(plList.length, 6); j++) {
-      var pl = plList[j];
-      s += '<text x="' + infoX + '" y="' + infoY + '" font-size="8.5" fill="#333">' + esc((pl.ty||'') + ' @ ' + (pl.dp||'') + "'") + '</text>';
-      infoY += 11;
+      if (line) lines.push(line);
+      for (var j = 0; j < lines.length; j++) {
+        s += '<text x="' + perfLX + '" y="' + perfLY + '" font-size="9" fill="#000">' + esc(lines[j]) + '</text>';
+        perfLY += 11;
+      }
+      perfLY += 4;
     }
   }
 
-  // ─── DEPTH SCALE — full scale, far right ───
-  var depthTick = maxD <= 1500 ? 100 : maxD <= 3000 ? 250 : maxD <= 6000 ? 500 : 1000;
-  s += '<line x1="' + (svgW-5) + '" y1="' + gy + '" x2="' + (svgW-5) + '" y2="' + dToY(maxD*0.98) + '" stroke="#666" stroke-width="1"/>';
-  s += '<text x="' + (svgW-10) + '" y="' + (gy+4) + '" text-anchor="end" font-size="9" fill="#333" font-weight="600">GL</text>';
-  for (var d = depthTick; d < maxD; d += depthTick) {
-    var ty = dToY(d);
-    s += '<line x1="' + (svgW-12) + '" y1="' + ty + '" x2="' + (svgW-5) + '" y2="' + ty + '" stroke="#666" stroke-width="0.8"/>';
-    s += '<text x="' + (svgW-15) + '" y="' + (ty+3) + '" text-anchor="end" font-size="9" fill="#333">' + d + "'" + '</text>';
-  }
+  // ── Footer ──
+  s += '<line x1="1" y1="' + (svgH - 40) + '" x2="' + (svgW-1) + '" y2="' + (svgH - 40) + '" stroke="#000" stroke-width="0.8"/>';
+  s += '<text x="20" y="' + (svgH - 25) + '" font-size="9" fill="#000" font-weight="700">Other:</text>';
+  s += '<line x1="1" y1="' + (svgH - 10) + '" x2="' + (svgW-1) + '" y2="' + (svgH - 10) + '" stroke="#000" stroke-width="0.8"/>';
 
-  // ─── NOTES ───
-  if (w.nt) {
-    s += '<text x="10" y="' + (svgH - 10) + '" font-size="8" fill="#666">Notes: ' + esc(w.nt.substring(0,80)) + '</text>';
-  }
+  // Version/date footer
+  var verLabel = '';
+  var ver = (w.v || [])[currentVersionIdx || 0];
+  if (ver) verLabel = 'WBD ' + (document.getElementById('wellInput').value || '') + ' ' + (ver.dt || '');
+  s += '<text x="' + (cx) + '" y="' + (svgH - 5) + '" text-anchor="middle" font-size="8" fill="#000">' + esc(verLabel) + '</text>';
+  s += '<text x="' + (svgW - 20) + '" y="' + (svgH - 5) + '" text-anchor="end" font-size="8" fill="#000">Page 1</text>';
 
   s += '</svg>';
   container.innerHTML = s;
