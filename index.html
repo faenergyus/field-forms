@@ -514,7 +514,7 @@
 
   <footer>
     Forty Acres Energy &nbsp;·&nbsp; Field Operations &nbsp;·&nbsp; Internal Use Only
-    <div class="data-note">Dashboard data from Google Sheets · Updated 2026-05-01 15:05</div>
+    <div class="data-note">Dashboard data from Google Sheets · Updated 2026-05-01 16:05</div>
   </footer>
 </div>
 
@@ -545,13 +545,13 @@ const CHART_DEFS = [
 
 const ZERO = () => ({ total: 0, byPumper: {}, wellsByPumper: {} });
 
-const DATA = {  // auto-refreshed 2026-05-01 15:05
+const DATA = {  // auto-refreshed 2026-05-01 16:05
   pastweek: {
     avo      : ZERO(),
     gwi      : ZERO(),
     fap      : ZERO(),
     pumpup   : ZERO(),
-    wellsite : { total: 1, byPumper: { 'Eli': 1 }, wellsByPumper: { 'Eli': ["WEST EUMONT UNIT #219"] } },
+    wellsite : { total: 3, byPumper: { 'Eli': 3 }, wellsByPumper: { 'Eli': ["WEST EUMONT UNIT #218", "WEST EUMONT UNIT #219", "WEST EUMONT UNIT #522"] } },
     facility : { total: 2, byPumper: { 'Eli': 2 }, wellsByPumper: { 'Eli': ["SHOLES B 25"] } },
     whs      : ZERO(),
     env      : ZERO(),
@@ -561,7 +561,7 @@ const DATA = {  // auto-refreshed 2026-05-01 15:05
     gwi      : { total: 46, byPumper: { 'Raul': 1, 'Wynn': 20, 'Armando': 9, 'Waldo': 6, 'Henry': 1, 'Eli': 9 }, wellsByPumper: { 'Raul': ["CARLSON A FEDERAL #001"], 'Wynn': ["CLOSSON B FEDERAL #012", "CLOSSON C #001", "LYNN A #004", "LYNN A #006", "MEYER B 23 #001", "MEYER B 23 #002", "MEYER B 31 A #001", "NEW MEXICO AA STATE #001", "NEW MEXICO AA STATE #007", "OTIS L JONES #002", "SHELL STATE #004", "SHELL STATE #007", "STATE H #002", "STATE H #003", "STATE H #005", "STATE H #006", "STEVENS B #013"], 'Armando': ["HUGHES B-6 #011", "HUGHES B-6 #012", "J F JANDA NCT-G #002", "JANDA STATE #001", "JANDA STATE #002", "MATKINS #006", "OTIS L JONES #001", "OTIS L JONES #002", "SHELL STATE #002"], 'Waldo': ["FEDERAL F #002", "FEDERAL F #003", "FEDERAL F #004", "FEDERAL F #005", "MOBERLY RHODES WF PROJECT #004"], 'Henry': ["WEST EUMONT UNIT #508"], 'Eli': ["BRITT A 6 #002", "HOLT MEXICO STATE COM #001", "HUSKY WOOLWORTH #001", "MAVEETY STATE GAS COM #009", "REED A 3 #002", "REED A 3 #003", "STEELER A #001", "STEELER A #003", "STEELER A #004"] } },
     fap      : { total: 127, byPumper: { 'Waldo': 5, 'Jason': 93, 'Armando': 6, 'Henry': 23 }, wellsByPumper: { 'Waldo': ["ARNOTT RAMSAY NCT-B #006", "ARNOTT RAMSAY NCT-B #008", "ARNOTT RAMSAY NCT-B #009", "ARNOTT RAMSAY NCT-B #012"], 'Jason': ["ARNOTT RAMSAY NCT-B #006", "ARNOTT RAMSAY NCT-B #008", "ARNOTT RAMSAY NCT-B #009", "ARNOTT RAMSAY NCT-B #010", "ARNOTT RAMSAY NCT-B #012", "ARNOTT RAMSAY NCT-B #020", "ARNOTT RAMSAY NCT-B #021", "BAYLUS CADE FEDERAL #004", "BAYLUS CADE FEDERAL #006", "BRITT A 6 #005", "C E LAMUNYON #040", "CLOWER STATE #001", "E C HILL B FEDERAL #018", "E C HILL B FEDERAL #020", "ELLIOTT #002", "G G TRAVIS #004", "GILLULLY B FEDERAL RA A #010", "LOCKHART B 31 #003", "LOCKHART B 31 #005", "LOCKHART B 31 #006", "LOCKHART B 31 #009", "MAVEETY STATE GAS COM #009", "MCQUATTERS COM #004", "STATE A A/C 1 #036", "STATE A A/C 1 #043", "STATE A A/C 1 #046", "STATE A A/C 1 #048", "STATE A A/C 1 #061", "STATE A A/C 1 #064", "STATE A A/C 1 #069", "STATE A A/C 1 #081", "STATE A A/C 2 #004", "STATE A A/C 2 #023", "STATE A A/C 2 #025", "STATE A A/C 2 #026", "STATE A A/C 2 #027", "STATE A A/C 2 #029", "STATE A A/C 2 #030", "STATE A A/C 2 #031", "STATE A A/C 2 #054", "STATE A A/C 3 #009", "STATE A A/C 3 COM A #004", "STATE C TR 11 #003", "STATE D #002", "STATE D #005", "STATE D #006", "STATE D #007", "STATE D #008", "STATE E #002", "TRAVIS #005", "WEST EUMONT UNIT #102", "WEST EUMONT UNIT #104", "WEST EUMONT UNIT #106", "WEST EUMONT UNIT #131", "WEST EUMONT UNIT #203", "WEST EUMONT UNIT #204", "WEST EUMONT UNIT #206", "WEST EUMONT UNIT #209", "WEST EUMONT UNIT #210", "WEST EUMONT UNIT #215", "WEST EUMONT UNIT #216", "WEST EUMONT UNIT #510", "WEST EUMONT UNIT #511", "WEST EUMONT UNIT #512", "WEST EUMONT UNIT #513", "WEST EUMONT UNIT #514", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #521"], 'Armando': ["STATE A A/C 1 #081", "STATE A A/C 2 #025"], 'Henry': ["WEST EUMONT UNIT #102", "WEST EUMONT UNIT #104", "WEST EUMONT UNIT #106", "WEST EUMONT UNIT #203", "WEST EUMONT UNIT #204", "WEST EUMONT UNIT #206", "WEST EUMONT UNIT #209", "WEST EUMONT UNIT #210", "WEST EUMONT UNIT #215", "WEST EUMONT UNIT #216", "WEST EUMONT UNIT #220", "WEST EUMONT UNIT #402", "WEST EUMONT UNIT #417", "WEST EUMONT UNIT #510", "WEST EUMONT UNIT #511", "WEST EUMONT UNIT #512", "WEST EUMONT UNIT #513", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #520", "WEST EUMONT UNIT #521"] } },
     pumpup   : { total: 1, byPumper: { 'Armando': 1 }, wellsByPumper: { 'Armando': ["STATE A A/C 2 #024"] } },
-    wellsite : { total: 34, byPumper: { 'Eli': 24, 'Wynn': 2, 'Armando': 8 }, wellsByPumper: { 'Eli': ["STATE E COM #002", "WEST EUMONT UNIT #130", "WEST EUMONT UNIT #211", "WEST EUMONT UNIT #212", "WEST EUMONT UNIT #214", "WEST EUMONT UNIT #218", "WEST EUMONT UNIT #219", "WEST EUMONT UNIT #522", "WEST EUMONT UNIT #524", "WEST EUMONT UNIT #525"], 'Wynn': ["STATE H #003", "STATE H #006"], 'Armando': ["STATE A A/C 1 #046", "STATE A A/C 1 #061", "STATE A A/C 2 #023", "STATE A A/C 2 #024", "STATE A A/C 2 #025", "STATE A A/C 2 #027", "STATE A A/C 2 #030", "STATE A A/C 2 #047"] } },
+    wellsite : { total: 36, byPumper: { 'Eli': 26, 'Wynn': 2, 'Armando': 8 }, wellsByPumper: { 'Eli': ["STATE E COM #002", "WEST EUMONT UNIT #130", "WEST EUMONT UNIT #211", "WEST EUMONT UNIT #212", "WEST EUMONT UNIT #214", "WEST EUMONT UNIT #218", "WEST EUMONT UNIT #219", "WEST EUMONT UNIT #522", "WEST EUMONT UNIT #524", "WEST EUMONT UNIT #525"], 'Wynn': ["STATE H #003", "STATE H #006"], 'Armando': ["STATE A A/C 1 #046", "STATE A A/C 1 #061", "STATE A A/C 2 #023", "STATE A A/C 2 #024", "STATE A A/C 2 #025", "STATE A A/C 2 #027", "STATE A A/C 2 #030", "STATE A A/C 2 #047"] } },
     facility : { total: 8, byPumper: { 'Eli': 8 }, wellsByPumper: { 'Eli': ["SHOLES B 25", "State A A/C 2 CIF", "State A AC 1 Main Additional Battery", "TEAGUE INJECTION STATION", "WEU Bay Federal", "WEU CIF", "WEU Federal D"] } },
     whs      : ZERO(),
     env      : ZERO(),
@@ -579,7 +579,7 @@ const DATA = {  // auto-refreshed 2026-05-01 15:05
 };
 
 // <<PUMPER_TASKS_START>>
-const PUMPER_TASKS = {  // auto-refreshed 2026-05-01 15:05
+const PUMPER_TASKS = {  // auto-refreshed 2026-05-01 16:05
   currentWeek: {
     date: "4/27/2026",
     tasks: {
@@ -664,8 +664,8 @@ const PUMPER_TASKS = {  // auto-refreshed 2026-05-01 15:05
 // <<PUMPER_TASKS_END>>
 
 // <<PRICES_START>>
-const PRICES = {  // auto-refreshed 2026-05-01 15:05
-  wti:  {price:102.23, chg:-2.84, date:"5/1/2026"},
+const PRICES = {  // auto-refreshed 2026-05-01 16:05
+  wti:  {price:102.38, chg:-2.69, date:"5/1/2026"},
   waha: {price:-3.01, chg:-0.12, date:"5/1/2026"}
 };
 // <<PRICES_END>>
