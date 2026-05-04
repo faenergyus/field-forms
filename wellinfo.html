@@ -506,6 +506,28 @@ function drawWBD(w) {
 
   // Draw casings — all from surface (as user said earlier)
   var sorted = csgTypes.slice().sort(function(a,b){return (OR[b.type]||25) - (OR[a.type]||25);});
+
+  // Helper: parse TOC depth (returns numeric depth or null if "Surface")
+  function parseTocDepth(tcStr) {
+    if (!tcStr) return null;
+    var s = String(tcStr).trim().toLowerCase();
+    if (s.indexOf('surface') >= 0 || s === 'surf' || s === '0' || s === '') return 0;
+    var m = String(tcStr).match(/(\d[\d,]*)/);
+    return m ? parseFloat(m[1].replace(/,/g,'')) : null;
+  }
+
+  // Helper: cement squiggle path for an annulus from cementTopY to shoeY at given x range
+  function cementSquiggle(xL, xR, yTop, yBot) {
+    var seg = '';
+    var amp = (xR - xL) / 4;
+    var midX = (xL + xR) / 2;
+    var step = 6;
+    for (var yy = yTop; yy <= yBot - step; yy += step) {
+      seg += '<path d="M' + xL + ',' + yy + ' Q' + (xL + amp) + ',' + (yy + step/2) + ' ' + midX + ',' + yy + ' Q' + (xR - amp) + ',' + (yy + step/2) + ' ' + xR + ',' + yy + '" fill="none" stroke="#888" stroke-width="0.6"/>';
+    }
+    return seg;
+  }
+
   for (var i = 0; i < sorted.length; i++) {
     var cs = sorted[i];
     if (!cs.depth) continue;
@@ -514,6 +536,18 @@ function drawWBD(w) {
     var ir = IR[cs.type] || 18;
     var wallW = or_ - ir;
 
+    // Cement in annulus — between this casing OD and the next outer casing's ID (or hole wall)
+    // Outer reference: previous (larger) casing in `sorted`, or the hole if first
+    var tocD = parseTocDepth(cs.raw.tc);
+    if (tocD !== null) {
+      var tocY = dToY(tocD);
+      var outerOR = i > 0 ? OR[sorted[i-1].type] || (or_ + 8) : or_ + 8;
+      // Left annulus
+      s += cementSquiggle(cx - outerOR, cx - or_, tocY, y2);
+      // Right annulus
+      s += cementSquiggle(cx + or_, cx + outerOR, tocY, y2);
+    }
+
     // Walls — gray bands
     s += '<rect x="' + (cx-or_) + '" y="' + y1 + '" width="' + wallW + '" height="' + (y2-y1) + '" fill="#b0b0b0" stroke="#000" stroke-width="0.5"/>';
     s += '<rect x="' + (cx+ir) + '" y="' + y1 + '" width="' + wallW + '" height="' + (y2-y1) + '" fill="#b0b0b0" stroke="#000" stroke-width="0.5"/>';
@@ -521,6 +555,28 @@ function drawWBD(w) {
     // Right-triangle shoe along inner wall
     s += '<polygon points="' + (cx-ir) + ',' + y2 + ' ' + (cx-ir) + ',' + (y2+12) + ' ' + (cx-or_-6) + ',' + (y2+12) + '" fill="#000"/>';
     s += '<polygon points="' + (cx+ir) + ',' + y2 + ' ' + (cx+ir) + ',' + (y2+12) + ' ' + (cx+or_+6) + ',' + (y2+12) + '" fill="#000"/>';
+  }
+
+  // ── CEMENT DETAIL TABLES — RIGHT side ──
+  // For each casing in depth order: a small box with sxs cnt, TOC, circ
+  var cmtX = 600, cmtY = bodyTop + 20 + 5 * 15 + 10;  // start below KB/DF/GL block
+  for (var i = 0; i < csgTypes.length; i++) {
+    var cs = csgTypes[i];
+    if (!cs.raw.cs && !cs.raw.tc) continue;
+    var label = cs.type + ' Cement';
+    s += '<rect x="' + cmtX + '" y="' + cmtY + '" width="225" height="46" fill="#fff" stroke="#000" stroke-width="0.6"/>';
+    s += '<rect x="' + cmtX + '" y="' + cmtY + '" width="225" height="13" fill="#e8e8e8" stroke="#000" stroke-width="0.6"/>';
+    s += '<text x="' + (cmtX + 112) + '" y="' + (cmtY + 10) + '" text-anchor="middle" font-size="9" font-weight="700" fill="#000">' + esc(label) + '</text>';
+    var rowY = cmtY + 23;
+    s += '<text x="' + (cmtX + 4) + '" y="' + rowY + '" font-size="8" fill="#000" font-weight="700">Sxs:</text>';
+    s += '<text x="' + (cmtX + 32) + '" y="' + rowY + '" font-size="8" fill="#000">' + esc(cs.raw.cs || '--') + '</text>';
+    s += '<text x="' + (cmtX + 100) + '" y="' + rowY + '" font-size="8" fill="#000" font-weight="700">TOC:</text>';
+    s += '<text x="' + (cmtX + 130) + '" y="' + rowY + '" font-size="8" fill="#000">' + esc(cs.raw.tc || '--') + '</text>';
+    rowY += 13;
+    var circ = cs.raw.tc && String(cs.raw.tc).toLowerCase().indexOf('surface') >= 0 ? 'Yes' : (cs.raw.tc ? 'No' : '--');
+    s += '<text x="' + (cmtX + 4) + '" y="' + rowY + '" font-size="8" fill="#000" font-weight="700">Circ to Surf:</text>';
+    s += '<text x="' + (cmtX + 70) + '" y="' + rowY + '" font-size="8" fill="#000">' + esc(circ) + '</text>';
+    cmtY += 52;
   }
 
   // ── PERFORATIONS (drawn on diagram right side with brackets) ──
