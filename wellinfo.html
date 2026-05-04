@@ -357,8 +357,8 @@ function drawWBD(w) {
   var perfs = [];
   var pfList = w.pf || [];
   for (var i = 0; i < pfList.length; i++) {
-    var t = parseDepth(pfList[i].t), b = parseDepth(pfList[i].b);
-    if (t && b) perfs.push({top: t, bot: b, spf: pfList[i].spf, zone: pfList[i].z, sq: pfList[i].sq});
+    var t = parseDepth(pfList[i].td), b = parseDepth(pfList[i].bd);
+    if (t && b) perfs.push({top: t, bot: b, spf: pfList[i].spf, zone: pfList[i].zn, sq: pfList[i].sq});
   }
 
   var td = parseDepth(w.td), pbtd = parseDepth(w.pb);
@@ -756,7 +756,7 @@ function drawWBD(w) {
     var d = parseDepth(f.dp);
     return d && d > 0 && d < maxD;
   }).map(function(f){
-    return {n: f.n, d: parseDepth(f.dp)};
+    return {n: f.fm, d: parseDepth(f.dp)};
   }).sort(function(a,b){return a.d - b.d;});
 
   for (var i = 0; i < ftList.length; i++) {
