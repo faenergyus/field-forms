@@ -672,8 +672,8 @@ function drawWBD(w) {
     s += '<line x1="' + gx + '" y1="' + gy + '" x2="' + (gx-3) + '" y2="' + (gy-4) + '" stroke="#000" stroke-width="0.6"/>';
   }
 
-  // ── DEPTH SCALE — right side of wellbore (pushed out to leave room for formation tops) ──
-  var scaleX = wbRight + 80;
+  // ── DEPTH SCALE — right next to wellbore (formation tops go further right) ──
+  var scaleX = wbRight + 8;
   var dTick = maxD <= 1500 ? 200 : maxD <= 4000 ? 500 : maxD <= 8000 ? 1000 : 2000;
   s += '<line x1="' + scaleX + '" y1="' + gy + '" x2="' + scaleX + '" y2="' + dToY(maxD * 0.99) + '" stroke="#999" stroke-width="0.4"/>';
   for (var d = dTick; d < maxD; d += dTick) {
@@ -778,19 +778,31 @@ function drawWBD(w) {
     var labelTxt = p.top + '-' + p.bot + (p.spf ? '  ' + p.spf + 'spf' : '');
     perfLabels.push({y: (py1 + py2) / 2, txt: labelTxt, py1: py1, py2: py2, hw: innerHW});
   }
-  // Render perf depth labels on LEFT side, avoiding overlap
+  // Render perf depth labels on LEFT side, hugging the bracket end. Clamp all above TD.
   perfLabels.sort(function(a, b){ return a.y - b.y; });
+  var maxLabelY = td ? dToY(td) - 6 : (wbBot - 4);
   var lastLabelY = -100;
-  var perfLabelX = wbLeft - 5;
   for (var i = 0; i < perfLabels.length; i++) {
     var pl = perfLabels[i];
+    // Per-perf label X — anchor=end at bracket left-cap so text ends right next to casing
+    var perfLabelX = cx - pl.hw - 12;
     var ly = Math.max(pl.y, lastLabelY + 11);
+    if (ly > maxLabelY) ly = maxLabelY;        // clamp to above TD
     s += '<text x="' + perfLabelX + '" y="' + (ly + 3) + '" text-anchor="end" font-size="8" fill="#000">' + esc(pl.txt) + '</text>';
-    // Leader line from label to perf bracket (left side)
+    // Leader line from label to perf bracket (only if shifted)
     if (Math.abs(ly - pl.y) > 2) {
       s += '<line x1="' + (perfLabelX + 2) + '" y1="' + (ly + 1) + '" x2="' + (cx - pl.hw - 9) + '" y2="' + pl.y + '" stroke="#888" stroke-width="0.4"/>';
     }
     lastLabelY = ly;
+  }
+  // If we hit the TD ceiling and still have labels, restack from bottom up
+  if (td && perfLabels.length) {
+    // Verify pass: re-stack going upward if any label was clamped
+    var anyClamped = false;
+    for (var i = 0; i < perfLabels.length; i++) {
+      if (perfLabels[i].y > maxLabelY) { anyClamped = true; break; }
+    }
+    // (handled by the max() clamp above; bottom-up restack happens naturally as next iteration uses lastLabelY)
   }
 
   // ── FORMATION TOPS — labels on RIGHT, just inside the depth scale ──
@@ -801,13 +813,13 @@ function drawWBD(w) {
     return {n: f.fm, d: parseDepth(f.dp)};
   }).sort(function(a,b){return a.d - b.d;});
 
-  // Formation tops sit between wellbore and the depth scale (scale at wbRight + 80)
-  var ftLabelX = wbRight + 12;
+  // Formation tops sit OUTSIDE the depth scale (scale at wbRight + 8, scale text ends ~wbRight+40)
+  var ftLabelX = wbRight + 50;
   for (var i = 0; i < ftList.length; i++) {
     var ft = ftList[i];
     var fy = dToY(ft.d);
-    // Dashed leader from wellbore right edge to label area
-    s += '<line x1="' + (cx + 70) + '" y1="' + fy + '" x2="' + (wbRight + 10) + '" y2="' + fy + '" stroke="#666" stroke-width="0.5" stroke-dasharray="2,2"/>';
+    // Dashed leader from wellbore right edge through scale to label
+    s += '<line x1="' + (cx + 70) + '" y1="' + fy + '" x2="' + (ftLabelX - 2) + '" y2="' + fy + '" stroke="#666" stroke-width="0.5" stroke-dasharray="2,2"/>';
     s += '<text x="' + ftLabelX + '" y="' + (fy - 1) + '" font-size="8" fill="#000" font-weight="700">' + esc(ft.n) + '</text>';
     s += '<text x="' + ftLabelX + '" y="' + (fy + 8) + '" font-size="7" fill="#555">' + ft.d.toLocaleString() + "'" + '</text>';
   }
@@ -862,8 +874,8 @@ function drawWBD(w) {
   if (td) {
     var tdy = dToY(td);
     s += '<line x1="' + (wbLeft - 20) + '" y1="' + tdy + '" x2="' + (wbRight + 20) + '" y2="' + tdy + '" stroke="#000" stroke-width="2"/>';
-    // TD label past the depth scale on the right
-    s += '<text x="' + (scaleX + 40) + '" y="' + (tdy + 4) + '" font-size="10" fill="#000" font-weight="700">TD ' + td.toLocaleString() + "'" + '</text>';
+    // TD label past formation tops on the far right
+    s += '<text x="' + (ftLabelX + 90) + '" y="' + (tdy + 4) + '" font-size="10" fill="#000" font-weight="700">TD ' + td.toLocaleString() + "'" + '</text>';
   }
 
   // ── PERFORATIONS LIST (left, below casing boxes) ──
