@@ -493,8 +493,17 @@ function drawWBD(w) {
   rightCell('Compl. Date:', g.cd || '', true);
 
   // ── WELLBORE DIAGRAM ──
-  var OR = {'Surface': 45, 'Intermediate': 35, 'Production': 25, 'Liner': 18};
-  var IR = {'Surface': 38, 'Intermediate': 29, 'Production': 20, 'Liner': 14};
+  // Parse size string ("4-1/2\"", "8 5/8", "7") → numeric inches
+  function parseSize(sz) {
+    if (!sz) return null;
+    var s = String(sz).replace(/"/g,'').replace(/in\b/i,'').trim();
+    var m = s.match(/^(\d+(?:\.\d+)?)\s*[-\s]?\s*(\d+)\s*\/\s*(\d+)/);
+    if (m) return parseFloat(m[1]) + parseFloat(m[2])/parseFloat(m[3]);
+    m = s.match(/^(\d+)\s*\/\s*(\d+)/);
+    if (m) return parseFloat(m[1])/parseFloat(m[2]);
+    m = s.match(/^(\d+(?:\.\d+)?)/);
+    return m ? parseFloat(m[1]) : null;
+  }
 
   // Ground surface
   var gy = wbTop;
@@ -515,7 +524,24 @@ function drawWBD(w) {
   }
 
   // Draw casings — all from surface (as user said earlier)
-  var sorted = csgTypes.slice().sort(function(a,b){return (OR[b.type]||25) - (OR[a.type]||25);});
+  // Order outermost→innermost by parsed size DESC; ties / no-size fall back to type rank
+  var typeRank = {'Surface': 4, 'Intermediate': 3, 'Production': 2, 'Liner': 1};
+  var sorted = csgTypes.slice().sort(function(a,b){
+    var as = parseSize(a.raw.sz), bs = parseSize(b.raw.sz);
+    if (as != null && bs != null && as !== bs) return bs - as;
+    return (typeRank[b.type]||0) - (typeRank[a.type]||0);
+  });
+  // Assign nested radii by rank position (outer→inner)
+  var radSlots = [{or:45,ir:38},{or:35,ir:29},{or:25,ir:20},{or:18,ir:14},{or:13,ir:10}];
+  var OR = {}, IR = {};
+  for (var si = 0; si < sorted.length; si++) {
+    var slot = radSlots[Math.min(si, radSlots.length-1)];
+    OR[sorted[si].type + '#' + si] = slot.or;
+    IR[sorted[si].type + '#' + si] = slot.ir;
+    sorted[si]._slot = si;
+  }
+  function csgIR(s) { return IR[s.type + '#' + s._slot]; }
+  function csgOR(s) { return OR[s.type + '#' + s._slot]; }
 
   // Helper: parse TOC depth (returns numeric depth or null if "Surface")
   function parseTocDepth(tcStr) {
@@ -538,34 +564,43 @@ function drawWBD(w) {
     return seg;
   }
 
+  // Pass 1: cement fills (drawn first so casing line goes on top)
+  for (var i = 0; i < sorted.length; i++) {
+    var cs = sorted[i];
+    if (!cs.depth) continue;
+    var y2 = dToY(cs.depth);
+    var ir = csgIR(cs);
+    var tocD = parseTocDepth(cs.raw.tc);
+    if (tocD === null) continue;
+    var tocY = dToY(tocD);
+    // Outer cement boundary = next outer casing's inside line at this depth, or hole wall (~ir + 8) if outermost
+    // Use prev (larger) casing in `sorted` only where it extends to this depth, else use this casing's ir + 8
+    var outerHW = ir + 8;
+    if (i > 0) {
+      // Walk outward to find the smallest enclosing casing whose depth >= tocY zone
+      for (var k = i - 1; k >= 0; k--) {
+        if (sorted[k].depth && sorted[k].depth > tocD) { outerHW = csgIR(sorted[k]); break; }
+      }
+    }
+    // Solid gray cement fill in annulus (left + right of casing line)
+    s += '<rect x="' + (cx - outerHW) + '" y="' + tocY + '" width="' + (outerHW - ir) + '" height="' + (y2 - tocY) + '" fill="#999"/>';
+    s += '<rect x="' + (cx + ir)      + '" y="' + tocY + '" width="' + (outerHW - ir) + '" height="' + (y2 - tocY) + '" fill="#999"/>';
+  }
+
+  // Pass 2: casing inside lines + shoes
   for (var i = 0; i < sorted.length; i++) {
     var cs = sorted[i];
     if (!cs.depth) continue;
     var y1 = gy, y2 = dToY(cs.depth);
-    var or_ = OR[cs.type] || 25;
-    var ir = IR[cs.type] || 18;
-    var wallW = or_ - ir;
+    var ir = csgIR(cs);
 
-    // Cement in annulus — between this casing OD and the next outer casing's ID (or hole wall)
-    // Outer reference: previous (larger) casing in `sorted`, or the hole if first
-    var tocD = parseTocDepth(cs.raw.tc);
-    if (tocD !== null) {
-      var tocY = dToY(tocD);
-      var outerOR = i > 0 ? OR[sorted[i-1].type] || (or_ + 8) : or_ + 8;
-      // Solid gray cement fill in annulus (left + right of casing)
-      s += '<rect x="' + (cx - outerOR) + '" y="' + tocY + '" width="' + (outerOR - or_) + '" height="' + (y2 - tocY) + '" fill="#999"/>';
-      s += '<rect x="' + (cx + or_)     + '" y="' + tocY + '" width="' + (outerOR - or_) + '" height="' + (y2 - tocY) + '" fill="#999"/>';
-    }
-
-    // Walls — black lines (inner + outer edge of each wall)
-    s += '<line x1="' + (cx-or_) + '" y1="' + y1 + '" x2="' + (cx-or_) + '" y2="' + y2 + '" stroke="#000" stroke-width="1.5"/>';
+    // Single black line on each side (inside of casing)
     s += '<line x1="' + (cx-ir)  + '" y1="' + y1 + '" x2="' + (cx-ir)  + '" y2="' + y2 + '" stroke="#000" stroke-width="1.5"/>';
     s += '<line x1="' + (cx+ir)  + '" y1="' + y1 + '" x2="' + (cx+ir)  + '" y2="' + y2 + '" stroke="#000" stroke-width="1.5"/>';
-    s += '<line x1="' + (cx+or_) + '" y1="' + y1 + '" x2="' + (cx+or_) + '" y2="' + y2 + '" stroke="#000" stroke-width="1.5"/>';
 
-    // Right-triangle shoe along inner wall
-    s += '<polygon points="' + (cx-ir) + ',' + y2 + ' ' + (cx-ir) + ',' + (y2+12) + ' ' + (cx-or_-6) + ',' + (y2+12) + '" fill="#000"/>';
-    s += '<polygon points="' + (cx+ir) + ',' + y2 + ' ' + (cx+ir) + ',' + (y2+12) + ' ' + (cx+or_+6) + ',' + (y2+12) + '" fill="#000"/>';
+    // Right-triangle shoe — vertical edge along the (only) casing line
+    s += '<polygon points="' + (cx-ir) + ',' + y2 + ' ' + (cx-ir) + ',' + (y2+12) + ' ' + (cx-ir-8) + ',' + (y2+12) + '" fill="#000"/>';
+    s += '<polygon points="' + (cx+ir) + ',' + y2 + ' ' + (cx+ir) + ',' + (y2+12) + ' ' + (cx+ir+8) + ',' + (y2+12) + '" fill="#000"/>';
   }
 
   // ── CEMENT DETAIL TABLES — RIGHT side ──
@@ -617,7 +652,7 @@ function drawWBD(w) {
     if (py2 - py1 < 3) py2 = py1 + 3;
     var innerHW = 20;
     for (var j = sorted.length - 1; j >= 0; j--) {
-      if (sorted[j].depth >= p.top) { innerHW = IR[sorted[j].type] || 20; break; }
+      if (sorted[j].depth >= p.top) { innerHW = csgIR(sorted[j]) || 20; break; }
     }
     // Hatched bracket on both sides — denser for clarity
     for (var py = py1; py <= py2; py += 2.5) {
@@ -650,7 +685,7 @@ function drawWBD(w) {
   // ── CEMENT PLUG between PBTD and TD ──
   if (pbtd && td && pbtd < td) {
     var pby = dToY(pbtd), tdy = dToY(td);
-    var plugHW = csgTypes.length ? IR[csgTypes[csgTypes.length-1].type] || 20 : 20;
+    var plugHW = sorted.length ? csgIR(sorted[sorted.length-1]) || 20 : 20;
     s += '<rect x="' + (cx - plugHW) + '" y="' + pby + '" width="' + (plugHW*2) + '" height="' + (tdy - pby) + '" fill="#999"/>';
   }
 
@@ -664,7 +699,7 @@ function drawWBD(w) {
     // Find inner casing half-width at this depth
     var plHw = 20;
     for (var j = sorted.length - 1; j >= 0; j--) {
-      if (sorted[j].depth >= pd) { plHw = IR[sorted[j].type] || 20; break; }
+      if (sorted[j].depth >= pd) { plHw = csgIR(sorted[j]) || 20; break; }
     }
     if (ptype.indexOf('CIBP') >= 0 || ptype.indexOf('BRIDGE') >= 0) {
       // Bridge plug — solid black bar with X pattern (typical CIBP symbol)
