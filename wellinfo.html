@@ -358,13 +358,19 @@ function drawWBD(w) {
   }
   strs.sort(function(a, b){return (a.depth || 99999) - (b.depth || 99999);});
 
-  // Parse perfs
-  var perfs = [];
+  // Parse perfs (dedupe by top-bot interval; prefer record with spf)
+  var perfsMap = {};
   var pfList = w.pf || [];
   for (var i = 0; i < pfList.length; i++) {
     var t = parseDepth(pfList[i].td), b = parseDepth(pfList[i].bd);
-    if (t && b) perfs.push({top: t, bot: b, spf: pfList[i].spf, zone: pfList[i].zn, sq: pfList[i].sq});
+    if (!t || !b) continue;
+    var key = t + '-' + b;
+    var rec = {top: t, bot: b, spf: pfList[i].spf, zone: pfList[i].zn, sq: pfList[i].sq};
+    if (!perfsMap[key] || (rec.spf && !perfsMap[key].spf)) {
+      perfsMap[key] = rec;
+    }
   }
+  var perfs = Object.keys(perfsMap).map(function(k){ return perfsMap[k]; });
 
   var td = parseDepth(w.td), pbtd = parseDepth(w.pb);
 
@@ -778,31 +784,33 @@ function drawWBD(w) {
     var labelTxt = p.top + '-' + p.bot + (p.spf ? '  ' + p.spf + 'spf' : '');
     perfLabels.push({y: (py1 + py2) / 2, txt: labelTxt, py1: py1, py2: py2, hw: innerHW});
   }
-  // Render perf depth labels on LEFT side, hugging the bracket end. Clamp all above TD.
+  // Render perf depth labels on LEFT side, hugging the bracket end. All labels must sit above TD.
   perfLabels.sort(function(a, b){ return a.y - b.y; });
   var maxLabelY = td ? dToY(td) - 6 : (wbBot - 4);
-  var lastLabelY = -100;
+  var labelStep = 11;
+  // Forward stack: greedy push down to avoid overlap
+  var ys = [];
+  var lastY = -1000;
+  for (var i = 0; i < perfLabels.length; i++) {
+    var ly = Math.max(perfLabels[i].y, lastY + labelStep);
+    ys.push(ly);
+    lastY = ly;
+  }
+  // If any label exceeded maxLabelY, restack upward from end
+  if (ys.length && ys[ys.length-1] > maxLabelY) {
+    ys[ys.length-1] = maxLabelY;
+    for (var i = ys.length - 2; i >= 0; i--) {
+      ys[i] = Math.min(ys[i], ys[i+1] - labelStep);
+    }
+  }
   for (var i = 0; i < perfLabels.length; i++) {
     var pl = perfLabels[i];
-    // Per-perf label X — anchor=end at bracket left-cap so text ends right next to casing
+    var ly = ys[i];
     var perfLabelX = cx - pl.hw - 12;
-    var ly = Math.max(pl.y, lastLabelY + 11);
-    if (ly > maxLabelY) ly = maxLabelY;        // clamp to above TD
     s += '<text x="' + perfLabelX + '" y="' + (ly + 3) + '" text-anchor="end" font-size="8" fill="#000">' + esc(pl.txt) + '</text>';
-    // Leader line from label to perf bracket (only if shifted)
     if (Math.abs(ly - pl.y) > 2) {
       s += '<line x1="' + (perfLabelX + 2) + '" y1="' + (ly + 1) + '" x2="' + (cx - pl.hw - 9) + '" y2="' + pl.y + '" stroke="#888" stroke-width="0.4"/>';
     }
-    lastLabelY = ly;
-  }
-  // If we hit the TD ceiling and still have labels, restack from bottom up
-  if (td && perfLabels.length) {
-    // Verify pass: re-stack going upward if any label was clamped
-    var anyClamped = false;
-    for (var i = 0; i < perfLabels.length; i++) {
-      if (perfLabels[i].y > maxLabelY) { anyClamped = true; break; }
-    }
-    // (handled by the max() clamp above; bottom-up restack happens naturally as next iteration uses lastLabelY)
   }
 
   // ── FORMATION TOPS — labels on RIGHT, just inside the depth scale ──
