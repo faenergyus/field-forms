@@ -503,15 +503,14 @@ function drawWBD(w) {
     s += '<line x1="' + gx + '" y1="' + gy + '" x2="' + (gx-3) + '" y2="' + (gy-4) + '" stroke="#000" stroke-width="0.6"/>';
   }
 
-  // ── DEPTH SCALE — left side, between casing spec boxes and wellbore ──
-  var scaleX = wbLeft - 14;
+  // ── DEPTH SCALE — right side of wellbore, before cement boxes ──
+  var scaleX = wbRight + 8;
   var dTick = maxD <= 1500 ? 200 : maxD <= 4000 ? 500 : maxD <= 8000 ? 1000 : 2000;
-  s += '<line x1="' + scaleX + '" y1="' + gy + '" x2="' + scaleX + '" y2="' + dToY(maxD * 0.99) + '" stroke="#666" stroke-width="0.6"/>';
-  s += '<text x="' + (scaleX + 2) + '" y="' + (gy + 3) + '" font-size="7" fill="#000" font-weight="700">GL</text>';
+  s += '<line x1="' + scaleX + '" y1="' + gy + '" x2="' + scaleX + '" y2="' + dToY(maxD * 0.99) + '" stroke="#999" stroke-width="0.4"/>';
   for (var d = dTick; d < maxD; d += dTick) {
     var ty = dToY(d);
-    s += '<line x1="' + (scaleX - 2) + '" y1="' + ty + '" x2="' + (scaleX + 4) + '" y2="' + ty + '" stroke="#666" stroke-width="0.5"/>';
-    s += '<text x="' + (scaleX + 6) + '" y="' + (ty + 2.5) + '" font-size="7" fill="#555">' + d.toLocaleString() + "'" + '</text>';
+    s += '<line x1="' + (scaleX - 3) + '" y1="' + ty + '" x2="' + (scaleX + 1) + '" y2="' + ty + '" stroke="#999" stroke-width="0.4"/>';
+    s += '<text x="' + (scaleX + 3) + '" y="' + (ty + 2.5) + '" font-size="6" fill="#aaa">' + d.toLocaleString() + "'" + '</text>';
   }
 
   // Draw casings — all from surface (as user said earlier)
