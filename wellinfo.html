@@ -784,34 +784,7 @@ function drawWBD(w) {
     var labelTxt = p.top + '-' + p.bot + (p.spf ? '  ' + p.spf + 'spf' : '');
     perfLabels.push({y: (py1 + py2) / 2, txt: labelTxt, py1: py1, py2: py2, hw: innerHW});
   }
-  // Render perf depth labels on LEFT side, hugging the bracket end. All labels must sit above TD.
-  perfLabels.sort(function(a, b){ return a.y - b.y; });
-  var maxLabelY = td ? dToY(td) - 6 : (wbBot - 4);
-  var labelStep = 11;
-  // Forward stack: greedy push down to avoid overlap
-  var ys = [];
-  var lastY = -1000;
-  for (var i = 0; i < perfLabels.length; i++) {
-    var ly = Math.max(perfLabels[i].y, lastY + labelStep);
-    ys.push(ly);
-    lastY = ly;
-  }
-  // If any label exceeded maxLabelY, restack upward from end
-  if (ys.length && ys[ys.length-1] > maxLabelY) {
-    ys[ys.length-1] = maxLabelY;
-    for (var i = ys.length - 2; i >= 0; i--) {
-      ys[i] = Math.min(ys[i], ys[i+1] - labelStep);
-    }
-  }
-  for (var i = 0; i < perfLabels.length; i++) {
-    var pl = perfLabels[i];
-    var ly = ys[i];
-    var perfLabelX = cx - pl.hw - 12;
-    s += '<text x="' + perfLabelX + '" y="' + (ly + 3) + '" text-anchor="end" font-size="8" fill="#000">' + esc(pl.txt) + '</text>';
-    if (Math.abs(ly - pl.y) > 2) {
-      s += '<line x1="' + (perfLabelX + 2) + '" y1="' + (ly + 1) + '" x2="' + (cx - pl.hw - 9) + '" y2="' + pl.y + '" stroke="#888" stroke-width="0.4"/>';
-    }
-  }
+  // (Perf depth labels removed — brackets only on wellbore; depths are in left-side perf list)
 
   // ── FORMATION TOPS — labels on RIGHT, just inside the depth scale ──
   var ftList = (w.ft || []).filter(function(f){
@@ -822,14 +795,37 @@ function drawWBD(w) {
   }).sort(function(a,b){return a.d - b.d;});
 
   // Formation tops sit OUTSIDE the depth scale (scale at wbRight + 8, scale text ends ~wbRight+40)
+  // Each label is two stacked text rows (~17px tall). Stack with overlap-avoidance.
   var ftLabelX = wbRight + 50;
+  var ftStep = 19;  // min vertical spacing between formation labels (name + depth row)
+  // Forward stack: target y = natural depth y, push down to avoid overlap
+  var ftYs = [];
+  var lastFtY = -1000;
+  for (var i = 0; i < ftList.length; i++) {
+    var ny = Math.max(dToY(ftList[i].d), lastFtY + ftStep);
+    ftYs.push(ny);
+    lastFtY = ny;
+  }
+  // If overflow past wbBot, restack upward
+  if (ftYs.length && ftYs[ftYs.length-1] > wbBot - 12) {
+    ftYs[ftYs.length-1] = wbBot - 12;
+    for (var i = ftYs.length - 2; i >= 0; i--) {
+      ftYs[i] = Math.min(ftYs[i], ftYs[i+1] - ftStep);
+    }
+  }
   for (var i = 0; i < ftList.length; i++) {
     var ft = ftList[i];
-    var fy = dToY(ft.d);
-    // Dashed leader from wellbore right edge through scale to label
-    s += '<line x1="' + (cx + 70) + '" y1="' + fy + '" x2="' + (ftLabelX - 2) + '" y2="' + fy + '" stroke="#666" stroke-width="0.5" stroke-dasharray="2,2"/>';
-    s += '<text x="' + ftLabelX + '" y="' + (fy - 1) + '" font-size="8" fill="#000" font-weight="700">' + esc(ft.n) + '</text>';
-    s += '<text x="' + ftLabelX + '" y="' + (fy + 8) + '" font-size="7" fill="#555">' + ft.d.toLocaleString() + "'" + '</text>';
+    var natY = dToY(ft.d);
+    var labY = ftYs[i];
+    // Dashed leader from wellbore edge to natural depth, then jog to label if shifted
+    s += '<line x1="' + (cx + 70) + '" y1="' + natY + '" x2="' + (ftLabelX - 12) + '" y2="' + natY + '" stroke="#666" stroke-width="0.5" stroke-dasharray="2,2"/>';
+    if (Math.abs(labY - natY) > 1) {
+      s += '<line x1="' + (ftLabelX - 12) + '" y1="' + natY + '" x2="' + (ftLabelX - 2) + '" y2="' + labY + '" stroke="#666" stroke-width="0.5" stroke-dasharray="2,2"/>';
+    } else {
+      s += '<line x1="' + (ftLabelX - 12) + '" y1="' + natY + '" x2="' + (ftLabelX - 2) + '" y2="' + natY + '" stroke="#666" stroke-width="0.5" stroke-dasharray="2,2"/>';
+    }
+    s += '<text x="' + ftLabelX + '" y="' + (labY - 1) + '" font-size="8" fill="#000" font-weight="700">' + esc(ft.n) + '</text>';
+    s += '<text x="' + ftLabelX + '" y="' + (labY + 8) + '" font-size="7" fill="#555">' + ft.d.toLocaleString() + "'" + '</text>';
   }
 
   // ── CEMENT PLUG between PBTD and TD ──
