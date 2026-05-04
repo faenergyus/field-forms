@@ -436,10 +436,18 @@ function drawWBD(w) {
   // CURRENT label
   s += '<text x="' + (cx) + '" y="' + (hdrTop + 78) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#000">CURRENT</text>';
 
-  // ── LEFT: Casing spec boxes ──
-  // Classic layout: Size / Wt&Thd / Grade / Set @ / Sxs cnt / Circ / TOC / Hole Size
-  var boxX = 20, boxW = 210, boxRowH = 14;
-  var boxY = bodyTop + 20;
+  // ── Casings: filter, parse, sort, assign radii, compute TOC ──
+  // Parse size string ("4-1/2\"", "8 5/8", "7") → numeric inches
+  function parseSize(sz) {
+    if (!sz) return null;
+    var s2 = String(sz).replace(/"/g,'').replace(/in\b/i,'').trim();
+    var m = s2.match(/^(\d+(?:\.\d+)?)\s*[-\s]?\s*(\d+)\s*\/\s*(\d+)/);
+    if (m) return parseFloat(m[1]) + parseFloat(m[2])/parseFloat(m[3]);
+    m = s2.match(/^(\d+)\s*\/\s*(\d+)/);
+    if (m) return parseFloat(m[1])/parseFloat(m[2]);
+    m = s2.match(/^(\d+(?:\.\d+)?)/);
+    return m ? parseFloat(m[1]) : null;
+  }
 
   var csgTypes = [];
   for (var i = 0; i < strs.length; i++) {
@@ -449,8 +457,79 @@ function drawWBD(w) {
     }
   }
 
-  for (var i = 0; i < csgTypes.length; i++) {
-    var cs = csgTypes[i];
+  // Sort outermost→innermost by parsed size DESC; tie-break by type rank
+  var typeRank = {'Surface': 4, 'Intermediate': 3, 'Production': 2, 'Liner': 1};
+  var sorted = csgTypes.slice().sort(function(a,b){
+    var as = parseSize(a.raw.sz), bs = parseSize(b.raw.sz);
+    if (as != null && bs != null && as !== bs) return bs - as;
+    return (typeRank[b.type]||0) - (typeRank[a.type]||0);
+  });
+  // Assign nested radii by rank position (outer→inner)
+  var radSlots = [{or:45,ir:38},{or:35,ir:29},{or:25,ir:20},{or:18,ir:14},{or:13,ir:10}];
+  var OR = {}, IR = {};
+  for (var si = 0; si < sorted.length; si++) {
+    var slot = radSlots[Math.min(si, radSlots.length-1)];
+    OR[sorted[si].type + '#' + si] = slot.or;
+    IR[sorted[si].type + '#' + si] = slot.ir;
+    sorted[si]._slot = si;
+  }
+  function csgIR(s2) { return IR[s2.type + '#' + s2._slot]; }
+  function csgOR(s2) { return OR[s2.type + '#' + s2._slot]; }
+
+  // Compute cement TOC for each casing — assumption-based when missing
+  // Annular cement: vol/ft cuft = (pi/4)(Dh^2 - Doc^2)/144; Class C/H ~1.18 cuft/sk
+  function computeCement(cs, idx) {
+    var tcStr = cs.raw.tc;
+    // 1. Try parsing existing TOC string
+    if (tcStr) {
+      var lower = String(tcStr).toLowerCase();
+      if (lower.indexOf('surf') >= 0 || lower.trim() === '0')
+        return {d: 0, str: 'Surface', circ: 'Yes', src: 'data'};
+      var m = String(tcStr).match(/(\d[\d,]*)/);
+      if (m) {
+        var d = parseFloat(m[1].replace(/,/g,''));
+        if (d >= 0) return {d: d, str: tcStr, circ: 'No', src: 'data'};
+      }
+    }
+    // 2. Surface casing (or outermost) — assume circulated to surface
+    if (idx === 0 || cs.type === 'Surface')
+      return {d: 0, str: 'Surface (calc)', circ: 'Yes', src: 'calc'};
+    // 3. Liner — TOL @ previous casing shoe
+    if (cs.type === 'Liner' && idx > 0 && sorted[idx-1].depth) {
+      var tol = sorted[idx-1].depth;
+      return {d: tol, str: "TOL @ " + tol.toLocaleString() + "' (calc)", circ: 'No', src: 'calc'};
+    }
+    // 4. Calc from sacks + hole size + casing OD
+    var sxsM = String(cs.raw.cs || '').match(/(\d+)/);
+    var sxs = sxsM ? parseFloat(sxsM[1]) : null;
+    var Dh = parseSize(cs.raw.hs);
+    var Doc = parseSize(cs.raw.sz);
+    if (sxs && Dh && Doc && Dh > Doc && cs.depth) {
+      var annPerFt = Math.PI/4 * (Dh*Dh - Doc*Doc) / 144; // cuft/ft
+      var height = (sxs * 1.18) / annPerFt;
+      var toc = Math.max(0, cs.depth - height);
+      return {d: toc, str: Math.round(toc).toLocaleString() + "' (calc)", circ: toc <= 0 ? 'Yes' : 'No', src: 'calc'};
+    }
+    // 5. Fallback — assume cement covers previous casing shoe
+    if (idx > 0 && sorted[idx-1].depth) {
+      var prev = sorted[idx-1].depth;
+      return {d: prev, str: prev.toLocaleString() + "' (calc)", circ: 'No', src: 'calc'};
+    }
+    return {d: null, str: tcStr || '', circ: '', src: 'unknown'};
+  }
+  for (var si = 0; si < sorted.length; si++) {
+    sorted[si]._cmt = computeCement(sorted[si], si);
+  }
+
+  // ── LEFT: Casing spec boxes ──
+  // Classic layout: Size / Wt&Thd / Grade / Set @ / Sxs cnt / Circ / TOC / Hole Size
+  var boxX = 20, boxW = 210, boxRowH = 14;
+  var boxY = bodyTop + 20;
+
+  // Render in size-sorted order so visual matches WBD
+  for (var i = 0; i < sorted.length; i++) {
+    var cs = sorted[i];
+    var cmt = cs._cmt || {};
     // Box title (italic underlined)
     s += '<text x="' + boxX + '" y="' + boxY + '" font-size="10" font-weight="700" fill="#000" font-style="italic" text-decoration="underline">' + esc(cs.type) + ' Csg</text>';
     boxY += boxRowH;
@@ -461,8 +540,8 @@ function drawWBD(w) {
       ['Grade:', cs.raw.gr],
       ['Set @:', cs.depth ? cs.depth.toLocaleString() : ''],
       ['Sxs cnt:', cs.raw.cs],
-      ['Circ:', cs.raw.tc && cs.raw.tc.toLowerCase().indexOf('surface') >= 0 ? 'Yes' : ''],
-      ['TOC:', cs.raw.tc],
+      ['Circ:', cmt.circ || ''],
+      ['TOC:', cmt.str || ''],
       ['Hole Size:', cs.raw.hs],
     ];
     for (var k = 0; k < fields.length; k++) {
@@ -493,18 +572,6 @@ function drawWBD(w) {
   rightCell('Compl. Date:', g.cd || '', true);
 
   // ── WELLBORE DIAGRAM ──
-  // Parse size string ("4-1/2\"", "8 5/8", "7") → numeric inches
-  function parseSize(sz) {
-    if (!sz) return null;
-    var s = String(sz).replace(/"/g,'').replace(/in\b/i,'').trim();
-    var m = s.match(/^(\d+(?:\.\d+)?)\s*[-\s]?\s*(\d+)\s*\/\s*(\d+)/);
-    if (m) return parseFloat(m[1]) + parseFloat(m[2])/parseFloat(m[3]);
-    m = s.match(/^(\d+)\s*\/\s*(\d+)/);
-    if (m) return parseFloat(m[1])/parseFloat(m[2]);
-    m = s.match(/^(\d+(?:\.\d+)?)/);
-    return m ? parseFloat(m[1]) : null;
-  }
-
   // Ground surface
   var gy = wbTop;
   s += '<line x1="' + (wbLeft) + '" y1="' + gy + '" x2="' + (wbRight) + '" y2="' + gy + '" stroke="#000" stroke-width="2"/>';
@@ -523,55 +590,16 @@ function drawWBD(w) {
     s += '<text x="' + (scaleX + 3) + '" y="' + (ty + 2.5) + '" font-size="6" fill="#aaa">' + d.toLocaleString() + "'" + '</text>';
   }
 
-  // Draw casings — all from surface (as user said earlier)
-  // Order outermost→innermost by parsed size DESC; ties / no-size fall back to type rank
-  var typeRank = {'Surface': 4, 'Intermediate': 3, 'Production': 2, 'Liner': 1};
-  var sorted = csgTypes.slice().sort(function(a,b){
-    var as = parseSize(a.raw.sz), bs = parseSize(b.raw.sz);
-    if (as != null && bs != null && as !== bs) return bs - as;
-    return (typeRank[b.type]||0) - (typeRank[a.type]||0);
-  });
-  // Assign nested radii by rank position (outer→inner)
-  var radSlots = [{or:45,ir:38},{or:35,ir:29},{or:25,ir:20},{or:18,ir:14},{or:13,ir:10}];
-  var OR = {}, IR = {};
-  for (var si = 0; si < sorted.length; si++) {
-    var slot = radSlots[Math.min(si, radSlots.length-1)];
-    OR[sorted[si].type + '#' + si] = slot.or;
-    IR[sorted[si].type + '#' + si] = slot.ir;
-    sorted[si]._slot = si;
-  }
-  function csgIR(s) { return IR[s.type + '#' + s._slot]; }
-  function csgOR(s) { return OR[s.type + '#' + s._slot]; }
-
-  // Helper: parse TOC depth (returns numeric depth or null if "Surface")
-  function parseTocDepth(tcStr) {
-    if (!tcStr) return null;
-    var s = String(tcStr).trim().toLowerCase();
-    if (s.indexOf('surface') >= 0 || s === 'surf' || s === '0' || s === '') return 0;
-    var m = String(tcStr).match(/(\d[\d,]*)/);
-    return m ? parseFloat(m[1].replace(/,/g,'')) : null;
-  }
-
-  // Helper: cement squiggle path for an annulus from cementTopY to shoeY at given x range
-  function cementSquiggle(xL, xR, yTop, yBot) {
-    var seg = '';
-    var amp = (xR - xL) / 4;
-    var midX = (xL + xR) / 2;
-    var step = 6;
-    for (var yy = yTop; yy <= yBot - step; yy += step) {
-      seg += '<path d="M' + xL + ',' + yy + ' Q' + (xL + amp) + ',' + (yy + step/2) + ' ' + midX + ',' + yy + ' Q' + (xR - amp) + ',' + (yy + step/2) + ' ' + xR + ',' + yy + '" fill="none" stroke="#888" stroke-width="0.6"/>';
-    }
-    return seg;
-  }
-
   // Pass 1: cement fills (drawn first so casing line goes on top)
+  // Use _cmt computed earlier (data or assumed)
   for (var i = 0; i < sorted.length; i++) {
     var cs = sorted[i];
     if (!cs.depth) continue;
     var y2 = dToY(cs.depth);
     var ir = csgIR(cs);
-    var tocD = parseTocDepth(cs.raw.tc);
-    if (tocD === null) continue;
+    var cmt = cs._cmt || {};
+    if (cmt.d === null || cmt.d === undefined) continue;
+    var tocD = cmt.d;
     var tocY = dToY(tocD);
     // Outer cement boundary = next outer casing's inside line at this depth, or hole wall (~ir + 8) if outermost
     // Use prev (larger) casing in `sorted` only where it extends to this depth, else use this casing's ir + 8
@@ -603,27 +631,7 @@ function drawWBD(w) {
     s += '<polygon points="' + (cx+ir) + ',' + (y2-12) + ' ' + (cx+ir) + ',' + y2 + ' ' + (cx+ir+8) + ',' + y2 + '" fill="#000"/>';
   }
 
-  // ── CEMENT DETAIL TABLES — RIGHT side ──
-  // For each casing in depth order: a small box with sxs cnt, TOC, circ
-  var cmtX = 600, cmtY = bodyTop + 20 + 5 * 15 + 10;  // start below KB/DF/GL block
-  for (var i = 0; i < csgTypes.length; i++) {
-    var cs = csgTypes[i];
-    if (!cs.raw.cs && !cs.raw.tc) continue;
-    var label = cs.type + ' Cement';
-    s += '<rect x="' + cmtX + '" y="' + cmtY + '" width="225" height="46" fill="#fff" stroke="#000" stroke-width="0.6"/>';
-    s += '<rect x="' + cmtX + '" y="' + cmtY + '" width="225" height="13" fill="#e8e8e8" stroke="#000" stroke-width="0.6"/>';
-    s += '<text x="' + (cmtX + 112) + '" y="' + (cmtY + 10) + '" text-anchor="middle" font-size="9" font-weight="700" fill="#000">' + esc(label) + '</text>';
-    var rowY = cmtY + 23;
-    s += '<text x="' + (cmtX + 4) + '" y="' + rowY + '" font-size="8" fill="#000" font-weight="700">Sxs:</text>';
-    s += '<text x="' + (cmtX + 32) + '" y="' + rowY + '" font-size="8" fill="#000">' + esc(cs.raw.cs || '--') + '</text>';
-    s += '<text x="' + (cmtX + 100) + '" y="' + rowY + '" font-size="8" fill="#000" font-weight="700">TOC:</text>';
-    s += '<text x="' + (cmtX + 130) + '" y="' + rowY + '" font-size="8" fill="#000">' + esc(cs.raw.tc || '--') + '</text>';
-    rowY += 13;
-    var circ = cs.raw.tc && String(cs.raw.tc).toLowerCase().indexOf('surface') >= 0 ? 'Yes' : (cs.raw.tc ? 'No' : '--');
-    s += '<text x="' + (cmtX + 4) + '" y="' + rowY + '" font-size="8" fill="#000" font-weight="700">Circ to Surf:</text>';
-    s += '<text x="' + (cmtX + 70) + '" y="' + rowY + '" font-size="8" fill="#000">' + esc(circ) + '</text>';
-    cmtY += 52;
-  }
+  // (Cement detail tables removed — info now consolidated in left spec boxes)
 
   // ── FORMATION TOPS — labeled lines on far left of wellbore ──
   var ftList = (w.ft || []).filter(function(f){
