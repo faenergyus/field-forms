@@ -503,18 +503,15 @@ function drawWBD(w) {
     s += '<line x1="' + gx + '" y1="' + gy + '" x2="' + (gx-3) + '" y2="' + (gy-4) + '" stroke="#000" stroke-width="0.6"/>';
   }
 
-  // ── DEPTH SCALE on far right ──
-  var scaleX = svgW - 35;
-  // Pick tick interval based on max depth
+  // ── DEPTH SCALE — left side, between casing spec boxes and wellbore ──
+  var scaleX = wbLeft - 14;
   var dTick = maxD <= 1500 ? 200 : maxD <= 4000 ? 500 : maxD <= 8000 ? 1000 : 2000;
-  // Scale axis line
   s += '<line x1="' + scaleX + '" y1="' + gy + '" x2="' + scaleX + '" y2="' + dToY(maxD * 0.99) + '" stroke="#666" stroke-width="0.6"/>';
-  // GL label
-  s += '<text x="' + (scaleX - 4) + '" y="' + (gy + 3) + '" text-anchor="end" font-size="7" fill="#000" font-weight="700">GL</text>';
+  s += '<text x="' + (scaleX + 2) + '" y="' + (gy + 3) + '" font-size="7" fill="#000" font-weight="700">GL</text>';
   for (var d = dTick; d < maxD; d += dTick) {
     var ty = dToY(d);
-    s += '<line x1="' + (scaleX - 4) + '" y1="' + ty + '" x2="' + (scaleX + 2) + '" y2="' + ty + '" stroke="#666" stroke-width="0.5"/>';
-    s += '<text x="' + (scaleX - 5) + '" y="' + (ty + 2.5) + '" text-anchor="end" font-size="7" fill="#555">' + d.toLocaleString() + "'" + '</text>';
+    s += '<line x1="' + (scaleX - 2) + '" y1="' + ty + '" x2="' + (scaleX + 4) + '" y2="' + ty + '" stroke="#666" stroke-width="0.5"/>';
+    s += '<text x="' + (scaleX + 6) + '" y="' + (ty + 2.5) + '" font-size="7" fill="#555">' + d.toLocaleString() + "'" + '</text>';
   }
 
   // Draw casings — all from surface (as user said earlier)
@@ -687,11 +684,13 @@ function drawWBD(w) {
     s += '<text x="' + (cx + plHw + 14) + '" y="' + (plY + 3) + '" font-size="8" fill="#000">' + esc(labelTxt) + '</text>';
   }
 
-  // PBTD dashed line + label
+  // PBTD dashed line + label (placed above PBTD line if too close to TD)
   if (pbtd) {
     var pby = dToY(pbtd);
     s += '<line x1="' + (wbLeft - 20) + '" y1="' + pby + '" x2="' + (wbRight + 20) + '" y2="' + pby + '" stroke="#000" stroke-width="1" stroke-dasharray="4,3"/>';
-    s += '<text x="' + (cx) + '" y="' + (pby + 14) + '" text-anchor="middle" font-size="10" fill="#000" font-weight="700">PBTD ' + pbtd.toLocaleString() + "'" + '</text>';
+    var pbtdLabelY = pby - 4;
+    if (td && Math.abs(dToY(td) - pby) > 14) pbtdLabelY = pby + 12;
+    s += '<text x="' + (wbLeft - 22) + '" y="' + pbtdLabelY + '" text-anchor="end" font-size="10" fill="#000" font-weight="700">PBTD ' + pbtd.toLocaleString() + "'" + '</text>';
   }
 
   // TD
