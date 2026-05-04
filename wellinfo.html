@@ -672,8 +672,8 @@ function drawWBD(w) {
     s += '<line x1="' + gx + '" y1="' + gy + '" x2="' + (gx-3) + '" y2="' + (gy-4) + '" stroke="#000" stroke-width="0.6"/>';
   }
 
-  // ── DEPTH SCALE — right side of wellbore, before cement boxes ──
-  var scaleX = wbRight + 8;
+  // ── DEPTH SCALE — right side of wellbore (pushed out to leave room for formation tops) ──
+  var scaleX = wbRight + 80;
   var dTick = maxD <= 1500 ? 200 : maxD <= 4000 ? 500 : maxD <= 8000 ? 1000 : 2000;
   s += '<line x1="' + scaleX + '" y1="' + gy + '" x2="' + scaleX + '" y2="' + dToY(maxD * 0.99) + '" stroke="#999" stroke-width="0.4"/>';
   for (var d = dTick; d < maxD; d += dTick) {
@@ -756,27 +756,8 @@ function drawWBD(w) {
     }
   }
 
-  // ── FORMATION TOPS — labeled lines on far left of wellbore ──
-  var ftList = (w.ft || []).filter(function(f){
-    var d = parseDepth(f.dp);
-    return d && d > 0 && d < maxD;
-  }).map(function(f){
-    return {n: f.fm, d: parseDepth(f.dp)};
-  }).sort(function(a,b){return a.d - b.d;});
-
-  for (var i = 0; i < ftList.length; i++) {
-    var ft = ftList[i];
-    var fy = dToY(ft.d);
-    // Tick on left side of wellbore
-    s += '<line x1="' + (wbLeft - 10) + '" y1="' + fy + '" x2="' + (cx - 70) + '" y2="' + fy + '" stroke="#666" stroke-width="0.5" stroke-dasharray="2,2"/>';
-    // Formation name + depth
-    s += '<text x="' + (wbLeft - 12) + '" y="' + (fy - 1) + '" text-anchor="end" font-size="8" fill="#000" font-weight="700">' + esc(ft.n) + '</text>';
-    s += '<text x="' + (wbLeft - 12) + '" y="' + (fy + 8) + '" text-anchor="end" font-size="7" fill="#555">' + ft.d.toLocaleString() + "'" + '</text>';
-  }
-
-  // ── PERFORATIONS — hatched brackets + right-side depth callouts ──
-  // First pass: collect rendering info, then draw with vertical offset to avoid overlap
-  var perfLabels = []; // {y, txt}
+  // ── PERFORATIONS — hatched brackets close to wellbore + LEFT-side depth callouts ──
+  var perfLabels = []; // {y, txt, py1, py2, hw}
   for (var i = 0; i < perfs.length; i++) {
     var p = perfs[i];
     var py1 = dToY(p.top), py2 = dToY(p.bot);
@@ -785,32 +766,50 @@ function drawWBD(w) {
     for (var j = sorted.length - 1; j >= 0; j--) {
       if (sorted[j].depth >= p.top) { innerHW = csgIR(sorted[j]) || 20; break; }
     }
-    // Hatched bracket on both sides — denser for clarity
+    // Hatched bracket — pulled in close (1px gap from inner casing wall)
     for (var py = py1; py <= py2; py += 2.5) {
-      s += '<line x1="' + (cx - innerHW - 3) + '" y1="' + py + '" x2="' + (cx - innerHW - 11) + '" y2="' + py + '" stroke="#000" stroke-width="1"/>';
-      s += '<line x1="' + (cx + innerHW + 3) + '" y1="' + py + '" x2="' + (cx + innerHW + 11) + '" y2="' + py + '" stroke="#000" stroke-width="1"/>';
+      s += '<line x1="' + (cx - innerHW - 1) + '" y1="' + py + '" x2="' + (cx - innerHW - 8) + '" y2="' + py + '" stroke="#000" stroke-width="1"/>';
+      s += '<line x1="' + (cx + innerHW + 1) + '" y1="' + py + '" x2="' + (cx + innerHW + 8) + '" y2="' + py + '" stroke="#000" stroke-width="1"/>';
     }
     // Bracket end caps
-    s += '<line x1="' + (cx - innerHW - 11) + '" y1="' + py1 + '" x2="' + (cx - innerHW - 11) + '" y2="' + py2 + '" stroke="#000" stroke-width="1"/>';
-    s += '<line x1="' + (cx + innerHW + 11) + '" y1="' + py1 + '" x2="' + (cx + innerHW + 11) + '" y2="' + py2 + '" stroke="#000" stroke-width="1"/>';
+    s += '<line x1="' + (cx - innerHW - 8) + '" y1="' + py1 + '" x2="' + (cx - innerHW - 8) + '" y2="' + py2 + '" stroke="#000" stroke-width="1"/>';
+    s += '<line x1="' + (cx + innerHW + 8) + '" y1="' + py1 + '" x2="' + (cx + innerHW + 8) + '" y2="' + py2 + '" stroke="#000" stroke-width="1"/>';
 
-    // Collect depth label for right-side rendering
     var labelTxt = p.top + '-' + p.bot + (p.spf ? '  ' + p.spf + 'spf' : '');
     perfLabels.push({y: (py1 + py2) / 2, txt: labelTxt, py1: py1, py2: py2, hw: innerHW});
   }
-  // Render perf depth labels on right side, avoiding overlap
+  // Render perf depth labels on LEFT side, avoiding overlap
   perfLabels.sort(function(a, b){ return a.y - b.y; });
   var lastLabelY = -100;
-  var labelX = wbRight + 5;
+  var perfLabelX = wbLeft - 5;
   for (var i = 0; i < perfLabels.length; i++) {
     var pl = perfLabels[i];
     var ly = Math.max(pl.y, lastLabelY + 11);
-    s += '<text x="' + labelX + '" y="' + (ly + 3) + '" font-size="8" fill="#000">' + esc(pl.txt) + '</text>';
-    // Leader line from label to perf bracket
+    s += '<text x="' + perfLabelX + '" y="' + (ly + 3) + '" text-anchor="end" font-size="8" fill="#000">' + esc(pl.txt) + '</text>';
+    // Leader line from label to perf bracket (left side)
     if (Math.abs(ly - pl.y) > 2) {
-      s += '<line x1="' + (labelX - 2) + '" y1="' + (ly + 1) + '" x2="' + (cx + pl.hw + 12) + '" y2="' + pl.y + '" stroke="#888" stroke-width="0.4"/>';
+      s += '<line x1="' + (perfLabelX + 2) + '" y1="' + (ly + 1) + '" x2="' + (cx - pl.hw - 9) + '" y2="' + pl.y + '" stroke="#888" stroke-width="0.4"/>';
     }
     lastLabelY = ly;
+  }
+
+  // ── FORMATION TOPS — labels on RIGHT, just inside the depth scale ──
+  var ftList = (w.ft || []).filter(function(f){
+    var d = parseDepth(f.dp);
+    return d && d > 0 && d < maxD;
+  }).map(function(f){
+    return {n: f.fm, d: parseDepth(f.dp)};
+  }).sort(function(a,b){return a.d - b.d;});
+
+  // Formation tops sit between wellbore and the depth scale (scale at wbRight + 80)
+  var ftLabelX = wbRight + 12;
+  for (var i = 0; i < ftList.length; i++) {
+    var ft = ftList[i];
+    var fy = dToY(ft.d);
+    // Dashed leader from wellbore right edge to label area
+    s += '<line x1="' + (cx + 70) + '" y1="' + fy + '" x2="' + (wbRight + 10) + '" y2="' + fy + '" stroke="#666" stroke-width="0.5" stroke-dasharray="2,2"/>';
+    s += '<text x="' + ftLabelX + '" y="' + (fy - 1) + '" font-size="8" fill="#000" font-weight="700">' + esc(ft.n) + '</text>';
+    s += '<text x="' + ftLabelX + '" y="' + (fy + 8) + '" font-size="7" fill="#555">' + ft.d.toLocaleString() + "'" + '</text>';
   }
 
   // ── CEMENT PLUG between PBTD and TD ──
@@ -863,7 +862,8 @@ function drawWBD(w) {
   if (td) {
     var tdy = dToY(td);
     s += '<line x1="' + (wbLeft - 20) + '" y1="' + tdy + '" x2="' + (wbRight + 20) + '" y2="' + tdy + '" stroke="#000" stroke-width="2"/>';
-    s += '<text x="' + (wbRight + 25) + '" y="' + (tdy + 4) + '" font-size="10" fill="#000" font-weight="700">TD ' + td.toLocaleString() + "'" + '</text>';
+    // TD label past the depth scale on the right
+    s += '<text x="' + (scaleX + 40) + '" y="' + (tdy + 4) + '" font-size="10" fill="#000" font-weight="700">TD ' + td.toLocaleString() + "'" + '</text>';
   }
 
   // ── PERFORATIONS LIST (left, below casing boxes) ──
