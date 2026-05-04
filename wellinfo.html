@@ -571,6 +571,93 @@ function drawWBD(w) {
   rightCell('Spud Date:', g.sd || '', true);
   rightCell('Compl. Date:', g.cd || '', true);
 
+  // ── Parse tubing/rods/pump from arrays ──
+  var tbList = w.tb || [], rdList = w.rd || [];
+
+  function parseDepthLoose(d) {
+    if (d == null) return null;
+    var x = String(d).replace(/,/g,'').replace(/[^\d.]/g,'');
+    var n = parseFloat(x);
+    return (isNaN(n) || n <= 0) ? null : n;
+  }
+
+  // Tubing: find EOT, tubing OD label, SN/MA depths
+  var eotDepth = null, tubingDesc = '', snDepth = null, maDepth = null;
+  for (var i = 0; i < tbList.length; i++) {
+    var t = tbList[i], d = (t.desc || '').trim(), du = d.toUpperCase();
+    var dp = parseDepthLoose(t.dp);
+    if (du === 'EOT' || du === 'END OF TUBING') eotDepth = dp || eotDepth;
+    if (du === 'SN' || du.indexOf('SEATING') >= 0) snDepth = dp;
+    if (du === 'MA' || du.indexOf('MUD ANCHOR') >= 0) maDepth = dp;
+    // Tubing OD label = first item matching pipe-size pattern
+    if (!tubingDesc && /\d+\s*[\/-]\s*\d+\s*"/.test(d) && du.indexOf('PUMP') < 0) {
+      tubingDesc = d;
+    }
+  }
+  // If no explicit EOT, sum lengths from notes (length=N joints * 31.5 ft) — fallback
+  // Otherwise fall back to deepest depth in tbList (already cumulative in some sheets)
+  if (!eotDepth) {
+    var mx = 0;
+    for (var i = 0; i < tbList.length; i++) {
+      var dp = parseDepthLoose(tbList[i].dp);
+      if (dp && dp > mx) mx = dp;
+    }
+    if (mx > 100) eotDepth = mx;
+  }
+
+  // Rods: collect sections (have count + length), pump info
+  var rodSections = [], pumpDepth = null, pumpModel = '';
+  for (var i = 0; i < rdList.length; i++) {
+    var r = rdList[i], d = (r.desc || '').trim(), du = d.toUpperCase();
+    var cnt = parseDepthLoose(r.cnt), len = parseDepthLoose(r.len), dp = parseDepthLoose(r.dp);
+    if (cnt && len && dp && du.indexOf('ROD') >= 0 && du.indexOf('PONY') < 0) {
+      rodSections.push({size: d.match(/\d+\/\d+"|\d+\.\d+"/) ? (d.match(/\d+\/\d+"|\d+\.\d+"/)[0]) : '', cnt: cnt, len: len, dp: dp});
+    }
+    if (du === 'PUMP' || du.indexOf('PUMP:') === 0) {
+      if (dp) pumpDepth = dp;
+      if (!pumpModel && (du.indexOf('PUMP:') === 0 || du.indexOf('X ') > 0)) pumpModel = d.replace(/^PUMP:\s*/i, '');
+    }
+    // "Pump Description" header → next row often has model
+    if (du === 'PUMP DESCRIPTION' && i+1 < rdList.length) {
+      var nd = (rdList[i+1].desc || '').trim();
+      if (nd && nd.toUpperCase() !== 'FORMATION TOPS') pumpModel = nd;
+    }
+  }
+  // Default pump depth = bottom of rod string
+  if (!pumpDepth && rodSections.length) {
+    pumpDepth = rodSections[rodSections.length - 1].dp;
+  }
+
+  // ── Equipment block on right ──
+  if (tubingDesc || eotDepth || rodSections.length || pumpDepth) {
+    rY += 6;
+    s += '<line x1="' + rX + '" y1="' + rY + '" x2="' + (rX + 220) + '" y2="' + rY + '" stroke="#000" stroke-width="0.6"/>';
+    rY += 12;
+    s += '<text x="' + rX + '" y="' + rY + '" font-size="10" font-weight="700" fill="#000" font-style="italic" text-decoration="underline">Tubing</text>';
+    rY += 13;
+    if (tubingDesc) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">' + esc(tubingDesc) + '</text>'; rY += 11; }
+    if (eotDepth) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">EOT: ' + Math.round(eotDepth).toLocaleString() + "'</text>"; rY += 11; }
+    if (snDepth) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">SN: ' + Math.round(snDepth).toLocaleString() + "'</text>"; rY += 11; }
+    if (rodSections.length) {
+      rY += 4;
+      s += '<text x="' + rX + '" y="' + rY + '" font-size="10" font-weight="700" fill="#000" font-style="italic" text-decoration="underline">Rods</text>';
+      rY += 13;
+      for (var i = 0; i < rodSections.length; i++) {
+        var rs = rodSections[i];
+        var txt = (rs.size ? rs.size + ' ' : '') + rs.cnt + ' ea, ' + Math.round(rs.len) + "' (to " + Math.round(rs.dp).toLocaleString() + "')";
+        s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">' + esc(txt) + '</text>';
+        rY += 11;
+      }
+    }
+    if (pumpModel || pumpDepth) {
+      rY += 4;
+      s += '<text x="' + rX + '" y="' + rY + '" font-size="10" font-weight="700" fill="#000" font-style="italic" text-decoration="underline">Pump</text>';
+      rY += 13;
+      if (pumpModel) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">' + esc(pumpModel) + '</text>'; rY += 11; }
+      if (pumpDepth) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">@ ' + Math.round(pumpDepth).toLocaleString() + "'</text>"; rY += 11; }
+    }
+  }
+
   // ── WELLBORE DIAGRAM ──
   // Ground surface
   var gy = wbTop;
@@ -631,7 +718,38 @@ function drawWBD(w) {
     s += '<polygon points="' + (cx+ir) + ',' + (y2-12) + ' ' + (cx+ir) + ',' + y2 + ' ' + (cx+ir+8) + ',' + y2 + '" fill="#000"/>';
   }
 
-  // (Cement detail tables removed — info now consolidated in left spec boxes)
+  // ── TUBING / RODS / PUMP visuals down the center ──
+  if (eotDepth || pumpDepth) {
+    var tubBot = eotDepth ? dToY(Math.min(eotDepth, maxD)) : (pumpDepth ? dToY(pumpDepth) : null);
+    var pumpY = pumpDepth ? dToY(Math.min(pumpDepth, maxD)) : null;
+    // Tubing — pair of thin lines at center
+    if (tubBot) {
+      s += '<line x1="' + (cx-4) + '" y1="' + gy + '" x2="' + (cx-4) + '" y2="' + tubBot + '" stroke="#000" stroke-width="0.8"/>';
+      s += '<line x1="' + (cx+4) + '" y1="' + gy + '" x2="' + (cx+4) + '" y2="' + tubBot + '" stroke="#000" stroke-width="0.8"/>';
+    }
+    // Rod string — single thin line at exact center, down to pump (or EOT if no pump)
+    var rodBot = pumpY || tubBot;
+    if (rodBot) {
+      s += '<line x1="' + cx + '" y1="' + gy + '" x2="' + cx + '" y2="' + rodBot + '" stroke="#000" stroke-width="0.5" stroke-dasharray="2,2"/>';
+    }
+    // SN tick mark
+    if (snDepth) {
+      var snY = dToY(snDepth);
+      s += '<line x1="' + (cx-6) + '" y1="' + snY + '" x2="' + (cx+6) + '" y2="' + snY + '" stroke="#000" stroke-width="1.2"/>';
+      s += '<text x="' + (cx-9) + '" y="' + (snY+3) + '" text-anchor="end" font-size="7" fill="#000">SN ' + Math.round(snDepth) + "'</text>";
+    }
+    // Pump — small rectangle with X
+    if (pumpY) {
+      var pw = 8, ph = 18;
+      s += '<rect x="' + (cx-pw/2) + '" y="' + (pumpY-ph/2) + '" width="' + pw + '" height="' + ph + '" fill="#fff" stroke="#000" stroke-width="1"/>';
+      s += '<line x1="' + (cx-pw/2) + '" y1="' + (pumpY-ph/2) + '" x2="' + (cx+pw/2) + '" y2="' + (pumpY+ph/2) + '" stroke="#000" stroke-width="0.6"/>';
+      s += '<line x1="' + (cx-pw/2) + '" y1="' + (pumpY+ph/2) + '" x2="' + (cx+pw/2) + '" y2="' + (pumpY-ph/2) + '" stroke="#000" stroke-width="0.6"/>';
+      s += '<text x="' + (cx+pw/2+3) + '" y="' + (pumpY+3) + '" font-size="7" fill="#000" font-weight="700">Pump @ ' + Math.round(pumpDepth) + "'</text>";
+    } else if (eotDepth) {
+      // EOT label only
+      s += '<text x="' + (cx+6) + '" y="' + (tubBot+3) + '" font-size="7" fill="#000">EOT ' + Math.round(eotDepth) + "'</text>";
+    }
+  }
 
   // ── FORMATION TOPS — labeled lines on far left of wellbore ──
   var ftList = (w.ft || []).filter(function(f){
