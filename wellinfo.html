@@ -755,7 +755,7 @@ function drawWBD(w) {
       s += '<rect x="' + (cx-pw/2) + '" y="' + (pumpY-ph/2) + '" width="' + pw + '" height="' + ph + '" fill="#fff" stroke="#000" stroke-width="1"/>';
       s += '<line x1="' + (cx-pw/2) + '" y1="' + (pumpY-ph/2) + '" x2="' + (cx+pw/2) + '" y2="' + (pumpY+ph/2) + '" stroke="#000" stroke-width="0.6"/>';
       s += '<line x1="' + (cx-pw/2) + '" y1="' + (pumpY+ph/2) + '" x2="' + (cx+pw/2) + '" y2="' + (pumpY-ph/2) + '" stroke="#000" stroke-width="0.6"/>';
-      s += '<text x="' + (cx+pw/2+3) + '" y="' + (pumpY+3) + '" font-size="7" fill="#000" font-weight="700">Pump @ ' + Math.round(pumpDepth) + "'</text>";
+      // (pump label removed)
     } else if (eotDepth) {
       // EOT label only
       s += '<text x="' + (cx+6) + '" y="' + (tubBot+3) + '" font-size="7" fill="#000">EOT ' + Math.round(eotDepth) + "'</text>";
@@ -885,32 +885,41 @@ function drawWBD(w) {
   // ── PERFORATIONS LIST (left, below casing boxes) ──
   var perfLX = 20, perfLY = boxY + 5;
   if (perfs.length) {
-    // Group by zone (formation) first, then by SPF within each zone
+    // Group by zone, but ORDER zones by their shallowest perf (top → bottom)
     var by_zone = {};
     for (var i = 0; i < perfs.length; i++) {
       var z = (perfs[i].zone || g.pool || g.fm || 'PERFORATIONS').toUpperCase();
       if (!by_zone[z]) by_zone[z] = [];
       by_zone[z].push(perfs[i]);
     }
-    var zoneKeys = Object.keys(by_zone).sort();
+    var zoneKeys = Object.keys(by_zone).sort(function(a, b) {
+      var ma = Math.min.apply(null, by_zone[a].map(function(p){return p.top;}));
+      var mb = Math.min.apply(null, by_zone[b].map(function(p){return p.top;}));
+      return ma - mb;
+    });
     for (var zi = 0; zi < zoneKeys.length; zi++) {
       var zoneName = zoneKeys[zi];
       // Zone header
       s += '<text x="' + perfLX + '" y="' + perfLY + '" font-size="10" font-weight="700" fill="#000">' + esc(zoneName) + '</text>';
       perfLY += 13;
-      // Group within zone by SPF
+      // Group within zone by SPF; order spf groups by shallowest perf within
       var by_spf = {};
       for (var i = 0; i < by_zone[zoneName].length; i++) {
         var spfk = by_zone[zoneName][i].spf || '';
         if (!by_spf[spfk]) by_spf[spfk] = [];
         by_spf[spfk].push(by_zone[zoneName][i]);
       }
-      var spfKeys = Object.keys(by_spf).sort();
+      var spfKeys = Object.keys(by_spf).sort(function(a, b) {
+        var ma = Math.min.apply(null, by_spf[a].map(function(p){return p.top;}));
+        var mb = Math.min.apply(null, by_spf[b].map(function(p){return p.top;}));
+        return ma - mb;
+      });
       for (var k = 0; k < spfKeys.length; k++) {
         var label = spfKeys[k] ? 'Perfs @' + spfKeys[k] + 'spf -' : 'Perfs -';
         s += '<text x="' + perfLX + '" y="' + perfLY + '" font-size="9" font-style="italic" fill="#333">' + label + '</text>';
         perfLY += 10;
-        var plist = by_spf[spfKeys[k]];
+        // Sort perfs within group by top depth ascending
+        var plist = by_spf[spfKeys[k]].slice().sort(function(a, b){ return a.top - b.top; });
         var lineItems = [];
         for (var j = 0; j < plist.length; j++) {
           lineItems.push(plist[j].top + '-' + plist[j].bot);
