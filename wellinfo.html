@@ -503,6 +503,20 @@ function drawWBD(w) {
     s += '<line x1="' + gx + '" y1="' + gy + '" x2="' + (gx-3) + '" y2="' + (gy-4) + '" stroke="#000" stroke-width="0.6"/>';
   }
 
+  // ── DEPTH SCALE on far right ──
+  var scaleX = svgW - 35;
+  // Pick tick interval based on max depth
+  var dTick = maxD <= 1500 ? 200 : maxD <= 4000 ? 500 : maxD <= 8000 ? 1000 : 2000;
+  // Scale axis line
+  s += '<line x1="' + scaleX + '" y1="' + gy + '" x2="' + scaleX + '" y2="' + dToY(maxD * 0.99) + '" stroke="#666" stroke-width="0.6"/>';
+  // GL label
+  s += '<text x="' + (scaleX - 4) + '" y="' + (gy + 3) + '" text-anchor="end" font-size="7" fill="#000" font-weight="700">GL</text>';
+  for (var d = dTick; d < maxD; d += dTick) {
+    var ty = dToY(d);
+    s += '<line x1="' + (scaleX - 4) + '" y1="' + ty + '" x2="' + (scaleX + 2) + '" y2="' + ty + '" stroke="#666" stroke-width="0.5"/>';
+    s += '<text x="' + (scaleX - 5) + '" y="' + (ty + 2.5) + '" text-anchor="end" font-size="7" fill="#555">' + d.toLocaleString() + "'" + '</text>';
+  }
+
   // Draw casings — all from surface (as user said earlier)
   var sorted = csgTypes.slice().sort(function(a,b){return (OR[b.type]||25) - (OR[a.type]||25);});
 
@@ -597,7 +611,9 @@ function drawWBD(w) {
     s += '<text x="' + (wbLeft - 12) + '" y="' + (fy + 8) + '" text-anchor="end" font-size="7" fill="#555">' + ft.d.toLocaleString() + "'" + '</text>';
   }
 
-  // ── PERFORATIONS (drawn on diagram right side with brackets) ──
+  // ── PERFORATIONS — hatched brackets + right-side depth callouts ──
+  // First pass: collect rendering info, then draw with vertical offset to avoid overlap
+  var perfLabels = []; // {y, txt}
   for (var i = 0; i < perfs.length; i++) {
     var p = perfs[i];
     var py1 = dToY(p.top), py2 = dToY(p.bot);
@@ -606,11 +622,32 @@ function drawWBD(w) {
     for (var j = sorted.length - 1; j >= 0; j--) {
       if (sorted[j].depth >= p.top) { innerHW = IR[sorted[j].type] || 20; break; }
     }
-    // Hatched bracket on both sides
-    for (var py = py1; py <= py2; py += 3) {
-      s += '<line x1="' + (cx - innerHW - 3) + '" y1="' + py + '" x2="' + (cx - innerHW - 9) + '" y2="' + py + '" stroke="#000" stroke-width="1"/>';
-      s += '<line x1="' + (cx + innerHW + 3) + '" y1="' + py + '" x2="' + (cx + innerHW + 9) + '" y2="' + py + '" stroke="#000" stroke-width="1"/>';
+    // Hatched bracket on both sides — denser for clarity
+    for (var py = py1; py <= py2; py += 2.5) {
+      s += '<line x1="' + (cx - innerHW - 3) + '" y1="' + py + '" x2="' + (cx - innerHW - 11) + '" y2="' + py + '" stroke="#000" stroke-width="1"/>';
+      s += '<line x1="' + (cx + innerHW + 3) + '" y1="' + py + '" x2="' + (cx + innerHW + 11) + '" y2="' + py + '" stroke="#000" stroke-width="1"/>';
     }
+    // Bracket end caps
+    s += '<line x1="' + (cx - innerHW - 11) + '" y1="' + py1 + '" x2="' + (cx - innerHW - 11) + '" y2="' + py2 + '" stroke="#000" stroke-width="1"/>';
+    s += '<line x1="' + (cx + innerHW + 11) + '" y1="' + py1 + '" x2="' + (cx + innerHW + 11) + '" y2="' + py2 + '" stroke="#000" stroke-width="1"/>';
+
+    // Collect depth label for right-side rendering
+    var labelTxt = p.top + '-' + p.bot + (p.spf ? '  ' + p.spf + 'spf' : '');
+    perfLabels.push({y: (py1 + py2) / 2, txt: labelTxt, py1: py1, py2: py2, hw: innerHW});
+  }
+  // Render perf depth labels on right side, avoiding overlap
+  perfLabels.sort(function(a, b){ return a.y - b.y; });
+  var lastLabelY = -100;
+  var labelX = wbRight + 5;
+  for (var i = 0; i < perfLabels.length; i++) {
+    var pl = perfLabels[i];
+    var ly = Math.max(pl.y, lastLabelY + 11);
+    s += '<text x="' + labelX + '" y="' + (ly + 3) + '" font-size="8" fill="#000">' + esc(pl.txt) + '</text>';
+    // Leader line from label to perf bracket
+    if (Math.abs(ly - pl.y) > 2) {
+      s += '<line x1="' + (labelX - 2) + '" y1="' + (ly + 1) + '" x2="' + (cx + pl.hw + 12) + '" y2="' + pl.y + '" stroke="#888" stroke-width="0.4"/>';
+    }
+    lastLabelY = ly;
   }
 
   // ── CEMENT PLUG between PBTD and TD ──
@@ -618,6 +655,36 @@ function drawWBD(w) {
     var pby = dToY(pbtd), tdy = dToY(td);
     var plugHW = csgTypes.length ? IR[csgTypes[csgTypes.length-1].type] || 20 : 20;
     s += '<rect x="' + (cx - plugHW) + '" y="' + pby + '" width="' + (plugHW*2) + '" height="' + (tdy - pby) + '" fill="#999"/>';
+  }
+
+  // ── PLUGS (CIBP, Cement Plug, Bridge Plug, Retainer) ──
+  var plList = (w.pl || []).filter(function(p){ return parseDepth(p.dp); });
+  for (var i = 0; i < plList.length; i++) {
+    var pl = plList[i];
+    var pd = parseDepth(pl.dp);
+    var plY = dToY(pd);
+    var ptype = (pl.ty || '').toUpperCase();
+    // Find inner casing half-width at this depth
+    var plHw = 20;
+    for (var j = sorted.length - 1; j >= 0; j--) {
+      if (sorted[j].depth >= pd) { plHw = IR[sorted[j].type] || 20; break; }
+    }
+    if (ptype.indexOf('CIBP') >= 0 || ptype.indexOf('BRIDGE') >= 0) {
+      // Bridge plug — solid black bar with X pattern (typical CIBP symbol)
+      s += '<rect x="' + (cx - plHw) + '" y="' + (plY - 3) + '" width="' + (plHw * 2) + '" height="6" fill="#000"/>';
+      s += '<line x1="' + (cx - plHw) + '" y1="' + (plY - 3) + '" x2="' + (cx + plHw) + '" y2="' + (plY + 3) + '" stroke="#fff" stroke-width="1"/>';
+      s += '<line x1="' + (cx - plHw) + '" y1="' + (plY + 3) + '" x2="' + (cx + plHw) + '" y2="' + (plY - 3) + '" stroke="#fff" stroke-width="1"/>';
+    } else if (ptype.indexOf('RETAINER') >= 0) {
+      // Cement retainer — bowtie symbol
+      s += '<polygon points="' + (cx - plHw) + ',' + (plY - 4) + ' ' + (cx + plHw) + ',' + (plY - 4) + ' ' + (cx - plHw) + ',' + (plY + 4) + ' ' + (cx + plHw) + ',' + (plY + 4) + '" fill="#000"/>';
+    } else {
+      // Cement plug or generic — solid gray fill block (~30 ft thick visually)
+      var plugThick = 8;
+      s += '<rect x="' + (cx - plHw) + '" y="' + (plY - plugThick/2) + '" width="' + (plHw * 2) + '" height="' + plugThick + '" fill="#999" stroke="#000" stroke-width="0.5"/>';
+    }
+    // Label on right side of wellbore
+    var labelTxt = (pl.ty || 'Plug') + ' @ ' + pd.toLocaleString() + "'";
+    s += '<text x="' + (cx + plHw + 14) + '" y="' + (plY + 3) + '" font-size="8" fill="#000">' + esc(labelTxt) + '</text>';
   }
 
   // PBTD dashed line + label
@@ -637,45 +704,50 @@ function drawWBD(w) {
   // ── PERFORATIONS LIST (left, below casing boxes) ──
   var perfLX = 20, perfLY = boxY + 5;
   if (perfs.length) {
-    // Group by formation/zone if present
-    var formHeader = g.pool || g.fm || '';
-    if (formHeader) {
-      s += '<text x="' + perfLX + '" y="' + perfLY + '" font-size="10" font-weight="700" fill="#000">' + esc(formHeader.toUpperCase()) + '</text>';
-      perfLY += 14;
-    }
-    // Group perfs
-    var by_spf = {};
+    // Group by zone (formation) first, then by SPF within each zone
+    var by_zone = {};
     for (var i = 0; i < perfs.length; i++) {
-      var spfk = perfs[i].spf || '';
-      if (!by_spf[spfk]) by_spf[spfk] = [];
-      by_spf[spfk].push(perfs[i]);
+      var z = (perfs[i].zone || g.pool || g.fm || 'PERFORATIONS').toUpperCase();
+      if (!by_zone[z]) by_zone[z] = [];
+      by_zone[z].push(perfs[i]);
     }
-    var keys = Object.keys(by_spf).sort();
-    for (var k = 0; k < keys.length; k++) {
-      var label = keys[k] ? 'Perfs @' + keys[k] + 'spf -' : 'Perfs -';
-      s += '<text x="' + perfLX + '" y="' + perfLY + '" font-size="9" font-weight="700" fill="#000">' + label + '</text>';
-      perfLY += 11;
-      // List perfs on wrapped lines
-      var txt = '';
-      var plist = by_spf[keys[k]];
-      var lineItems = [];
-      for (var j = 0; j < plist.length; j++) {
-        lineItems.push(plist[j].top + '-' + plist[j].bot);
+    var zoneKeys = Object.keys(by_zone).sort();
+    for (var zi = 0; zi < zoneKeys.length; zi++) {
+      var zoneName = zoneKeys[zi];
+      // Zone header
+      s += '<text x="' + perfLX + '" y="' + perfLY + '" font-size="10" font-weight="700" fill="#000">' + esc(zoneName) + '</text>';
+      perfLY += 13;
+      // Group within zone by SPF
+      var by_spf = {};
+      for (var i = 0; i < by_zone[zoneName].length; i++) {
+        var spfk = by_zone[zoneName][i].spf || '';
+        if (!by_spf[spfk]) by_spf[spfk] = [];
+        by_spf[spfk].push(by_zone[zoneName][i]);
       }
-      // Wrap to 35 char lines
-      var lines = [];
-      var line = '';
-      for (var j = 0; j < lineItems.length; j++) {
-        var part = lineItems[j] + (j < lineItems.length - 1 ? ', ' : '');
-        if ((line + part).length > 35) { lines.push(line); line = part; }
-        else line += part;
+      var spfKeys = Object.keys(by_spf).sort();
+      for (var k = 0; k < spfKeys.length; k++) {
+        var label = spfKeys[k] ? 'Perfs @' + spfKeys[k] + 'spf -' : 'Perfs -';
+        s += '<text x="' + perfLX + '" y="' + perfLY + '" font-size="9" font-style="italic" fill="#333">' + label + '</text>';
+        perfLY += 10;
+        var plist = by_spf[spfKeys[k]];
+        var lineItems = [];
+        for (var j = 0; j < plist.length; j++) {
+          lineItems.push(plist[j].top + '-' + plist[j].bot);
+        }
+        var lines = [];
+        var line = '';
+        for (var j = 0; j < lineItems.length; j++) {
+          var part = lineItems[j] + (j < lineItems.length - 1 ? ', ' : '');
+          if ((line + part).length > 35) { lines.push(line); line = part; }
+          else line += part;
+        }
+        if (line) lines.push(line);
+        for (var j = 0; j < lines.length; j++) {
+          s += '<text x="' + (perfLX + 8) + '" y="' + perfLY + '" font-size="9" fill="#000">' + esc(lines[j]) + '</text>';
+          perfLY += 11;
+        }
       }
-      if (line) lines.push(line);
-      for (var j = 0; j < lines.length; j++) {
-        s += '<text x="' + perfLX + '" y="' + perfLY + '" font-size="9" fill="#000">' + esc(lines[j]) + '</text>';
-        perfLY += 11;
-      }
-      perfLY += 4;
+      perfLY += 5;
     }
   }
 
