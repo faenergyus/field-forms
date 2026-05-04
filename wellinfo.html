@@ -542,15 +542,16 @@ function drawWBD(w) {
     if (tocD !== null) {
       var tocY = dToY(tocD);
       var outerOR = i > 0 ? OR[sorted[i-1].type] || (or_ + 8) : or_ + 8;
-      // Left annulus
-      s += cementSquiggle(cx - outerOR, cx - or_, tocY, y2);
-      // Right annulus
-      s += cementSquiggle(cx + or_, cx + outerOR, tocY, y2);
+      // Solid gray cement fill in annulus (left + right of casing)
+      s += '<rect x="' + (cx - outerOR) + '" y="' + tocY + '" width="' + (outerOR - or_) + '" height="' + (y2 - tocY) + '" fill="#999"/>';
+      s += '<rect x="' + (cx + or_)     + '" y="' + tocY + '" width="' + (outerOR - or_) + '" height="' + (y2 - tocY) + '" fill="#999"/>';
     }
 
-    // Walls — gray bands
-    s += '<rect x="' + (cx-or_) + '" y="' + y1 + '" width="' + wallW + '" height="' + (y2-y1) + '" fill="#b0b0b0" stroke="#000" stroke-width="0.5"/>';
-    s += '<rect x="' + (cx+ir) + '" y="' + y1 + '" width="' + wallW + '" height="' + (y2-y1) + '" fill="#b0b0b0" stroke="#000" stroke-width="0.5"/>';
+    // Walls — black lines (inner + outer edge of each wall)
+    s += '<line x1="' + (cx-or_) + '" y1="' + y1 + '" x2="' + (cx-or_) + '" y2="' + y2 + '" stroke="#000" stroke-width="1.5"/>';
+    s += '<line x1="' + (cx-ir)  + '" y1="' + y1 + '" x2="' + (cx-ir)  + '" y2="' + y2 + '" stroke="#000" stroke-width="1.5"/>';
+    s += '<line x1="' + (cx+ir)  + '" y1="' + y1 + '" x2="' + (cx+ir)  + '" y2="' + y2 + '" stroke="#000" stroke-width="1.5"/>';
+    s += '<line x1="' + (cx+or_) + '" y1="' + y1 + '" x2="' + (cx+or_) + '" y2="' + y2 + '" stroke="#000" stroke-width="1.5"/>';
 
     // Right-triangle shoe along inner wall
     s += '<polygon points="' + (cx-ir) + ',' + y2 + ' ' + (cx-ir) + ',' + (y2+12) + ' ' + (cx-or_-6) + ',' + (y2+12) + '" fill="#000"/>';
