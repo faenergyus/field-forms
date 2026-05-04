@@ -598,9 +598,9 @@ function drawWBD(w) {
     s += '<line x1="' + (cx-ir)  + '" y1="' + y1 + '" x2="' + (cx-ir)  + '" y2="' + y2 + '" stroke="#000" stroke-width="1.5"/>';
     s += '<line x1="' + (cx+ir)  + '" y1="' + y1 + '" x2="' + (cx+ir)  + '" y2="' + y2 + '" stroke="#000" stroke-width="1.5"/>';
 
-    // Right-triangle shoe — vertical edge along the (only) casing line
-    s += '<polygon points="' + (cx-ir) + ',' + y2 + ' ' + (cx-ir) + ',' + (y2+12) + ' ' + (cx-ir-8) + ',' + (y2+12) + '" fill="#000"/>';
-    s += '<polygon points="' + (cx+ir) + ',' + y2 + ' ' + (cx+ir) + ',' + (y2+12) + ' ' + (cx+ir+8) + ',' + (y2+12) + '" fill="#000"/>';
+    // Right-triangle shoe — vertical edge along the casing line, base at casing shoe depth (y2)
+    s += '<polygon points="' + (cx-ir) + ',' + (y2-12) + ' ' + (cx-ir) + ',' + y2 + ' ' + (cx-ir-8) + ',' + y2 + '" fill="#000"/>';
+    s += '<polygon points="' + (cx+ir) + ',' + (y2-12) + ' ' + (cx+ir) + ',' + y2 + ' ' + (cx+ir+8) + ',' + y2 + '" fill="#000"/>';
   }
 
   // ── CEMENT DETAIL TABLES — RIGHT side ──
