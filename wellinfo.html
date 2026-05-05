@@ -707,11 +707,26 @@ async function uploadWbdFile(inputEl) {
     var fd = new FormData();
     fd.append('file', file);
     fd.append('short', w.sn);
-    var res = await fetch(API_BASE + '/wbd/parse', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
-      body: fd
-    });
+    var res;
+    async function doFetch() {
+      return await fetch(API_BASE + '/wbd/parse', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token },
+        body: fd
+      });
+    }
+    try {
+      res = await doFetch();
+    } catch (netErr) {
+      // Network/CORS failure — apiBase may be stale (tunnel rotated). Refresh and retry once.
+      console.warn('First fetch failed, refreshing apiBase:', netErr);
+      await loadApiBase();
+      // FormData is single-use after a failed POST; rebuild
+      fd = new FormData();
+      fd.append('file', file);
+      fd.append('short', w.sn);
+      res = await doFetch();
+    }
     if (!res.ok) {
       var msg = await res.text();
       alert('Parse failed: ' + res.status + ' ' + msg);
