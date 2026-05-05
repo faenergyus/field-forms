@@ -55,6 +55,18 @@
     #wbdContainer { background: #e8e8e8; padding: 20px 0; display: flex; align-items: flex-start; justify-content: center; }
     #wbdContainer svg { width: 100%; max-width: 850px; height: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.2); background: #fff; }
 
+    /* Job History list */
+    #jobHistory h3 { font-size: 1rem; margin-bottom: 8px; color: #1c4a1c; }
+    .job-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; background: #fff; border: 1px solid #c0c0c0; }
+    .job-table th { background: #f0f4f0; padding: 6px 8px; text-align: left; border-bottom: 1px solid #c0c0c0; font-weight: 700; color: #1c4a1c; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .job-table td { padding: 6px 8px; border-bottom: 1px solid #eaeaea; vertical-align: top; color: #222; }
+    .job-table tr.current { background: #fff8d8; }
+    .job-table tr:hover { background: #f5fbf5; }
+    .job-table .job-date { font-weight: 700; white-space: nowrap; }
+    .job-table .job-cause { font-size: 0.7rem; color: #900; }
+    .job-table .job-summary { color: #444; font-style: italic; }
+    .job-empty { padding: 16px; color: #888; text-align: center; font-style: italic; }
+
     /* Well General Info Header — matches WBD reference */
     .well-general { background: #fff; border: 2px solid #333; margin-bottom: 20px; font-size: 0.8rem; }
     .well-general-title { background: #333; color: #fff; text-align: center; padding: 6px; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.03em; }
@@ -129,6 +141,7 @@
         <div id="wbdContainer"></div>
         <div class="data-cards" id="dataCards"></div>
       </div>
+      <div id="jobHistory" style="margin-top:24px;"></div>
     </div>
   </div>
 
@@ -422,6 +435,61 @@ function renderVersion() {
   wbd._workover = wo;
   wbd._picked = sources.picked;
   drawWBD(wbd);
+  renderJobHistory(w, sources);
+}
+
+function renderJobHistory(w, sources) {
+  var div = document.getElementById('jobHistory');
+  if (!div) return;
+  var allEvents = w.events || [];
+  if (!allEvents.length) {
+    div.innerHTML = '<h3>Job History</h3><div class="job-empty">No workover history on file.</div>';
+    return;
+  }
+  var pickedDate = sources.picked && sources.picked.date ? sources.picked.date : '9999-99-99';
+  var visible = allEvents.filter(function(e) { return (e.event_date || '0') <= pickedDate; });
+  visible.sort(function(a, b) { return (b.event_date || '0').localeCompare(a.event_date || '0'); });
+
+  var pickedJobKey = (sources.picked && sources.picked.kind === 'workover' && sources.workover) ? sources.workover.job_xkey : null;
+  var rows = '';
+  visible.forEach(function(e) {
+    var isCurrent = e.job_xkey === pickedJobKey;
+    var cause = (e.failure_cause || '') + (e.failed_component ? ' / ' + e.failed_component : '');
+    var pump = (e.pump_size || '') + (e.pump_type ? ' (' + e.pump_type + ')' : '');
+    var rodChanges = [];
+    if (e.rods_replaced_1)      rodChanges.push(e.rods_replaced_1 + ' × 1"');
+    if (e.rods_replaced_78)     rodChanges.push(e.rods_replaced_78 + ' × 7/8"');
+    if (e.rods_replaced_34)     rodChanges.push(e.rods_replaced_34 + ' × 3/4"');
+    if (e.rods_replaced_58)     rodChanges.push(e.rods_replaced_58 + ' × 5/8"');
+    if (e.rods_replaced_fg)     rodChanges.push(e.rods_replaced_fg + ' × FG');
+    if (e.rods_replaced_sinker) rodChanges.push(e.rods_replaced_sinker + ' × sinker');
+    var tbgChanges = [];
+    if (e.tbg_replaced_278) tbgChanges.push(e.tbg_replaced_278 + ' × 2-7/8"');
+    if (e.tbg_replaced_238) tbgChanges.push(e.tbg_replaced_238 + ' × 2-3/8"');
+    var changes = [];
+    if (rodChanges.length) changes.push('Rods: ' + rodChanges.join(', '));
+    if (tbgChanges.length) changes.push('Tbg: ' + tbgChanges.join(', '));
+    if (e.pump_new === 'NEW' || e.pump_new === 'Y') changes.push('New pump');
+    if (e.cleanout === 'Y') changes.push('Cleanout');
+    if (e.acid === 'Y') changes.push('Acid');
+    if (e.enduralloy && e.enduralloy !== '0') changes.push('Enduralloy ' + e.enduralloy);
+
+    var summary = e.summary ? esc(e.summary) : '';
+    if (summary.length > 200) summary = summary.substring(0, 200) + '...';
+
+    rows += '<tr' + (isCurrent ? ' class="current"' : '') + '>'
+         + '<td class="job-date">' + esc(e.event_date || '') + (isCurrent ? ' ★' : '') + '</td>'
+         + '<td>' + (cause ? '<div class="job-cause">' + esc(cause) + '</div>' : '') + (e.afe ? '<div style="font-size:0.7rem;color:#888">AFE ' + esc(e.afe) + '</div>' : '') + '</td>'
+         + '<td>' + esc(pump) + '</td>'
+         + '<td style="font-size:0.7rem;">' + (changes.length ? changes.join('<br>') : '—') + '</td>'
+         + '<td class="job-summary">' + summary + '</td>'
+         + '</tr>';
+  });
+
+  div.innerHTML = '<h3>Job History — ' + visible.length + ' workover' + (visible.length !== 1 ? 's' : '') + ' through ' + esc(pickedDate === '9999-99-99' ? 'present' : pickedDate) + '</h3>'
+    + '<table class="job-table">'
+    + '<thead><tr><th>Date</th><th>Cause / AFE</th><th>Pump</th><th>Changes</th><th>Summary</th></tr></thead>'
+    + '<tbody>' + rows + '</tbody></table>';
 }
 
 // ── WBD Renderer ──
