@@ -1007,7 +1007,8 @@ async def parse_wbd_file(
 
         well_label = (short or 'UPLOADED').strip().upper()
         try:
-            ext.process_wbd_file(_os.path.abspath(tmp_path), well_label, 'upload')
+            from pathlib import Path as _Path
+            ext.process_wbd_file(_Path(tmp_path), well_label, 'upload')
         except Exception as e:
             raise HTTPException(400, f"Parser failed: {e}")
 
