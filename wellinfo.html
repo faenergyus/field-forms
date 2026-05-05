@@ -55,6 +55,30 @@
     #wbdContainer { background: #e8e8e8; padding: 20px 0; display: flex; align-items: flex-start; justify-content: center; }
     #wbdContainer svg { width: 100%; max-width: 850px; height: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.2); background: #fff; }
 
+    /* WBD edit toolbar */
+    .wbd-btn { background: #1c4a1c; color: #fff; border: none; padding: 6px 14px; font-size: 0.8rem; font-weight: 600; cursor: pointer; border-radius: 4px; margin-left: 6px; }
+    .wbd-btn:hover { background: #2a5a2a; }
+    .wbd-btn.danger { background: #a02020; }
+    .wbd-btn.danger:hover { background: #c02828; }
+    .wbd-btn.secondary { background: #777; }
+    .wbd-btn.secondary:hover { background: #888; }
+
+    /* Editor forms */
+    #wbdEditor { background: #fff; border: 1px solid #c0c0c0; padding: 16px; border-radius: 6px; }
+    #wbdEditor h3 { font-size: 0.95rem; color: #1c4a1c; margin: 14px 0 6px; }
+    #wbdEditor h3:first-child { margin-top: 0; }
+    .ed-meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+    .ed-meta label { font-size: 0.75rem; color: #555; font-weight: 600; }
+    .ed-meta input, .ed-meta select { width: 100%; padding: 4px 6px; border: 1px solid #c0c0c0; border-radius: 3px; font-size: 0.85rem; }
+    .ed-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    .ed-table th { background: #f0f4f0; padding: 4px 6px; text-align: left; border: 1px solid #c8d8c8; font-size: 0.7rem; color: #1c4a1c; }
+    .ed-table td { padding: 2px; border: 1px solid #e0e0e0; }
+    .ed-table input, .ed-table select { width: 100%; padding: 3px 5px; border: 1px solid transparent; font-size: 0.78rem; background: transparent; }
+    .ed-table input:focus, .ed-table select:focus { background: #fffbe5; border-color: #c0c0c0; outline: none; }
+    .ed-table .row-del { color: #a02020; cursor: pointer; text-align: center; padding: 4px; font-weight: 700; user-select: none; }
+    .ed-add-row { font-size: 0.75rem; color: #1c4a1c; cursor: pointer; padding: 4px 0; user-select: none; }
+    .ed-add-row:hover { color: #2a5a2a; text-decoration: underline; }
+
     /* Tabs */
     .tabs { display: flex; gap: 2px; border-bottom: 2px solid #1c4a1c; margin-bottom: 16px; margin-top: 8px; }
     .tab-btn { background: #e8f0e8; color: #1c4a1c; border: 1px solid #b8ccb8; border-bottom: none; padding: 8px 18px; font-size: 0.88rem; font-weight: 600; cursor: pointer; border-radius: 6px 6px 0 0; transition: background 0.15s; }
@@ -159,13 +183,23 @@
       </div>
 
       <div id="tab-wbd" class="tab-panel active">
-        <div id="versionSelector" style="margin-bottom:12px;display:none;">
-          <label style="font-size:0.8rem;font-weight:600;color:#333;">WBD Version: </label>
-          <select id="versionSelect" style="padding:4px 8px;border:1px solid #999;border-radius:4px;font-size:0.8rem;" onchange="onVersionChange()"></select>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+          <div id="versionSelector" style="display:none;">
+            <label style="font-size:0.8rem;font-weight:600;color:#333;">WBD Version: </label>
+            <select id="versionSelect" style="padding:4px 8px;border:1px solid #999;border-radius:4px;font-size:0.8rem;" onchange="onVersionChange()"></select>
+          </div>
+          <div id="wbdToolbar" style="display:none;margin-left:auto;">
+            <button type="button" id="btnEdit"   class="wbd-btn" onclick="openEditor(false)">Edit</button>
+            <button type="button" id="btnAdd"    class="wbd-btn" onclick="openEditor(true)">Add Version</button>
+            <button type="button" id="btnDelete" class="wbd-btn danger" onclick="deleteVersion()">Delete</button>
+          </div>
         </div>
-        <div class="well-layout">
-          <div id="wbdContainer"></div>
-          <div class="data-cards" id="dataCards"></div>
+        <div id="wbdEditor" style="display:none;"></div>
+        <div id="wbdViewer">
+          <div class="well-layout">
+            <div id="wbdContainer"></div>
+            <div class="data-cards" id="dataCards"></div>
+          </div>
         </div>
       </div>
 
@@ -190,7 +224,7 @@ function parseAccountsCSV(text) {
   var lines = text.trim().split('\n');
   return lines.slice(1).map(function(line) {
     var cols = line.match(/("(?:[^"]|"")*"|[^,]*)/g).map(function(c) { return c.replace(/^"|"$/g,'').trim(); });
-    return { email: cols[0], displayName: cols[1] };
+    return { email: cols[0], displayName: cols[1], pbi_name: cols[2], role: cols[3] };
   });
 }
 
@@ -206,7 +240,7 @@ async function handleCredentialResponse(response) {
     var rows = parseAccountsCSV(csv);
     var match = rows.find(function(r) { return r.email.toLowerCase() === email && r.email !== 'x'; });
     if (!match) { errorEl.style.color = '#ff8080'; errorEl.textContent = 'Access denied for ' + email; return; }
-    var session = { email: email, displayName: match.displayName, picture: picture, expires: Date.now() + SESSION_HRS * 3600000 };
+    var session = { email: email, displayName: match.displayName, picture: picture, role: (match.role || '').toLowerCase(), token: response.credential, tokenExp: Date.now() + 3500000, expires: Date.now() + SESSION_HRS * 3600000 };
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
     fetch(TRACKER_URL, { method:'POST', body: JSON.stringify({ email: email }) }).catch(function(){});
     showPortal(session);
@@ -414,7 +448,238 @@ function renderWellInfo(name) {
   // Equipment + Job History don't depend on WBD version — render once per well
   renderEquipmentOverTime(w);
   renderJobHistoryFull(w);
+  // Show edit toolbar only for engineers/admins
+  var toolbar = document.getElementById('wbdToolbar');
+  if (toolbar) toolbar.style.display = isEditor() ? 'block' : 'none';
   document.getElementById('wellDisplay').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function isEditor() {
+  try {
+    var s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+    return s.role === 'engineer' || s.role === 'admin';
+  } catch(e) { return false; }
+}
+function getToken() {
+  try {
+    var s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+    return s.token || '';
+  } catch(e) { return ''; }
+}
+
+// ── WBD Editor ─────────────────────────────────────────────────────────────
+var EDITOR_FIELDS = {
+  casing:        [['casing_type','Type','select','Surface,Intermediate,Production,Liner,Open Hole'], ['size','Size'], ['weight','Weight'], ['grade','Grade'], ['set_depth','Set @','number'], ['hole_size','Hole Size'], ['cement_sacks','Sxs'], ['toc','TOC'], ['circ_to_surface','Circ'], ['notes','Notes']],
+  perforations:  [['top_depth','Top','number'], ['bottom_depth','Bottom','number'], ['spf','SPF'], ['zone','Zone'], ['perf_date','Date'], ['is_squeezed','Sq?','bool'], ['squeeze_date','Sq Date'], ['notes','Notes']],
+  plugs:         [['plug_type','Type','select','CIBP,Cement Plug,Bridge Plug,Retainer'], ['depth','Depth','number'], ['toc','TOC'], ['cement_sacks','Sxs'], ['notes','Notes']],
+  formation_tops:[['formation_name','Formation'], ['depth','Depth','number']],
+  tubing:        [['description','Description'], ['depth','Depth','number'], ['joints','Joints'], ['notes','Notes']],
+  rods:          [['description','Description'], ['count','Count'], ['length','Length'], ['depth','Depth','number'], ['notes','Notes']],
+};
+
+function openEditor(addMode) {
+  var w = currentWell;
+  if (!w) return;
+  var picked = (w._timeline || [])[currentVersionIdx];
+  if (!picked) return;
+  if (picked.kind !== 'schematic' && !addMode) {
+    alert('Pick a schematic version to edit (workover events come from Job Detail).');
+    return;
+  }
+
+  // Clone source = picked schematic if it's one, else most recent schematic
+  var clone = picked.kind === 'schematic' ? picked.data : null;
+  if (!clone) {
+    for (var i = 0; i < w._timeline.length; i++) {
+      if (w._timeline[i].kind === 'schematic') { clone = w._timeline[i].data; break; }
+    }
+  }
+
+  var meta;
+  if (addMode) {
+    var today = new Date().toISOString().slice(0, 10);
+    meta = { wbd_date: today, status: 'CURRENT', td: clone ? clone.td : '', pbtd: clone ? clone.pb : '' };
+  } else {
+    meta = { wbd_date: clone.dt || '', status: clone.st || 'CURRENT', td: clone.td || '', pbtd: clone.pb || '' };
+  }
+
+  window._editor = {
+    addMode: addMode,
+    cloneFromId: addMode ? (clone ? clone.id : null) : null,
+    editingId: addMode ? null : clone.id,
+    short: w.sn,
+    meta: meta,
+    casing: (clone ? clone.csg || [] : []).map(function(c){ return {casing_type:c.ty, size:c.sz, weight:c.wt, grade:c.gr, set_depth:c.dp, hole_size:c.hs, cement_sacks:c.cs, toc:c.tc, circ_to_surface:'', notes:''}; }),
+    perforations: (clone ? clone.pf || [] : []).map(function(p){ return {top_depth:p.td, bottom_depth:p.bd, spf:p.spf, zone:p.zn, perf_date:p.dt, is_squeezed:p.sq, squeeze_date:'', notes:''}; }),
+    plugs: (clone ? clone.pl || [] : []).map(function(p){ return {plug_type:p.ty, depth:p.dp, toc:p.tc, cement_sacks:p.cs, notes:''}; }),
+    formation_tops: (clone ? clone.ft || [] : []).map(function(f){ return {formation_name:f.fm, depth:f.dp}; }),
+    tubing: (clone ? clone.tb || [] : []).map(function(t){ return {description:t.desc, depth:t.dp, joints:t.jts, notes:''}; }),
+    rods:   (clone ? clone.rd || [] : []).map(function(r){ return {description:r.desc, count:r.cnt, length:r.len, depth:r.dp, notes:''}; }),
+  };
+  document.getElementById('wbdViewer').style.display = 'none';
+  document.getElementById('wbdEditor').style.display = 'block';
+  document.getElementById('wbdToolbar').style.display = 'none';
+  renderEditor();
+}
+
+function renderEditor() {
+  var e = window._editor;
+  var html = '';
+  html += '<h3>' + (e.addMode ? 'Add New WBD Version' : 'Edit WBD Version #' + e.editingId) + '</h3>';
+  html += '<div class="ed-meta">';
+  html += '<div><label>Date</label><input type="text" id="ed_dt" value="' + esc(e.meta.wbd_date || '') + '" placeholder="YYYY-MM-DD"></div>';
+  html += '<div><label>Status</label><select id="ed_st"><option>CURRENT</option><option>PROPOSED</option><option>ORIGINAL</option><option>HISTORICAL</option></select></div>';
+  html += '<div><label>TD</label><input type="text" id="ed_td" value="' + esc(e.meta.td || '') + '"></div>';
+  html += '<div><label>PBTD</label><input type="text" id="ed_pb" value="' + esc(e.meta.pbtd || '') + '"></div>';
+  html += '</div>';
+
+  ['casing','perforations','plugs','formation_tops','tubing','rods'].forEach(function(group) {
+    html += '<h3>' + group.charAt(0).toUpperCase() + group.slice(1).replace('_', ' ') + '</h3>';
+    html += renderEditorTable(group);
+  });
+
+  html += '<div style="margin-top:18px;text-align:right;">'
+       + '<button type="button" class="wbd-btn secondary" onclick="cancelEditor()">Cancel</button>'
+       + '<button type="button" class="wbd-btn" onclick="saveEditor()">' + (e.addMode ? 'Create Version' : 'Save Changes') + '</button>'
+       + '</div>';
+  document.getElementById('wbdEditor').innerHTML = html;
+
+  // Set status select to current value
+  var stSel = document.getElementById('ed_st');
+  if (stSel && e.meta.status) {
+    if (![].slice.call(stSel.options).some(function(o){ return o.value === e.meta.status; })) {
+      var opt = document.createElement('option'); opt.value = e.meta.status; opt.textContent = e.meta.status;
+      stSel.appendChild(opt);
+    }
+    stSel.value = e.meta.status;
+  }
+}
+
+function renderEditorTable(group) {
+  var fields = EDITOR_FIELDS[group];
+  var rows = window._editor[group] || [];
+  var html = '<table class="ed-table"><thead><tr>';
+  fields.forEach(function(f) { html += '<th>' + esc(f[1]) + '</th>'; });
+  html += '<th style="width:30px;"></th></tr></thead><tbody>';
+  rows.forEach(function(row, idx) {
+    html += '<tr data-idx="' + idx + '">';
+    fields.forEach(function(f) {
+      var val = row[f[0]] == null ? '' : row[f[0]];
+      var type = f[2] || 'text';
+      if (type === 'select') {
+        var opts = (f[3] || '').split(',').map(function(o){ return '<option' + (o===val ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('');
+        html += '<td><select data-field="' + f[0] + '"><option></option>' + opts + '</select></td>';
+      } else if (type === 'bool') {
+        html += '<td><select data-field="' + f[0] + '"><option value="">—</option><option value="true"' + (val===true ? ' selected':'') + '>Yes</option><option value="false"' + (val===false ? ' selected':'') + '>No</option></select></td>';
+      } else {
+        html += '<td><input type="text" data-field="' + f[0] + '" value="' + esc(val) + '"></td>';
+      }
+    });
+    html += '<td class="row-del" onclick="delEditorRow(\'' + group + '\',' + idx + ')">×</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  html += '<div class="ed-add-row" onclick="addEditorRow(\'' + group + '\')">+ Add ' + group.replace('_',' ') + ' row</div>';
+  return html;
+}
+
+function addEditorRow(group) { collectEditorState(); window._editor[group].push({}); renderEditor(); }
+function delEditorRow(group, idx) { collectEditorState(); window._editor[group].splice(idx, 1); renderEditor(); }
+
+function collectEditorState() {
+  var e = window._editor;
+  e.meta.wbd_date = document.getElementById('ed_dt').value;
+  e.meta.status   = document.getElementById('ed_st').value;
+  e.meta.td       = document.getElementById('ed_td').value;
+  e.meta.pbtd     = document.getElementById('ed_pb').value;
+  ['casing','perforations','plugs','formation_tops','tubing','rods'].forEach(function(group) {
+    var rows = [];
+    document.querySelectorAll('#wbdEditor h3 + .ed-table tbody tr').forEach(function(){});
+    var tables = document.querySelectorAll('#wbdEditor table.ed-table');
+    var groupIdx = ['casing','perforations','plugs','formation_tops','tubing','rods'].indexOf(group);
+    var tbl = tables[groupIdx];
+    if (!tbl) return;
+    tbl.querySelectorAll('tbody tr').forEach(function(tr) {
+      var rec = {};
+      tr.querySelectorAll('[data-field]').forEach(function(el) {
+        var v = el.value;
+        if (el.dataset.field === 'is_squeezed') v = v === 'true' ? true : v === 'false' ? false : null;
+        if (v === '') v = null;
+        rec[el.dataset.field] = v;
+      });
+      rows.push(rec);
+    });
+    e[group] = rows;
+  });
+}
+
+function cancelEditor() {
+  document.getElementById('wbdEditor').style.display = 'none';
+  document.getElementById('wbdEditor').innerHTML = '';
+  document.getElementById('wbdViewer').style.display = 'block';
+  document.getElementById('wbdToolbar').style.display = 'block';
+  window._editor = null;
+}
+
+async function saveEditor() {
+  collectEditorState();
+  var e = window._editor;
+  if (!API_BASE) { alert('API not configured'); return; }
+  var token = getToken();
+  if (!token) { alert('Sign in again to save (token missing)'); return; }
+  var headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
+  try {
+    var url, method, body;
+    if (e.addMode) {
+      url = API_BASE + '/wbd/version';
+      method = 'POST';
+      body = JSON.stringify({ short: e.short, clone_from_wbd_id: e.cloneFromId, meta: e.meta });
+    } else {
+      url = API_BASE + '/wbd/version/' + e.editingId;
+      method = 'PUT';
+      body = JSON.stringify({ meta: e.meta, casing: e.casing, perforations: e.perforations, plugs: e.plugs, formation_tops: e.formation_tops, tubing: e.tubing, rods: e.rods });
+    }
+    var res = await fetch(url, { method: method, headers: headers, body: body });
+    if (!res.ok) {
+      var msg = await res.text();
+      alert('Save failed: ' + res.status + ' ' + msg);
+      return;
+    }
+    var data = await res.json();
+    alert('Saved (wbd_id=' + data.wbd_id + ')');
+    // For ADD: do a second PUT with the full child rows so they get the new content the user entered
+    if (e.addMode && data.wbd_id) {
+      var put = await fetch(API_BASE + '/wbd/version/' + data.wbd_id, {
+        method: 'PUT', headers: headers,
+        body: JSON.stringify({ meta: e.meta, casing: e.casing, perforations: e.perforations, plugs: e.plugs, formation_tops: e.formation_tops, tubing: e.tubing, rods: e.rods })
+      });
+      if (!put.ok) { alert('Saved version but child rows failed: ' + await put.text()); return; }
+    }
+    // Reload well data and re-render
+    var fresh = await loadWellDetail(e.short);
+    cancelEditor();
+    if (fresh) renderWellInfo(e.short);
+  } catch (err) {
+    alert('Save error: ' + err);
+  }
+}
+
+async function deleteVersion() {
+  var w = currentWell;
+  if (!w) return;
+  var picked = (w._timeline || [])[currentVersionIdx];
+  if (!picked || picked.kind !== 'schematic') { alert('Pick a schematic version to delete.'); return; }
+  if (!confirm('Soft-delete WBD version ' + (picked.data.st || '') + ' ' + (picked.data.dt || '') + '? It can be restored from SQL.')) return;
+  var token = getToken();
+  if (!token) { alert('Sign in again to delete'); return; }
+  try {
+    var res = await fetch(API_BASE + '/wbd/version/' + picked.data.id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) { alert('Delete failed: ' + await res.text()); return; }
+    var fresh = await loadWellDetail(w.sn);
+    if (fresh) renderWellInfo(w.sn);
+  } catch (err) {
+    alert('Delete error: ' + err);
+  }
 }
 
 function onVersionChange() {

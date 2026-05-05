@@ -141,7 +141,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://faenergyus.github.io", "http://localhost:8000", "http://127.0.0.1:8000"],
     allow_origin_regex=r"https://.*\.trycloudflare\.com",
-    allow_methods=["GET", "PUT"],
+    allow_methods=["GET", "PUT", "POST", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -590,6 +590,18 @@ def wbd_wells():
     return {"wells": out, "count": len(out)}
 
 
+@app.get("/wbd/whoami")
+async def whoami_pre(authorization: Optional[str] = Header(None)):
+    """Return the caller's email + role. Used by the UI to decide whether to show edit buttons.
+    Defined here (before /wbd/{short}) so it doesn't get shadowed by the path-param route."""
+    try:
+        user = await get_current_user(authorization)
+    except HTTPException:
+        return {"email": None, "role": None, "can_edit": False}
+    role = _fetch_accounts().get(user.lower(), "")
+    return {"email": user, "role": role, "can_edit": role in {"engineer", "admin"}}
+
+
 @app.get("/wbd/{short}", response_class=ORJSONResponse)
 def wbd_well(short: str):
     """Return full WBD detail for a single well (all extracted versions + components)."""
@@ -715,6 +727,253 @@ def wbd_well(short: str):
                                   -int((x["dt"] or "0000-00-00")[:4]) if x.get("dt") else 0))
     well["v"] = versions
     return well
+
+
+# ---------------------------------------------------------------------------
+# WBD Edit / Add — engineer-only write endpoints
+# ---------------------------------------------------------------------------
+import urllib.request as _urlreq
+import csv as _csv
+import io as _io
+
+ACCOUNTS_CSV_URL = "https://docs.google.com/spreadsheets/d/146yuHYjs3RF3wtCK3Qj9NXH94DrStwhieTGqPeLQRfA/gviz/tq?tqx=out:csv&sheet=Accounts"
+EDITOR_ROLES = {"engineer", "admin"}
+
+_accounts_cache = {"data": {}, "ts": 0}
+def _fetch_accounts():
+    """Return {email_lower: role_lower}. Cached for 5 min."""
+    import time as _t
+    if _t.time() - _accounts_cache["ts"] < 300 and _accounts_cache["data"]:
+        return _accounts_cache["data"]
+    try:
+        with _urlreq.urlopen(ACCOUNTS_CSV_URL, timeout=10) as r:
+            text = r.read().decode("utf-8", errors="replace")
+        rows = list(_csv.reader(_io.StringIO(text)))
+        out = {}
+        if rows:
+            headers = [h.lower().strip() for h in rows[0]]
+            try:
+                ei = headers.index("email")
+                ri = headers.index("role")
+            except ValueError:
+                return {}
+            for r in rows[1:]:
+                if len(r) <= max(ei, ri): continue
+                em = (r[ei] or "").strip().lower()
+                ro = (r[ri] or "").strip().lower()
+                if em and em != "x":
+                    out[em] = ro
+        _accounts_cache["data"] = out
+        _accounts_cache["ts"] = _t.time()
+        return out
+    except Exception as e:
+        log.warning("Could not fetch Accounts CSV: %s", e)
+        return _accounts_cache["data"] or {}
+
+
+async def get_editor(authorization: Optional[str] = Header(None)) -> str:
+    """Verify caller and require Engineer/admin role."""
+    user = await get_current_user(authorization)
+    accounts = _fetch_accounts()
+    role = accounts.get(user.lower(), "")
+    if role not in EDITOR_ROLES:
+        raise HTTPException(403, f"User {user} role '{role}' not permitted to edit WBDs")
+    return user
+
+
+# ---------------------------------------------------------------------------
+# Editable child-table schemas
+# ---------------------------------------------------------------------------
+from pydantic import BaseModel
+from typing import List, Any
+
+class CasingRow(BaseModel):
+    casing_type: Optional[str] = None
+    size: Optional[str] = None
+    weight: Optional[str] = None
+    grade: Optional[str] = None
+    set_depth: Optional[str] = None
+    hole_size: Optional[str] = None
+    cement_sacks: Optional[str] = None
+    toc: Optional[str] = None
+    circ_to_surface: Optional[str] = None
+    notes: Optional[str] = None
+
+class PerfRow(BaseModel):
+    top_depth: Optional[str] = None
+    bottom_depth: Optional[str] = None
+    spf: Optional[str] = None
+    zone: Optional[str] = None
+    perf_date: Optional[str] = None
+    is_squeezed: Optional[bool] = None
+    squeeze_date: Optional[str] = None
+    notes: Optional[str] = None
+
+class PlugRow(BaseModel):
+    plug_type: Optional[str] = None
+    depth: Optional[str] = None
+    toc: Optional[str] = None
+    cement_sacks: Optional[str] = None
+    notes: Optional[str] = None
+
+class FormationTopRow(BaseModel):
+    formation_name: Optional[str] = None
+    depth: Optional[str] = None
+
+class TubingRow(BaseModel):
+    description: Optional[str] = None
+    depth: Optional[str] = None
+    joints: Optional[str] = None
+    notes: Optional[str] = None
+
+class RodRow(BaseModel):
+    description: Optional[str] = None
+    count: Optional[str] = None
+    length: Optional[str] = None
+    depth: Optional[str] = None
+    notes: Optional[str] = None
+
+class VersionMeta(BaseModel):
+    wbd_date: Optional[str] = None
+    status: Optional[str] = None
+    td: Optional[str] = None
+    pbtd: Optional[str] = None
+
+class WbdEditPayload(BaseModel):
+    meta: VersionMeta
+    casing: List[CasingRow] = []
+    perforations: List[PerfRow] = []
+    plugs: List[PlugRow] = []
+    formation_tops: List[FormationTopRow] = []
+    tubing: List[TubingRow] = []
+    rods: List[RodRow] = []
+
+class NewVersionRequest(BaseModel):
+    short: str
+    clone_from_wbd_id: Optional[int] = None  # if set, copy child rows from this version
+    meta: VersionMeta
+
+
+def _next_id(cur, table, pk):
+    cur.execute(f"SELECT ISNULL(MAX({pk}), 0) + 1 FROM dbo.{table}")
+    return cur.fetchone()[0]
+
+
+@app.put("/wbd/version/{wbd_id}")
+def edit_wbd_version(wbd_id: int, payload: WbdEditPayload, user: str = Depends(get_editor)):
+    """Update a WBD version (metadata + replace all child rows)."""
+    conn = get_ops_conn()
+    cur = conn.cursor()
+    # Verify version exists
+    cur.execute("SELECT well_id FROM dbo.wbd_versions WHERE wbd_id = ?", wbd_id)
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, f"WBD version {wbd_id} not found")
+    well_id = row[0]
+
+    # Update metadata
+    m = payload.meta
+    cur.execute(
+        "UPDATE dbo.wbd_versions SET wbd_date=?, status=?, td=?, pbtd=?, data_extracted=1 WHERE wbd_id=?",
+        m.wbd_date, m.status, m.td, m.pbtd, wbd_id
+    )
+
+    # Replace child rows: delete + reinsert
+    def replace(table, pk, rows, fields):
+        cur.execute(f"DELETE FROM dbo.{table} WHERE wbd_id = ?", wbd_id)
+        if not rows: return
+        nid = _next_id(cur, table, pk)
+        cols = ",".join([pk, "well_id", "wbd_id"] + fields)
+        placeholders = ",".join(["?"] * (3 + len(fields)))
+        sql = f"INSERT INTO dbo.{table} ({cols}) VALUES ({placeholders})"
+        for r in rows:
+            d = r.dict()
+            params = [nid, well_id, wbd_id] + [d.get(f) for f in fields]
+            cur.execute(sql, *params)
+            nid += 1
+
+    replace("wbd_casing",         "casing_id", payload.casing,
+            ["casing_type","size","weight","grade","set_depth","hole_size","cement_sacks","toc","circ_to_surface","notes"])
+    replace("wbd_perforations",   "perf_id",   payload.perforations,
+            ["top_depth","bottom_depth","spf","zone","perf_date","is_squeezed","squeeze_date","notes"])
+    replace("wbd_plugs",          "plug_id",   payload.plugs,
+            ["plug_type","depth","toc","cement_sacks","notes"])
+    replace("wbd_formation_tops", "top_id",    payload.formation_tops,
+            ["formation_name","depth"])
+    replace("wbd_tubing",         "tubing_id", payload.tubing,
+            ["description","depth","joints","notes"])
+    replace("wbd_rods",           "rod_id",    payload.rods,
+            ["description","count","length","depth","notes"])
+
+    conn.commit()
+    conn.close()
+    log.info("WBD %d edited by %s", wbd_id, user)
+    return {"ok": True, "wbd_id": wbd_id, "edited_by": user}
+
+
+@app.post("/wbd/version")
+def create_wbd_version(req: NewVersionRequest, user: str = Depends(get_editor)):
+    """Create a new WBD version. If clone_from_wbd_id is set, copy child rows."""
+    conn = get_ops_conn()
+    cur = conn.cursor()
+
+    # Resolve well_id from short name
+    short_to_wid = _master_short_to_well_id(cur)
+    well_id = short_to_wid.get(req.short)
+    if well_id is None:
+        # Could create a wbd_wells row, but for now require it to exist
+        conn.close()
+        raise HTTPException(404, f"Well '{req.short}' not found in wbd_wells; add it manually first")
+
+    new_id = _next_id(cur, "wbd_versions", "wbd_id")
+    m = req.meta
+    cur.execute(
+        "INSERT INTO dbo.wbd_versions (wbd_id, well_id, wbd_date, status, source_file, file_format, sheet_name, td, pbtd, data_extracted) "
+        "VALUES (?, ?, ?, ?, NULL, 'manual', NULL, ?, ?, 1)",
+        new_id, well_id, m.wbd_date, m.status, m.td, m.pbtd
+    )
+
+    # Optionally clone child tables
+    if req.clone_from_wbd_id:
+        for table, pk, fields in [
+            ("wbd_casing",         "casing_id", ["casing_type","size","weight","grade","set_depth","hole_size","cement_sacks","toc","circ_to_surface","notes"]),
+            ("wbd_perforations",   "perf_id",   ["top_depth","bottom_depth","spf","zone","perf_date","is_squeezed","squeeze_date","notes"]),
+            ("wbd_plugs",          "plug_id",   ["plug_type","depth","toc","cement_sacks","notes"]),
+            ("wbd_formation_tops", "top_id",    ["formation_name","depth"]),
+            ("wbd_tubing",         "tubing_id", ["description","depth","joints","notes"]),
+            ("wbd_rods",           "rod_id",    ["description","count","length","depth","notes"]),
+        ]:
+            cur.execute(f"SELECT {','.join(fields)} FROM dbo.{table} WHERE wbd_id = ?", req.clone_from_wbd_id)
+            src_rows = cur.fetchall()
+            if not src_rows: continue
+            nid = _next_id(cur, table, pk)
+            cols = ",".join([pk, "well_id", "wbd_id"] + fields)
+            placeholders = ",".join(["?"] * (3 + len(fields)))
+            for r in src_rows:
+                params = [nid, well_id, new_id] + list(r)
+                cur.execute(f"INSERT INTO dbo.{table} ({cols}) VALUES ({placeholders})", *params)
+                nid += 1
+
+    conn.commit()
+    conn.close()
+    log.info("WBD version %d created (clone_from=%s) by %s", new_id, req.clone_from_wbd_id, user)
+    return {"ok": True, "wbd_id": new_id, "created_by": user}
+
+
+@app.delete("/wbd/version/{wbd_id}")
+def soft_delete_wbd_version(wbd_id: int, user: str = Depends(get_editor)):
+    """Soft delete: flip data_extracted = 0 so the version disappears from UI but stays in DB."""
+    conn = get_ops_conn()
+    cur = conn.cursor()
+    cur.execute("UPDATE dbo.wbd_versions SET data_extracted = 0 WHERE wbd_id = ?", wbd_id)
+    if cur.rowcount == 0:
+        conn.close()
+        raise HTTPException(404, f"WBD version {wbd_id} not found")
+    conn.commit()
+    conn.close()
+    log.info("WBD %d soft-deleted by %s", wbd_id, user)
+    return {"ok": True}
 
 
 # ---------------------------------------------------------------------------
