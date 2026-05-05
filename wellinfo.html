@@ -392,34 +392,50 @@ function onVersionChange() {
 }
 
 // For a given timeline pick, find the corresponding schematic and equipment sources.
-// Schematic: most recent schematic with date <= picked.date (fallback: any schematic with data)
-// Equipment: most recent workover event with date <= picked.date (or null if none)
+//
+// Workover picked: equipment = picked event; schematic = most recent schematic with data
+//                  whose date <= picked.date (time-travel view of structural state)
+// Schematic picked: schematic = picked; equipment = LATEST workover overall (unfiltered)
+//                   so the user always sees the most recent rod/tubing/pump state.
+//                   Rationale: the schematic is the structural drawing; equipment changes
+//                   on every workover and the most useful default is "current".
 function resolveSources(timeline, idx) {
   var picked = timeline[idx];
   if (!picked) return { schematic: null, workover: null };
-  var pDate = picked.date || '9999';
   var schematic = null, workover = null;
-  for (var i = 0; i < timeline.length; i++) {
-    var t = timeline[i];
-    var d = t.date || '0';
-    if (d <= pDate) {
-      if (t.kind === 'schematic' && !schematic) {
-        var s = t.data;
-        var hasData = (s.csg && s.csg.length) || (s.pf && s.pf.length) || s.td || s.pb;
-        if (hasData) schematic = s;
-      }
-      if (t.kind === 'workover' && !workover) workover = t.data;
+
+  function findSchematic(maxDate) {
+    for (var i = 0; i < timeline.length; i++) {
+      var t = timeline[i];
+      if (t.kind !== 'schematic') continue;
+      if (maxDate && (t.date || '9999') > maxDate) continue;
+      var s = t.data;
+      var hasData = (s.csg && s.csg.length) || (s.pf && s.pf.length) || s.td || s.pb;
+      if (hasData) return s;
     }
+    return null;
   }
-  // Fallback: any schematic with data, even if newer than picked
-  if (!schematic) {
-    for (var j = 0; j < timeline.length; j++) {
-      if (timeline[j].kind === 'schematic') {
-        var s2 = timeline[j].data;
-        var hasData2 = (s2.csg && s2.csg.length) || (s2.pf && s2.pf.length) || s2.td || s2.pb;
-        if (hasData2) { schematic = s2; break; }
-      }
+  function findLatestWorkover() {
+    for (var i = 0; i < timeline.length; i++) {
+      if (timeline[i].kind === 'workover') return timeline[i].data; // timeline is desc by date
     }
+    return null;
+  }
+  function findWorkoverAtOrBefore(maxDate) {
+    for (var i = 0; i < timeline.length; i++) {
+      var t = timeline[i];
+      if (t.kind !== 'workover') continue;
+      if (!maxDate || (t.date || '0') <= maxDate) return t.data;
+    }
+    return null;
+  }
+
+  if (picked.kind === 'workover') {
+    workover = picked.data;
+    schematic = findSchematic(picked.date) || findSchematic(null);
+  } else {
+    schematic = picked.data;
+    workover = findLatestWorkover();
   }
   return { schematic: schematic, workover: workover, picked: picked };
 }
