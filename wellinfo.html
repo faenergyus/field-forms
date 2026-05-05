@@ -411,6 +411,9 @@ function renderWellInfo(name) {
   currentVersionIdx = timeline.length > 0 ? 0 : 0;
   if (timeline.length > 0) sel.value = currentVersionIdx;
   renderVersion();
+  // Equipment + Job History don't depend on WBD version — render once per well
+  renderEquipmentOverTime(w);
+  renderJobHistoryFull(w);
   document.getElementById('wellDisplay').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -490,8 +493,6 @@ function renderVersion() {
   wbd._workover = wo;
   wbd._picked = sources.picked;
   drawWBD(wbd);
-  renderEquipment(w, sources);
-  renderJobHistory(w, sources);
 }
 
 function switchTab(name) {
@@ -505,7 +506,111 @@ function switchTab(name) {
   }
 }
 
-function renderEquipment(w, sources) {
+// Build a wide time-series table: rows = equipment fields, columns = workover dates (left-to-right newest first)
+function renderEquipmentOverTime(w) {
+  var div = document.getElementById('equipmentContent');
+  if (!div) return;
+  var events = (w.events || []).slice().sort(function(a, b) {
+    return (b.event_date || '0').localeCompare(a.event_date || '0');
+  });
+
+  if (!events.length) {
+    div.innerHTML = '<div class="eq-empty">No workover history on file.</div>'
+      + renderSchematicEquipmentTables(currentSchematicForFallback(w));
+    return;
+  }
+
+  // Field groups for the time-series table
+  var groups = [
+    { title: 'Pump', fields: [
+      ['Size',           'pump_size'],
+      ['Type',           'pump_type'],
+      ['New?',           'pump_new'],
+      ['Pumping Unit',   'pumping_unit'],
+      ['SPM',            'spm'],
+    ]},
+    { title: 'Tubing', fields: [
+      ['2-7/8" jts',           'tbg_count_278'],
+      ['2-7/8" coated',         'tbg_count_278_coated'],
+      ['2-3/8" jts',           'tbg_count_238'],
+      ['2-3/8" coated',         'tbg_count_238_coated'],
+      ['Coating',               'tbg_coating'],
+      ['SN depth',              'sn_depth'],
+      ['TAC depth',             'tac_depth'],
+    ]},
+    { title: 'Rods', fields: [
+      ['1"',         'rods_1'],
+      ['7/8"',       'rods_78'],
+      ['3/4"',       'rods_34'],
+      ['5/8"',       'rods_58'],
+      ['Fiberglass', 'rods_fg'],
+      ['Sinker',     'rods_sinker'],
+      ['Type',       'rod_type'],
+      ['New couplers', 'rod_couplers_new'],
+    ]},
+    { title: 'Job', fields: [
+      ['Failure cause',     'failure_cause'],
+      ['Failed component',  'failed_component'],
+      ['Corrosion',         'corrosion'],
+      ['Pull tubing',       'pull_tubing'],
+      ['Cleanout',          'cleanout'],
+      ['Acid',              'acid'],
+      ['Enduralloy',        'enduralloy'],
+    ]},
+  ];
+
+  function fmtVal(v) {
+    if (v === null || v === undefined || v === '') return '<span style="color:#bbb">·</span>';
+    if (v === '<Empty>') return '<span style="color:#bbb">·</span>';
+    return esc(v);
+  }
+
+  var thead = '<tr><th style="position:sticky;left:0;background:#f0f4f0;z-index:2;">Field</th>';
+  events.forEach(function(e) {
+    thead += '<th style="white-space:nowrap;text-align:center;">' + esc(e.event_date || '') + '</th>';
+  });
+  thead += '</tr>';
+
+  var bodyHtml = '';
+  groups.forEach(function(g) {
+    bodyHtml += '<tr><td colspan="' + (events.length + 1) + '" style="background:#e8f0e8;font-weight:700;color:#1c4a1c;padding:6px 10px;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em;">' + esc(g.title) + '</td></tr>';
+    g.fields.forEach(function(f) {
+      var label = f[0], key = f[1];
+      // Skip rows that are empty across all events
+      var anyValue = events.some(function(e) {
+        var v = e[key];
+        return v !== null && v !== undefined && v !== '' && v !== '<Empty>';
+      });
+      if (!anyValue) return;
+      bodyHtml += '<tr><td class="eq-label" style="position:sticky;left:0;background:#fff;">' + esc(label) + '</td>';
+      events.forEach(function(e) {
+        bodyHtml += '<td style="text-align:center;">' + fmtVal(e[key]) + '</td>';
+      });
+      bodyHtml += '</tr>';
+    });
+  });
+
+  div.innerHTML = '<div class="eq-source">All ' + events.length + ' workover' + (events.length !== 1 ? 's' : '') + ' on file. Newest on the left.</div>'
+    + '<div style="overflow-x:auto;border:1px solid #c0c0c0;background:#fff;">'
+    + '<table class="eq-table" style="margin:0;border:none;">'
+    + '<thead>' + thead + '</thead>'
+    + '<tbody>' + bodyHtml + '</tbody>'
+    + '</table></div>';
+}
+
+function currentSchematicForFallback(w) {
+  for (var i = 0; i < (w._timeline || []).length; i++) {
+    var t = w._timeline[i];
+    if (t.kind === 'schematic') {
+      var s = t.data;
+      if ((s.tb && s.tb.length) || (s.rd && s.rd.length)) return s;
+    }
+  }
+  return {};
+}
+
+// Old per-version equipment renderer kept for reference but no longer called
+function renderEquipment_OLD(w, sources) {
   var div = document.getElementById('equipmentContent');
   if (!div) return;
   var wo = sources.workover;
@@ -617,7 +722,8 @@ function renderSchematicEquipmentTables(sch) {
   return html;
 }
 
-function renderJobHistory(w, sources) {
+// Full job history — shows all workovers, doesn't depend on WBD version pick
+function renderJobHistoryFull(w) {
   var div = document.getElementById('jobHistory');
   if (!div) return;
   var allEvents = w.events || [];
@@ -625,19 +731,10 @@ function renderJobHistory(w, sources) {
     div.innerHTML = '<h3>Job History</h3><div class="job-empty">No workover history on file.</div>';
     return;
   }
-  // If picked is a workover: filter to that date and earlier (time-travel view)
-  // Else (schematic or no pick): show all workovers (most recent first)
-  var pickedKind = sources.picked && sources.picked.kind;
-  var pickedDate = sources.picked && sources.picked.date ? sources.picked.date : '9999-99-99';
-  var visible;
-  if (pickedKind === 'workover') {
-    visible = allEvents.filter(function(e) { return (e.event_date || '0') <= pickedDate; });
-  } else {
-    visible = allEvents.slice();
-  }
-  visible.sort(function(a, b) { return (b.event_date || '0').localeCompare(a.event_date || '0'); });
-
-  var pickedJobKey = (sources.picked && sources.picked.kind === 'workover' && sources.workover) ? sources.workover.job_xkey : null;
+  var visible = allEvents.slice().sort(function(a, b) {
+    return (b.event_date || '0').localeCompare(a.event_date || '0');
+  });
+  var pickedJobKey = null;
   var rows = '';
   visible.forEach(function(e) {
     var isCurrent = e.job_xkey === pickedJobKey;
@@ -673,8 +770,7 @@ function renderJobHistory(w, sources) {
          + '</tr>';
   });
 
-  var asOf = (pickedKind === 'workover') ? pickedDate : 'present';
-  div.innerHTML = '<h3>Job History — ' + visible.length + ' workover' + (visible.length !== 1 ? 's' : '') + ' through ' + esc(asOf) + '</h3>'
+  div.innerHTML = '<h3>Job History — ' + visible.length + ' workover' + (visible.length !== 1 ? 's' : '') + '</h3>'
     + '<table class="job-table">'
     + '<thead><tr><th>Date</th><th>Cause / AFE</th><th>Pump</th><th>Changes</th><th>Summary</th></tr></thead>'
     + '<tbody>' + rows + '</tbody></table>';
