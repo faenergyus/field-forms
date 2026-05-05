@@ -623,8 +623,33 @@ def wbd_well(short: str):
         "lt": rec['_LeaseType'] or '',
         "wbd_link": rec['WBD Link'] or '', "wbd_pdf": rec['WBD_PDFLINK'] or '',
         "well_link": rec['WellFileLink'] or '',
-        "v": [],
+        "v": [],            # schematic versions (casings/perfs/plugs/...)
+        "events": [],       # workover events (rod/tubing/pump from Job Detail)
     }
+
+    # Fetch workover events (independent of whether well_id matches in wbd_wells)
+    cur.execute("""
+        SELECT event_date, start_date, afe, failure_cause, secondary_cause,
+               failed_component, component_detail, failure_analysis,
+               pumping_unit, spm, pump_size, pump_type, pump_new,
+               corrosion, pull_tubing, cleanout, acid, enduralloy, tbg_coating,
+               tbg_count_278, tbg_count_278_coated, tbg_count_238, tbg_count_238_coated,
+               tbg_replaced_278, tbg_replaced_278_coated, tbg_replaced_238, tbg_replaced_238_coated,
+               sn_depth, tac_depth,
+               rods_1, rods_78, rods_34, rods_58, rods_fg, rods_sinker,
+               rods_replaced_1, rods_replaced_78, rods_replaced_34, rods_replaced_58, rods_replaced_fg, rods_replaced_sinker,
+               rod_couplers_new, rod_type, summary, job_xkey
+        FROM dbo.wbd_workover_events
+        WHERE sn = ?
+        ORDER BY event_date DESC
+    """, short)
+    ev_cols = [d[0] for d in cur.description]
+    for r in cur.fetchall():
+        e = dict(zip(ev_cols, r))
+        # Normalize dates / nulls
+        e["event_date"] = str(e["event_date"])[:10] if e.get("event_date") else None
+        e["start_date"] = str(e["start_date"])[:10] if e.get("start_date") else None
+        well["events"].append(e)
 
     if wid is None:
         conn.close()

@@ -311,49 +311,64 @@ function casingCard(title, arr, color) {
 var currentWell = null;
 var currentVersionIdx = 0;
 
+// Merged timeline: schematics + workover events sorted by date desc
+function buildTimeline(w) {
+  var items = [];
+  (w.v || []).forEach(function(s, i) {
+    items.push({kind: 'schematic', idx: i, date: s.dt || '', label: '📋 ' + (s.st || 'Version') + (s.dt ? ' (' + s.dt + ')' : ''), data: s});
+  });
+  (w.events || []).forEach(function(e, i) {
+    var causeStr = e.failure_cause || '';
+    var compStr = e.failed_component ? ' — ' + e.failed_component : '';
+    var label = '⚙ Workover ' + (e.event_date || '') + (causeStr ? ' (' + causeStr + compStr + ')' : '');
+    items.push({kind: 'workover', idx: i, date: e.event_date || '', label: label, data: e});
+  });
+  items.sort(function(a, b) { return (b.date || '0').localeCompare(a.date || '0'); });
+  return items;
+}
+
 function renderWellInfo(name) {
   var w = WELL_DATA[name];
-  if (!w) { w = {v:[]}; }
+  if (!w) { w = {v:[], events:[]}; }
   currentWell = w;
   currentWell._name = name;
+  currentWell._timeline = buildTimeline(w);
   document.getElementById('wellDisplay').style.display = 'block';
   document.getElementById('wellHeader').style.display = 'none';
   document.getElementById('wellGeneral').innerHTML = '';
   document.getElementById('dataCards').innerHTML = '';
 
-  // Version selector — data pre-filtered upstream (data_extracted=1 only)
-  var versions = w.v || [];
+  // Version selector populates from merged timeline
+  var timeline = currentWell._timeline;
   var sel = document.getElementById('versionSelect');
   var vDiv = document.getElementById('versionSelector');
-  if (versions.length > 1) {
+  if (timeline.length > 1) {
     vDiv.style.display = 'block';
     sel.innerHTML = '';
-    for (var i = 0; i < versions.length; i++) {
-      var vr = versions[i];
-      var label = (vr.st || 'Version') + (vr.dt ? ' (' + vr.dt + ')' : '');
+    for (var i = 0; i < timeline.length; i++) {
       var opt = document.createElement('option');
       opt.value = i;
-      opt.textContent = label;
+      opt.textContent = timeline[i].label;
       sel.appendChild(opt);
     }
-    sel.value = 0;
+  } else if (timeline.length === 1) {
+    vDiv.style.display = 'block';
+    sel.innerHTML = '<option>' + timeline[0].label + '</option>';
   } else {
-    vDiv.style.display = versions.length === 1 ? 'block' : 'none';
-    if (versions.length === 1) {
-      sel.innerHTML = '<option>' + ((versions[0].st||'') + ' ' + (versions[0].dt||'')).trim() + '</option>';
-    }
+    vDiv.style.display = 'none';
   }
 
-  // Default to first version that has actual data (casings, perfs, or TD/PBTD)
+  // Default: first item with actual schematic data, otherwise first workover with data
   currentVersionIdx = 0;
-  for (var vi = 0; vi < versions.length; vi++) {
-    var vr = versions[vi];
-    var hasData = (vr.csg && vr.csg.length) || (vr.pf && vr.pf.length) || vr.td || vr.pb;
-    if (hasData) { currentVersionIdx = vi; break; }
+  for (var ti = 0; ti < timeline.length; ti++) {
+    var t = timeline[ti];
+    if (t.kind === 'schematic') {
+      var s = t.data;
+      var hasData = (s.csg && s.csg.length) || (s.pf && s.pf.length) || s.td || s.pb;
+      if (hasData) { currentVersionIdx = ti; break; }
+    }
   }
-  if (versions.length > 0) {
-    document.getElementById('versionSelect').value = currentVersionIdx;
-  }
+  if (timeline.length > 0) sel.value = currentVersionIdx;
   renderVersion();
   document.getElementById('wellDisplay').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -363,12 +378,49 @@ function onVersionChange() {
   renderVersion();
 }
 
+// For a given timeline pick, find the corresponding schematic and equipment sources.
+// Schematic: most recent schematic with date <= picked.date (fallback: any schematic with data)
+// Equipment: most recent workover event with date <= picked.date (or null if none)
+function resolveSources(timeline, idx) {
+  var picked = timeline[idx];
+  if (!picked) return { schematic: null, workover: null };
+  var pDate = picked.date || '9999';
+  var schematic = null, workover = null;
+  for (var i = 0; i < timeline.length; i++) {
+    var t = timeline[i];
+    var d = t.date || '0';
+    if (d <= pDate) {
+      if (t.kind === 'schematic' && !schematic) {
+        var s = t.data;
+        var hasData = (s.csg && s.csg.length) || (s.pf && s.pf.length) || s.td || s.pb;
+        if (hasData) schematic = s;
+      }
+      if (t.kind === 'workover' && !workover) workover = t.data;
+    }
+  }
+  // Fallback: any schematic with data, even if newer than picked
+  if (!schematic) {
+    for (var j = 0; j < timeline.length; j++) {
+      if (timeline[j].kind === 'schematic') {
+        var s2 = timeline[j].data;
+        var hasData2 = (s2.csg && s2.csg.length) || (s2.pf && s2.pf.length) || s2.td || s2.pb;
+        if (hasData2) { schematic = s2; break; }
+      }
+    }
+  }
+  return { schematic: schematic, workover: workover, picked: picked };
+}
+
 function renderVersion() {
   var w = currentWell;
   if (!w) return;
-  var ver = (w.v && w.v[currentVersionIdx]) || {};
-  // Merge version data into w for drawWBD
-  var wbd = Object.assign({}, w, ver);
+  var sources = resolveSources(w._timeline, currentVersionIdx);
+  var sch = sources.schematic || {};
+  var wo = sources.workover;
+  // Build wbd object: header info from w + casings/perfs/plugs/formation/tubing/rods from schematic + (override) equipment from workover if available
+  var wbd = Object.assign({}, w, sch);
+  wbd._workover = wo;
+  wbd._picked = sources.picked;
   drawWBD(wbd);
 }
 
@@ -699,10 +751,66 @@ function drawWBD(w) {
   }
 
   // ── Equipment block on right ──
-  if (tubingDesc || eotDepth || rodSections.length || pumpDepth) {
-    rY += 6;
-    s += '<line x1="' + rX + '" y1="' + rY + '" x2="' + (rX + 220) + '" y2="' + rY + '" stroke="#000" stroke-width="0.6"/>';
-    rY += 12;
+  // Prefer workover data (from Job Detail) when available — that's the authoritative
+  // post-job state. Else fall back to inferred-from-arrays data above.
+  var wo = w._workover;
+  if (wo) {
+    // Override snDepth from workover for diagram tick mark
+    var woSn = parseDepthLoose(wo.sn_depth);
+    if (woSn) snDepth = woSn;
+    // Pump depth: use SN depth as proxy (pump sits just below SN)
+    if (woSn) pumpDepth = woSn + 8;
+  }
+  rY += 6;
+  s += '<line x1="' + rX + '" y1="' + rY + '" x2="' + (rX + 220) + '" y2="' + rY + '" stroke="#000" stroke-width="0.6"/>';
+  rY += 12;
+  // Source banner
+  if (wo) {
+    s += '<text x="' + rX + '" y="' + rY + '" font-size="8" font-style="italic" fill="#666">From workover ' + esc(wo.event_date || '') + '</text>';
+    rY += 11;
+  }
+
+  if (wo) {
+    // Tubing block from workover counts
+    s += '<text x="' + rX + '" y="' + rY + '" font-size="10" font-weight="700" fill="#000" font-style="italic" text-decoration="underline">Tubing</text>';
+    rY += 13;
+    var tbgLines = [];
+    if (wo.tbg_count_278) tbgLines.push('2-7/8" : ' + wo.tbg_count_278 + ' jts' + (wo.tbg_count_278_coated ? ' (' + wo.tbg_count_278_coated + ' coated)' : ''));
+    if (wo.tbg_count_238) tbgLines.push('2-3/8" : ' + wo.tbg_count_238 + ' jts' + (wo.tbg_count_238_coated ? ' (' + wo.tbg_count_238_coated + ' coated)' : ''));
+    if (wo.tbg_coating) tbgLines.push('Coating: ' + wo.tbg_coating);
+    if (wo.sn_depth) tbgLines.push('SN: ' + Math.round(parseFloat(wo.sn_depth)).toLocaleString() + "'");
+    if (wo.tac_depth) tbgLines.push('TAC: ' + Math.round(parseFloat(wo.tac_depth)).toLocaleString() + "'");
+    if (!tbgLines.length) tbgLines.push('—');
+    tbgLines.forEach(function(t) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">' + esc(t) + '</text>'; rY += 11; });
+    rY += 4;
+    // Rods block from workover counts
+    s += '<text x="' + rX + '" y="' + rY + '" font-size="10" font-weight="700" fill="#000" font-style="italic" text-decoration="underline">Rods</text>';
+    rY += 13;
+    var rodLines = [];
+    if (wo.rods_1)      rodLines.push('1"    : ' + wo.rods_1 + ' ea');
+    if (wo.rods_78)     rodLines.push('7/8"  : ' + wo.rods_78 + ' ea');
+    if (wo.rods_34)     rodLines.push('3/4"  : ' + wo.rods_34 + ' ea');
+    if (wo.rods_58)     rodLines.push('5/8"  : ' + wo.rods_58 + ' ea');
+    if (wo.rods_fg)     rodLines.push('FG    : ' + wo.rods_fg + ' ea');
+    if (wo.rods_sinker) rodLines.push('Sinker: ' + wo.rods_sinker + ' ea');
+    if (wo.rod_type)    rodLines.push('Type  : ' + wo.rod_type);
+    if (!rodLines.length) rodLines.push('—');
+    rodLines.forEach(function(t) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">' + esc(t) + '</text>'; rY += 11; });
+    rY += 4;
+    // Pump block from workover
+    s += '<text x="' + rX + '" y="' + rY + '" font-size="10" font-weight="700" fill="#000" font-style="italic" text-decoration="underline">Pump</text>';
+    rY += 13;
+    if (wo.pump_size) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">Size: ' + esc(wo.pump_size) + '</text>'; rY += 11; }
+    if (wo.pump_type) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">Type: ' + esc(wo.pump_type) + '</text>'; rY += 11; }
+    if (wo.pumping_unit) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">Unit: ' + esc(wo.pumping_unit) + '</text>'; rY += 11; }
+    if (wo.spm) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">SPM:  ' + esc(wo.spm) + '</text>'; rY += 11; }
+    if (wo.failure_cause || wo.failed_component) {
+      rY += 4;
+      s += '<text x="' + rX + '" y="' + rY + '" font-size="8" font-style="italic" fill="#900">Failure: ' + esc((wo.failure_cause || '') + (wo.failed_component ? ' / ' + wo.failed_component : '')) + '</text>';
+      rY += 11;
+    }
+  } else if (tubingDesc || eotDepth || rodSections.length || pumpDepth) {
+    // Legacy: inferred from xlsx tb/rd arrays
     s += '<text x="' + rX + '" y="' + rY + '" font-size="10" font-weight="700" fill="#000" font-style="italic" text-decoration="underline">Tubing</text>';
     rY += 13;
     if (tubingDesc) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">' + esc(tubingDesc) + '</text>'; rY += 11; }
