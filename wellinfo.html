@@ -1367,36 +1367,36 @@ function renderAllTables(w) {
   html += tableHTML('Tubing (schematic detail)', ['Version','Description','Depth','Joints','Notes'], tbRows);
 
   // ── Tubing — workover counts (skip workovers with no tubing data; editable in edit mode)
-  function woCell(xkey, field, val) {
-    if (TABLES_EDIT_MODE && xkey) {
-      return '<td><input type="text" value="' + esc(val == null ? '' : val) + '" oninput="woOnChange(\''+xkey.replace(/'/g,"\\'")+'\',\''+field+'\',event)"></td>';
-    }
-    return '<td>' + fmt(val) + '</td>';
-  }
-  function woRow(t, fields) {
-    var wo = TABLES_EDIT_MODE && t.data.job_xkey ? WORKOVER_BUFFER[t.data.job_xkey] : t.data;
-    if (!wo) wo = t.data;
-    var html = '<tr><td class="eq-label" style="position:sticky;left:0;background:#fff;white-space:nowrap;">' + esc(vlabel(t)) + '</td>';
-    fields.forEach(function(f){ html += woCell(wo.job_xkey, f, wo[f]); });
-    html += '</tr>';
-    return html;
-  }
+  // Workover tables are always read-only on this page. The data comes from dbo.[Job Detail],
+  // populated by the workover-report sync (update_job_detail.py → SharePoint → SQL).
+  // Edits to those values must happen in the workover report itself, not here.
+  var WO_READONLY_TIP = 'Read-only — workover data is sourced from the SharePoint workover report. Edit there.';
   function workoverTableHTML(title, fields, headers, filterKeys) {
-    var html = '<h3>' + esc(title) + '</h3>'
-             + '<div style="overflow-x:auto;border:1px solid #c0c0c0;background:#fff;margin-bottom:14px;">'
-             + '<table class="eq-table" style="margin:0;border:none;"><thead><tr>'
-             + '<th style="position:sticky;left:0;background:#f0f4f0;z-index:2;">Version</th>';
-    headers.forEach(function(h){ html += '<th>' + esc(h) + '</th>'; });
-    html += '</tr></thead><tbody>';
-    var any = false;
+    var rows = [];
     workovers.forEach(function(t){
       var wo = t.data;
-      // In edit mode: include all workovers (so engineer can fill in blanks). Read-only: only those with data.
-      if (!TABLES_EDIT_MODE && !anyNonEmpty(wo, filterKeys)) return;
-      any = true;
-      html += woRow(t, fields);
+      if (!anyNonEmpty(wo, filterKeys)) return;
+      var row = [vlabel(t)];
+      fields.forEach(function(f){ row.push(wo[f]); });
+      rows.push(row);
     });
-    if (!any) return '';
+    if (!rows.length) return '';
+    var displayHeaders = ['Version'].concat(headers);
+    // Annotate H3 + each row with the read-only tooltip
+    var html = '<h3 title="' + esc(WO_READONLY_TIP) + '" style="cursor:help;">' + esc(title) + ' <span style="font-size:0.7rem;color:#888;font-weight:normal;">🔒 read-only</span></h3>'
+             + '<div style="overflow-x:auto;border:1px solid #c0c0c0;background:#fff;margin-bottom:14px;" title="' + esc(WO_READONLY_TIP) + '">'
+             + '<table class="eq-table" style="margin:0;border:none;"><thead><tr>';
+    displayHeaders.forEach(function(h, i){
+      html += '<th' + (i===0 ? ' style="position:sticky;left:0;background:#f0f4f0;z-index:2;"' : '') + '>' + esc(h) + '</th>';
+    });
+    html += '</tr></thead><tbody>';
+    rows.forEach(function(r){
+      html += '<tr title="' + esc(WO_READONLY_TIP) + '">';
+      r.forEach(function(c, i){
+        html += '<td' + (i===0 ? ' class="eq-label" style="position:sticky;left:0;background:#fff;white-space:nowrap;"' : '') + '>' + (i===0 ? esc(c) : fmt(c)) + '</td>';
+      });
+      html += '</tr>';
+    });
     html += '</tbody></table></div>';
     return html;
   }
