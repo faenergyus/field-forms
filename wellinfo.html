@@ -1698,11 +1698,10 @@ function drawWBD(w) {
     if (rodBot) {
       s += '<line x1="' + cx + '" y1="' + gy + '" x2="' + cx + '" y2="' + rodBot + '" stroke="#000" stroke-width="0.5" stroke-dasharray="2,2"/>';
     }
-    // SN tick mark
+    // SN tick mark (no depth label — that's in the equipment table)
     if (snDepth) {
       var snY = dToY(snDepth);
       s += '<line x1="' + (cx-6) + '" y1="' + snY + '" x2="' + (cx+6) + '" y2="' + snY + '" stroke="#000" stroke-width="1.2"/>';
-      s += '<text x="' + (cx-9) + '" y="' + (snY+3) + '" text-anchor="end" font-size="7" fill="#000">SN ' + Math.round(snDepth) + "'</text>";
     }
     // Pump — small rectangle with X
     if (pumpY) {
