@@ -972,7 +972,9 @@ var TABLES_EDIT_MODE = false;
 // Per-version buffer of full schematic data, edited in place.
 // Shape: { [wbd_id]: { meta:{...}, casing:[...], perforations:[...], plugs:[...], formation_tops:[...], tubing:[...], rods:[...] } }
 var TABLES_BUFFER = {};
-var TABLES_DIRTY = {};   // {wbd_id: true} for versions touched
+var TABLES_DIRTY = {};        // {wbd_id: true} for schematic versions touched
+var WORKOVER_BUFFER = {};     // {xkey: {field: value, ...}}
+var WORKOVER_DIRTY  = {};     // {xkey: true}
 
 // Field maps: short JSON keys (page) → SQL/PUT-payload field names
 var TBL_FIELDS = {
@@ -1052,9 +1054,28 @@ function initTablesBuffer() {
   });
 }
 
+function initWorkoverBuffer() {
+  WORKOVER_BUFFER = {};
+  WORKOVER_DIRTY = {};
+  ((currentWell && currentWell.events) || []).forEach(function(e){
+    if (!e.job_xkey) return;
+    var snap = {};
+    Object.keys(e).forEach(function(k){ snap[k] = e[k]; });
+    WORKOVER_BUFFER[e.job_xkey] = snap;
+  });
+}
+
+function woOnChange(xkey, field, ev) {
+  if (!WORKOVER_BUFFER[xkey]) return;
+  var v = ev.target.value;
+  WORKOVER_BUFFER[xkey][field] = v;
+  WORKOVER_DIRTY[xkey] = true;
+}
+
 function enterTablesEditMode() {
   if (!currentWell) return;
   initTablesBuffer();
+  initWorkoverBuffer();
   TABLES_EDIT_MODE = true;
   document.getElementById('btnTablesEdit').style.display   = 'none';
   document.getElementById('btnTablesAdd').style.display    = 'none';
@@ -1067,6 +1088,8 @@ function cancelTablesEdits() {
   TABLES_EDIT_MODE = false;
   TABLES_BUFFER = {};
   TABLES_DIRTY = {};
+  WORKOVER_BUFFER = {};
+  WORKOVER_DIRTY = {};
   document.getElementById('btnTablesEdit').style.display   = 'inline-block';
   document.getElementById('btnTablesAdd').style.display    = 'inline-block';
   document.getElementById('btnTablesSave').style.display   = 'none';
@@ -1075,15 +1098,17 @@ function cancelTablesEdits() {
 }
 
 async function saveTablesEdits() {
-  var dirty = Object.keys(TABLES_DIRTY).filter(function(k){ return TABLES_DIRTY[k]; });
-  if (!dirty.length) { cancelTablesEdits(); return; }
+  var dirtySch = Object.keys(TABLES_DIRTY).filter(function(k){ return TABLES_DIRTY[k]; });
+  var dirtyWo  = Object.keys(WORKOVER_DIRTY).filter(function(k){ return WORKOVER_DIRTY[k]; });
+  if (!dirtySch.length && !dirtyWo.length) { cancelTablesEdits(); return; }
   var token = getToken();
   if (!token) { alert('Sign in again to save'); return; }
   var btn = document.getElementById('btnTablesSave');
   if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
   try {
-    for (var i = 0; i < dirty.length; i++) {
-      var wbd_id = dirty[i];
+    // 1) Schematic versions — full PUT
+    for (var i = 0; i < dirtySch.length; i++) {
+      var wbd_id = dirtySch[i];
       var ent = TABLES_BUFFER[wbd_id];
       var body = {
         meta: ent.meta,
@@ -1102,6 +1127,26 @@ async function saveTablesEdits() {
       if (!res.ok) {
         var msg = await res.text();
         alert('Save failed for version ' + wbd_id + ': ' + res.status + ' ' + msg);
+        return;
+      }
+    }
+    // 2) Workover events — partial PUT to Job Detail
+    var EDITABLE_WO_FIELDS = ['pump_size','pump_type','pump_new','pumping_unit','spm','sn_depth','tac_depth','rods_1','rods_78','rods_34','rods_58','rods_fg','rods_sinker','rod_type','rod_couplers_new','rods_replaced_1','rods_replaced_78','rods_replaced_34','rods_replaced_58','rods_replaced_fg','rods_replaced_sinker','tbg_count_278','tbg_count_278_coated','tbg_count_238','tbg_count_238_coated','tbg_replaced_278','tbg_replaced_278_coated','tbg_replaced_238','tbg_replaced_238_coated','tbg_coating','failure_cause','failed_component','corrosion','pull_tubing','cleanout','acid','enduralloy','summary'];
+    for (var i = 0; i < dirtyWo.length; i++) {
+      var xkey = dirtyWo[i];
+      var snap = WORKOVER_BUFFER[xkey];
+      var body = {};
+      EDITABLE_WO_FIELDS.forEach(function(f){
+        if (snap[f] !== undefined) body[f] = (snap[f] === '' ? null : snap[f]);
+      });
+      var res = await fetch(API_BASE + '/wbd/workover/' + encodeURIComponent(xkey), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        var msg = await res.text();
+        alert('Save failed for workover ' + xkey + ': ' + res.status + ' ' + msg);
         return;
       }
     }
@@ -1321,54 +1366,67 @@ function renderAllTables(w) {
   schems.forEach(function(t){ (t.data.tb || []).forEach(function(x){ tbRows.push([vlabel(t), x.desc, x.dp, x.jts, x.notes]); }); });
   html += tableHTML('Tubing (schematic detail)', ['Version','Description','Depth','Joints','Notes'], tbRows);
 
-  // ── Tubing — workover counts (skip workovers with no tubing data)
-  var tbgKeys = ['tbg_count_278','tbg_count_278_coated','tbg_count_238','tbg_count_238_coated','tbg_coating','sn_depth','tac_depth','tbg_replaced_278','tbg_replaced_278_coated','tbg_replaced_238','tbg_replaced_238_coated'];
-  var tbgwoRows = [];
-  workovers.forEach(function(t){
-    var wo = t.data;
-    if (!anyNonEmpty(wo, tbgKeys)) return;
-    tbgwoRows.push([vlabel(t), wo.tbg_count_278, wo.tbg_count_278_coated, wo.tbg_count_238, wo.tbg_count_238_coated, wo.tbg_coating, wo.sn_depth, wo.tac_depth, wo.tbg_replaced_278, wo.tbg_replaced_278_coated, wo.tbg_replaced_238, wo.tbg_replaced_238_coated]);
-  });
-  html += tableHTML('Tubing (workover counts)',
-    ['Version','2-7/8"','2-7/8" coated','2-3/8"','2-3/8" coated','Coating','SN depth','TAC depth','Repl 2-7/8"','Repl 2-7/8" coated','Repl 2-3/8"','Repl 2-3/8" coated'],
-    tbgwoRows);
+  // ── Tubing — workover counts (skip workovers with no tubing data; editable in edit mode)
+  function woCell(xkey, field, val) {
+    if (TABLES_EDIT_MODE && xkey) {
+      return '<td><input type="text" value="' + esc(val == null ? '' : val) + '" oninput="woOnChange(\''+xkey.replace(/'/g,"\\'")+'\',\''+field+'\',event)"></td>';
+    }
+    return '<td>' + fmt(val) + '</td>';
+  }
+  function woRow(t, fields) {
+    var wo = TABLES_EDIT_MODE && t.data.job_xkey ? WORKOVER_BUFFER[t.data.job_xkey] : t.data;
+    if (!wo) wo = t.data;
+    var html = '<tr><td class="eq-label" style="position:sticky;left:0;background:#fff;white-space:nowrap;">' + esc(vlabel(t)) + '</td>';
+    fields.forEach(function(f){ html += woCell(wo.job_xkey, f, wo[f]); });
+    html += '</tr>';
+    return html;
+  }
+  function workoverTableHTML(title, fields, headers, filterKeys) {
+    var html = '<h3>' + esc(title) + '</h3>'
+             + '<div style="overflow-x:auto;border:1px solid #c0c0c0;background:#fff;margin-bottom:14px;">'
+             + '<table class="eq-table" style="margin:0;border:none;"><thead><tr>'
+             + '<th style="position:sticky;left:0;background:#f0f4f0;z-index:2;">Version</th>';
+    headers.forEach(function(h){ html += '<th>' + esc(h) + '</th>'; });
+    html += '</tr></thead><tbody>';
+    var any = false;
+    workovers.forEach(function(t){
+      var wo = t.data;
+      // In edit mode: include all workovers (so engineer can fill in blanks). Read-only: only those with data.
+      if (!TABLES_EDIT_MODE && !anyNonEmpty(wo, filterKeys)) return;
+      any = true;
+      html += woRow(t, fields);
+    });
+    if (!any) return '';
+    html += '</tbody></table></div>';
+    return html;
+  }
 
+  html += workoverTableHTML('Tubing (workover counts)',
+    ['tbg_count_278','tbg_count_278_coated','tbg_count_238','tbg_count_238_coated','tbg_coating','sn_depth','tac_depth','tbg_replaced_278','tbg_replaced_278_coated','tbg_replaced_238','tbg_replaced_238_coated'],
+    ['2-7/8"','2-7/8" coated','2-3/8"','2-3/8" coated','Coating','SN depth','TAC depth','Repl 2-7/8"','Repl 2-7/8" coated','Repl 2-3/8"','Repl 2-3/8" coated'],
+    ['tbg_count_278','tbg_count_278_coated','tbg_count_238','tbg_count_238_coated','tbg_coating','sn_depth','tac_depth','tbg_replaced_278','tbg_replaced_278_coated','tbg_replaced_238','tbg_replaced_238_coated']);
   // ── Rods — schematic component-by-component rows
   var rdRows = [];
   schems.forEach(function(t){ (t.data.rd || []).forEach(function(r){ rdRows.push([vlabel(t), r.desc, r.cnt, r.len, r.dp, r.notes]); }); });
   html += tableHTML('Rods (schematic detail)', ['Version','Description','Count','Length','Depth','Notes'], rdRows);
 
-  // ── Rods — workover counts (skip workovers with no rod data)
-  var rdKeys = ['rods_1','rods_78','rods_34','rods_58','rods_fg','rods_sinker','rod_type','rod_couplers_new','rods_replaced_1','rods_replaced_78','rods_replaced_34','rods_replaced_58','rods_replaced_fg','rods_replaced_sinker'];
-  var rdwoRows = [];
-  workovers.forEach(function(t){
-    var wo = t.data;
-    if (!anyNonEmpty(wo, rdKeys)) return;
-    rdwoRows.push([vlabel(t), wo.rods_1, wo.rods_78, wo.rods_34, wo.rods_58, wo.rods_fg, wo.rods_sinker, wo.rod_type, wo.rod_couplers_new, wo.rods_replaced_1, wo.rods_replaced_78, wo.rods_replaced_34, wo.rods_replaced_58, wo.rods_replaced_fg, wo.rods_replaced_sinker]);
-  });
-  html += tableHTML('Rods (workover counts)',
-    ['Version','1"','7/8"','3/4"','5/8"','FG','Sinker','Type','New couplers','Repl 1"','Repl 7/8"','Repl 3/4"','Repl 5/8"','Repl FG','Repl sinker'],
-    rdwoRows);
+  // ── Rods — workover counts
+  html += workoverTableHTML('Rods (workover counts)',
+    ['rods_1','rods_78','rods_34','rods_58','rods_fg','rods_sinker','rod_type','rod_couplers_new','rods_replaced_1','rods_replaced_78','rods_replaced_34','rods_replaced_58','rods_replaced_fg','rods_replaced_sinker'],
+    ['1"','7/8"','3/4"','5/8"','FG','Sinker','Type','New couplers','Repl 1"','Repl 7/8"','Repl 3/4"','Repl 5/8"','Repl FG','Repl sinker'],
+    ['rods_1','rods_78','rods_34','rods_58','rods_fg','rods_sinker','rod_type','rod_couplers_new','rods_replaced_1','rods_replaced_78','rods_replaced_34','rods_replaced_58','rods_replaced_fg','rods_replaced_sinker']);
 
-  // ── Pump (skip workovers with no pump data)
-  var pumpKeys = ['pump_size','pump_type','pump_new','pumping_unit','spm'];
-  var pumpRows = [];
-  workovers.forEach(function(t){
-    var wo = t.data;
-    if (!anyNonEmpty(wo, pumpKeys)) return;
-    pumpRows.push([vlabel(t), wo.pump_size, wo.pump_type, wo.pump_new, wo.pumping_unit, wo.spm]);
-  });
-  html += tableHTML('Pump', ['Version','Size','Type','New?','Pumping Unit','SPM'], pumpRows);
+  // ── Pump
+  html += workoverTableHTML('Pump',
+    ['pump_size','pump_type','pump_new','pumping_unit','spm'],
+    ['Size','Type','New?','Pumping Unit','SPM'],
+    ['pump_size','pump_type','pump_new','pumping_unit','spm']);
 
-  // ── Job flags (skip workovers with no flag data)
-  var jobKeys = ['failure_cause','failed_component','corrosion','pull_tubing','cleanout','acid','enduralloy','summary'];
-  var jobRows = [];
-  workovers.forEach(function(t){
-    var wo = t.data;
-    if (!anyNonEmpty(wo, jobKeys)) return;
-    jobRows.push([vlabel(t), wo.failure_cause, wo.failed_component, wo.corrosion, wo.pull_tubing, wo.cleanout, wo.acid, wo.enduralloy, (wo.summary || '').substring(0,200)]);
-  });
-  html += tableHTML('Job flags', ['Version','Cause','Component','Corrosion','Pull tubing','Cleanout','Acid','Enduralloy','Summary'], jobRows);
+  // ── Job flags
+  html += workoverTableHTML('Job flags',
+    ['failure_cause','failed_component','corrosion','pull_tubing','cleanout','acid','enduralloy','summary'],
+    ['Cause','Component','Corrosion','Pull tubing','Cleanout','Acid','Enduralloy','Summary'],
+    ['failure_cause','failed_component','corrosion','pull_tubing','cleanout','acid','enduralloy','summary']);
 
   div.innerHTML = html;
 }

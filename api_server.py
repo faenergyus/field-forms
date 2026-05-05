@@ -1216,6 +1216,79 @@ def export_wbd_xlsx(short: str, user: str = Depends(get_current_user)):
     )
 
 
+# Map view-friendly field names → actual [Job Detail] columns
+WORKOVER_FIELD_MAP = {
+    "pump_size":              '[Pump  Size]',
+    "pump_type":              '[Pump  Type]',
+    "pump_new":               '[Pump  New?]',
+    "pumping_unit":           '[Pumping Unit]',
+    "spm":                    '[SPM]',
+    "sn_depth":               '[SN Depth]',
+    "tac_depth":              '[TAC Depth]',
+    "rods_1":                 '[Rods Count 1"]',
+    "rods_78":                '[Rods  7/8"]',
+    "rods_34":                '[Rods  3/4"]',
+    "rods_58":                '[Rods  5/8"]',
+    "rods_fg":                '[Rods  FG]',
+    "rods_sinker":            '[Rods  SINKER]',
+    "rod_type":               '[Rods  Type]',
+    "rod_couplers_new":       '[Rods Couplers New (#)]',
+    "rods_replaced_1":        '[Rods Replaced 1"]',
+    "rods_replaced_78":       '[Rods  7/8"_1]',
+    "rods_replaced_34":       '[Rods  3/4"_2]',
+    "rods_replaced_58":       '[Rods  5/8"_3]',
+    "rods_replaced_fg":       '[Rods  FG_4]',
+    "rods_replaced_sinker":   '[Rods  SINKER_5]',
+    "tbg_count_278":          '[Tubing Joints Count 2-7/8"]',
+    "tbg_count_278_coated":   '[Tubing Joints Count 2-7/8" Coated]',
+    "tbg_count_238":          '[Tubing Joints Count 2-3/8"]',
+    "tbg_count_238_coated":   '[Tubing Joints Count 2-3/8" Coated]',
+    "tbg_replaced_278":       '[Tubing Joints Replaced 2-7/8"]',
+    "tbg_replaced_278_coated":'[Tubing Joints Replaced 2-7/8" Coated]',
+    "tbg_replaced_238":       '[Tubing Joints Replaced 2-3/8"]',
+    "tbg_replaced_238_coated":'[Tubing Joints Replaced 2-3/8" Coated]',
+    "tbg_coating":            '[Tubing Joints_ Coating]',
+    "failure_cause":          '[Failure Cause]',
+    "failed_component":       '[Failed Component]',
+    "corrosion":              '[Corrosion?]',
+    "pull_tubing":            '[Pull Tubing?]',
+    "cleanout":               '[Cleanout?]',
+    "acid":                   '[Acid?]',
+    "enduralloy":             '[Enduralloy?]',
+    "summary":                '[Post Job Summary]',
+}
+
+
+@app.put("/wbd/workover/{xkey:path}")
+def edit_workover(xkey: str, payload: dict, user: str = Depends(get_editor)):
+    """Update a Job Detail row matching xKey. Only fields in WORKOVER_FIELD_MAP are accepted."""
+    if not payload:
+        raise HTTPException(400, "empty payload")
+    set_clauses = []
+    params = []
+    for k, v in payload.items():
+        col = WORKOVER_FIELD_MAP.get(k)
+        if not col:
+            continue
+        set_clauses.append(f"{col} = ?")
+        params.append(v)
+    if not set_clauses:
+        raise HTTPException(400, "no editable fields in payload")
+
+    sql = f"UPDATE dbo.[Job Detail] SET {', '.join(set_clauses)} WHERE xKey = ?"
+    params.append(xkey)
+    conn = get_ops_conn()
+    cur = conn.cursor()
+    cur.execute(sql, *params)
+    if cur.rowcount == 0:
+        conn.close()
+        raise HTTPException(404, f"Job Detail row with xKey '{xkey}' not found")
+    conn.commit()
+    conn.close()
+    log.info("Workover xKey=%s updated by %s (%d cols)", xkey, user, len(set_clauses))
+    return {"ok": True, "xkey": xkey, "updated_fields": list(payload.keys())}
+
+
 @app.delete("/wbd/version/{wbd_id}")
 def soft_delete_wbd_version(wbd_id: int, user: str = Depends(get_editor)):
     """Soft delete: flip data_extracted = 0 so the version disappears from UI but stays in DB."""
