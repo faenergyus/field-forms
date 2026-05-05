@@ -178,7 +178,7 @@
 
       <div class="tabs">
         <button type="button" class="tab-btn active" data-tab="wbd" onclick="switchTab('wbd')">WBD</button>
-        <button type="button" class="tab-btn" data-tab="equipment" onclick="switchTab('equipment')">Equipment</button>
+        <button type="button" class="tab-btn" data-tab="equipment" onclick="switchTab('equipment')">Tables</button>
         <button type="button" class="tab-btn" data-tab="history" onclick="switchTab('history')">Job History</button>
       </div>
 
@@ -209,6 +209,16 @@
       </div>
 
       <div id="tab-equipment" class="tab-panel">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+          <div id="tablesVersionSelector">
+            <label style="font-size:0.8rem;font-weight:600;color:#333;">Version: </label>
+            <select id="tablesVersionSelect" style="padding:4px 8px;border:1px solid #999;border-radius:4px;font-size:0.8rem;min-width:280px;" onchange="renderTablesVersion()"></select>
+          </div>
+          <div id="tablesToolbar" style="display:none;margin-left:auto;">
+            <button type="button" class="wbd-btn" onclick="openEditorFromTables(false)">Edit</button>
+            <button type="button" class="wbd-btn" onclick="openEditorFromTables(true)">Add Version</button>
+          </div>
+        </div>
         <div id="equipmentContent"></div>
       </div>
 
@@ -474,9 +484,10 @@ function renderWellInfo(name) {
   currentVersionIdx = timeline.length > 0 ? 0 : 0;
   if (timeline.length > 0) sel.value = currentVersionIdx;
   renderVersion();
-  // Equipment + Job History don't depend on WBD version — render once per well
-  renderEquipmentOverTime(w);
+  // Job History: all workovers, doesn't depend on WBD version
   renderJobHistoryFull(w);
+  // Tables tab has its own per-version dropdown — initialize it
+  setupTablesTab(w);
   // Show edit toolbar only for engineers/admins/techs; export available to anyone signed in
   var toolbar = document.getElementById('wbdToolbar');
   if (toolbar) toolbar.style.display = isEditor() ? 'block' : 'none';
@@ -954,8 +965,198 @@ function switchTab(name) {
   }
 }
 
-// Build a wide time-series table: rows = equipment fields, columns = workover dates (left-to-right newest first)
-function renderEquipmentOverTime(w) {
+// Tables tab — per-version editor-style display ----------------------------
+var _tablesVersionIdx = 0;
+
+function setupTablesTab(w) {
+  var sel = document.getElementById('tablesVersionSelect');
+  if (!sel) return;
+  var timeline = w._timeline || [];
+  sel.innerHTML = '';
+  if (!timeline.length) {
+    sel.innerHTML = '<option>(no versions)</option>';
+    document.getElementById('equipmentContent').innerHTML = '<div class="eq-empty">No WBD versions or workovers on file.</div>';
+    document.getElementById('tablesToolbar').style.display = 'none';
+    return;
+  }
+  for (var i = 0; i < timeline.length; i++) {
+    var opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = timeline[i].label;
+    sel.appendChild(opt);
+  }
+  _tablesVersionIdx = 0;
+  // Default to first item with actual data
+  for (var i = 0; i < timeline.length; i++) {
+    var t = timeline[i];
+    if (t.kind === 'schematic') {
+      var s = t.data;
+      if ((s.csg && s.csg.length) || (s.pf && s.pf.length) || s.td) { _tablesVersionIdx = i; break; }
+    } else if (t.kind === 'workover') {
+      if (workoverHasEquipment(t.data)) { _tablesVersionIdx = i; break; }
+    }
+  }
+  sel.value = _tablesVersionIdx;
+  document.getElementById('tablesToolbar').style.display = isEditor() ? 'block' : 'none';
+  renderTablesVersion();
+}
+
+function renderTablesVersion() {
+  var w = currentWell;
+  if (!w) return;
+  var sel = document.getElementById('tablesVersionSelect');
+  _tablesVersionIdx = parseInt(sel.value) || 0;
+  var picked = (w._timeline || [])[_tablesVersionIdx];
+  if (!picked) return;
+  var div = document.getElementById('equipmentContent');
+
+  if (picked.kind === 'schematic') {
+    div.innerHTML = renderSchematicTables(picked.data);
+  } else {
+    div.innerHTML = renderWorkoverTables(picked.data);
+  }
+}
+
+function renderSchematicTables(s) {
+  function tableSection(title, headers, rows, formatter) {
+    var html = '<h3>' + esc(title) + '</h3>';
+    if (!rows || rows.length === 0) {
+      html += '<div class="eq-empty">— no rows —</div>';
+      return html;
+    }
+    html += '<table class="eq-table"><thead><tr>';
+    headers.forEach(function(h){ html += '<th>' + esc(h) + '</th>'; });
+    html += '</tr></thead><tbody>';
+    rows.forEach(function(r){
+      html += '<tr>';
+      formatter(r).forEach(function(v){ html += '<td>' + (v == null || v === '' ? '<span style="color:#bbb">·</span>' : esc(v)) + '</td>'; });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    return html;
+  }
+
+  var html = '';
+  // Version metadata as the first labeled section
+  html += '<h3>Version</h3><table class="eq-table">'
+    + '<tbody>'
+    + '<tr><td class="eq-label">Date</td><td>'   + esc(s.dt || '—') + '</td></tr>'
+    + '<tr><td class="eq-label">Status</td><td>' + esc(s.st || '—') + '</td></tr>'
+    + '<tr><td class="eq-label">TD</td><td>'     + esc(s.td || '—') + '</td></tr>'
+    + '<tr><td class="eq-label">PBTD</td><td>'   + esc(s.pb || '—') + '</td></tr>'
+    + '<tr><td class="eq-label">wbd_id</td><td>' + esc(s.id || '—') + '</td></tr>'
+    + '</tbody></table>';
+
+  html += tableSection('Casing',
+    ['Type','Size','Weight','Grade','Set @','Hole Size','Sxs','TOC','Notes'],
+    s.csg || [],
+    function(c){ return [c.ty, c.sz, c.wt, c.gr, c.dp, c.hs, c.cs, c.tc, c.notes]; });
+
+  html += tableSection('Perforations',
+    ['Top','Bottom','SPF','Zone','Date','Squeezed','Sq Date','Notes'],
+    s.pf || [],
+    function(p){ return [p.td, p.bd, p.spf, p.zn, p.dt, (p.sq===true?'Yes':p.sq===false?'No':''), p.sqd, p.notes]; });
+
+  html += tableSection('Plugs',
+    ['Type','Depth','TOC','Sxs','Notes'],
+    s.pl || [],
+    function(p){ return [p.ty, p.dp, p.tc, p.cs, p.notes]; });
+
+  html += tableSection('Formation Tops',
+    ['Formation','Depth'],
+    s.ft || [],
+    function(f){ return [f.fm, f.dp]; });
+
+  html += tableSection('Tubing',
+    ['Description','Depth','Joints','Notes'],
+    s.tb || [],
+    function(t){ return [t.desc, t.dp, t.jts, t.notes]; });
+
+  html += tableSection('Rods',
+    ['Description','Count','Length','Depth','Notes'],
+    s.rd || [],
+    function(r){ return [r.desc, r.cnt, r.len, r.dp, r.notes]; });
+
+  return html;
+}
+
+function renderWorkoverTables(wo) {
+  function metaRow(label, val) {
+    return '<tr><td class="eq-label">' + esc(label) + '</td><td>' + (val == null || val === '' || val === 0 || val === '0' ? '<span style="color:#bbb">·</span>' : esc(val)) + '</td></tr>';
+  }
+  var html = '';
+  html += '<h3>Version</h3><table class="eq-table"><tbody>'
+    + metaRow('Date', wo.event_date)
+    + metaRow('Type', 'Workover')
+    + metaRow('Failure Cause', wo.failure_cause)
+    + metaRow('Failed Component', wo.failed_component)
+    + metaRow('AFE', wo.afe)
+    + '</tbody></table>';
+
+  html += '<h3>Pump</h3><table class="eq-table"><tbody>'
+    + metaRow('Size', wo.pump_size)
+    + metaRow('Type', wo.pump_type)
+    + metaRow('New?', wo.pump_new)
+    + metaRow('Pumping Unit', wo.pumping_unit)
+    + metaRow('SPM', wo.spm)
+    + '</tbody></table>';
+
+  html += '<h3>Tubing</h3><table class="eq-table"><tbody>'
+    + metaRow('2-7/8" jts', wo.tbg_count_278)
+    + metaRow('2-7/8" coated', wo.tbg_count_278_coated)
+    + metaRow('2-3/8" jts', wo.tbg_count_238)
+    + metaRow('2-3/8" coated', wo.tbg_count_238_coated)
+    + metaRow('Coating', wo.tbg_coating)
+    + metaRow('SN depth', wo.sn_depth)
+    + metaRow('TAC depth', wo.tac_depth)
+    + metaRow('Replaced 2-7/8"', wo.tbg_replaced_278)
+    + metaRow('Replaced 2-7/8" coated', wo.tbg_replaced_278_coated)
+    + metaRow('Replaced 2-3/8"', wo.tbg_replaced_238)
+    + metaRow('Replaced 2-3/8" coated', wo.tbg_replaced_238_coated)
+    + '</tbody></table>';
+
+  html += '<h3>Rods</h3><table class="eq-table"><tbody>'
+    + metaRow('1"', wo.rods_1)
+    + metaRow('7/8"', wo.rods_78)
+    + metaRow('3/4"', wo.rods_34)
+    + metaRow('5/8"', wo.rods_58)
+    + metaRow('Fiberglass', wo.rods_fg)
+    + metaRow('Sinker', wo.rods_sinker)
+    + metaRow('Type', wo.rod_type)
+    + metaRow('New couplers', wo.rod_couplers_new)
+    + metaRow('Replaced 1"', wo.rods_replaced_1)
+    + metaRow('Replaced 7/8"', wo.rods_replaced_78)
+    + metaRow('Replaced 3/4"', wo.rods_replaced_34)
+    + metaRow('Replaced 5/8"', wo.rods_replaced_58)
+    + metaRow('Replaced FG', wo.rods_replaced_fg)
+    + metaRow('Replaced sinker', wo.rods_replaced_sinker)
+    + '</tbody></table>';
+
+  html += '<h3>Job</h3><table class="eq-table"><tbody>'
+    + metaRow('Corrosion', wo.corrosion)
+    + metaRow('Pull tubing', wo.pull_tubing)
+    + metaRow('Cleanout', wo.cleanout)
+    + metaRow('Acid', wo.acid)
+    + metaRow('Enduralloy', wo.enduralloy)
+    + (wo.summary ? '<tr><td class="eq-label">Summary</td><td style="white-space:pre-wrap;">' + esc(wo.summary) + '</td></tr>' : '')
+    + '</tbody></table>';
+
+  return html;
+}
+
+// Edit/Add from Tables tab — same as WBD tab editor flow, but switches the user to WBD tab
+function openEditorFromTables(addMode) {
+  // Sync the WBD tab's currentVersionIdx to the Tables selection so the editor
+  // pre-fills from the same version
+  currentVersionIdx = _tablesVersionIdx;
+  var verSel = document.getElementById('versionSelect');
+  if (verSel) verSel.value = currentVersionIdx;
+  switchTab('wbd');
+  openEditor(addMode);
+}
+
+// Old time-series renderer kept for reference but no longer called
+function renderEquipmentOverTime_OLD(w) {
   var div = document.getElementById('equipmentContent');
   if (!div) return;
   var events = (w.events || []).slice().sort(function(a, b) {
