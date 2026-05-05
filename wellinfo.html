@@ -312,10 +312,34 @@ async function loadWellDetail(name) {
   }
 }
 
+var CAN_EDIT = false;
+
+async function loadWhoAmI() {
+  if (!API_BASE) return;
+  try {
+    var token = getToken();
+    var headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+    var res = await fetch(API_BASE + '/wbd/whoami', { headers: headers });
+    var d = await res.json();
+    CAN_EDIT = !!d.can_edit;
+    // Stamp role into session so isEditor() works without re-fetch
+    try {
+      var s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+      if (d.role) { s.role = d.role; localStorage.setItem(SESSION_KEY, JSON.stringify(s)); }
+    } catch(e) {}
+    // Re-show toolbar if a well is already loaded
+    if (currentWell) {
+      var t = document.getElementById('wbdToolbar');
+      if (t) t.style.display = CAN_EDIT ? 'block' : 'none';
+    }
+  } catch (e) { console.error('whoami failed:', e); }
+}
+
 // Bootstrap: load API config + well list on page ready
 (async function() {
   await loadApiBase();
   await loadWellList();
+  await loadWhoAmI();
 })();
 
 // Autocomplete
@@ -455,9 +479,11 @@ function renderWellInfo(name) {
 }
 
 function isEditor() {
+  if (CAN_EDIT) return true;
   try {
     var s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
-    return s.role === 'engineer' || s.role === 'admin' || s.role === 'tech';
+    var r = (s.role || '').toLowerCase();
+    return r === 'engineer' || r === 'admin' || r === 'tech';
   } catch(e) { return false; }
 }
 function getToken() {
