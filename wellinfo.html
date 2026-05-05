@@ -446,8 +446,16 @@ function renderJobHistory(w, sources) {
     div.innerHTML = '<h3>Job History</h3><div class="job-empty">No workover history on file.</div>';
     return;
   }
+  // If picked is a workover: filter to that date and earlier (time-travel view)
+  // Else (schematic or no pick): show all workovers (most recent first)
+  var pickedKind = sources.picked && sources.picked.kind;
   var pickedDate = sources.picked && sources.picked.date ? sources.picked.date : '9999-99-99';
-  var visible = allEvents.filter(function(e) { return (e.event_date || '0') <= pickedDate; });
+  var visible;
+  if (pickedKind === 'workover') {
+    visible = allEvents.filter(function(e) { return (e.event_date || '0') <= pickedDate; });
+  } else {
+    visible = allEvents.slice();
+  }
   visible.sort(function(a, b) { return (b.event_date || '0').localeCompare(a.event_date || '0'); });
 
   var pickedJobKey = (sources.picked && sources.picked.kind === 'workover' && sources.workover) ? sources.workover.job_xkey : null;
@@ -486,7 +494,8 @@ function renderJobHistory(w, sources) {
          + '</tr>';
   });
 
-  div.innerHTML = '<h3>Job History — ' + visible.length + ' workover' + (visible.length !== 1 ? 's' : '') + ' through ' + esc(pickedDate === '9999-99-99' ? 'present' : pickedDate) + '</h3>'
+  var asOf = (pickedKind === 'workover') ? pickedDate : 'present';
+  div.innerHTML = '<h3>Job History — ' + visible.length + ' workover' + (visible.length !== 1 ? 's' : '') + ' through ' + esc(asOf) + '</h3>'
     + '<table class="job-table">'
     + '<thead><tr><th>Date</th><th>Cause / AFE</th><th>Pump</th><th>Changes</th><th>Summary</th></tr></thead>'
     + '<tbody>' + rows + '</tbody></table>';
