@@ -150,10 +150,6 @@
 
     <div id="wellDisplay">
       <div class="well-header" id="wellHeader"></div>
-      <div id="versionSelector" style="margin-bottom:12px;display:none;">
-        <label style="font-size:0.8rem;font-weight:600;color:#333;">WBD Version: </label>
-        <select id="versionSelect" style="padding:4px 8px;border:1px solid #999;border-radius:4px;font-size:0.8rem;" onchange="onVersionChange()"></select>
-      </div>
       <div id="wellGeneral"></div>
 
       <div class="tabs">
@@ -163,6 +159,10 @@
       </div>
 
       <div id="tab-wbd" class="tab-panel active">
+        <div id="versionSelector" style="margin-bottom:12px;display:none;">
+          <label style="font-size:0.8rem;font-weight:600;color:#333;">WBD Version: </label>
+          <select id="versionSelect" style="padding:4px 8px;border:1px solid #999;border-radius:4px;font-size:0.8rem;" onchange="onVersionChange()"></select>
+        </div>
         <div class="well-layout">
           <div id="wbdContainer"></div>
           <div class="data-cards" id="dataCards"></div>
