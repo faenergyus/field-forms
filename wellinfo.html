@@ -188,12 +188,15 @@
             <label style="font-size:0.8rem;font-weight:600;color:#333;">WBD Version: </label>
             <select id="versionSelect" style="padding:4px 8px;border:1px solid #999;border-radius:4px;font-size:0.8rem;" onchange="onVersionChange()"></select>
           </div>
-          <div id="wbdToolbar" style="display:none;margin-left:auto;">
-            <input type="file" id="wbdUploadFile" style="display:none;" accept=".xlsx,.xls,.pdf,.pptx,.ppt" onchange="uploadWbdFile(this)">
-            <button type="button" id="btnUpload" class="wbd-btn" onclick="document.getElementById('wbdUploadFile').click()">Upload</button>
-            <button type="button" id="btnEdit"   class="wbd-btn" onclick="openEditor(false)">Edit</button>
-            <button type="button" id="btnAdd"    class="wbd-btn" onclick="openEditor(true)">Add Version</button>
-            <button type="button" id="btnDelete" class="wbd-btn danger" onclick="deleteVersion()">Delete</button>
+          <div style="margin-left:auto;display:flex;gap:6px;">
+            <button type="button" id="btnExport" class="wbd-btn secondary" onclick="exportWbd()" style="display:none;">Export</button>
+            <div id="wbdToolbar" style="display:none;">
+              <input type="file" id="wbdUploadFile" style="display:none;" accept=".xlsx,.xls,.pdf,.pptx,.ppt" onchange="uploadWbdFile(this)">
+              <button type="button" id="btnUpload" class="wbd-btn" onclick="document.getElementById('wbdUploadFile').click()">Upload</button>
+              <button type="button" id="btnEdit"   class="wbd-btn" onclick="openEditor(false)">Edit</button>
+              <button type="button" id="btnAdd"    class="wbd-btn" onclick="openEditor(true)">Add Version</button>
+              <button type="button" id="btnDelete" class="wbd-btn danger" onclick="deleteVersion()">Delete</button>
+            </div>
           </div>
         </div>
         <div id="wbdEditor" style="display:none;"></div>
@@ -474,9 +477,11 @@ function renderWellInfo(name) {
   // Equipment + Job History don't depend on WBD version — render once per well
   renderEquipmentOverTime(w);
   renderJobHistoryFull(w);
-  // Show edit toolbar only for engineers/admins/techs
+  // Show edit toolbar only for engineers/admins/techs; export available to anyone signed in
   var toolbar = document.getElementById('wbdToolbar');
   if (toolbar) toolbar.style.display = isEditor() ? 'block' : 'none';
+  var expBtn = document.getElementById('btnExport');
+  if (expBtn) expBtn.style.display = 'inline-block';
   document.getElementById('wellDisplay').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -689,6 +694,41 @@ async function saveEditor() {
     if (fresh) renderWellInfo(e.short);
   } catch (err) {
     alert('Save error: ' + err);
+  }
+}
+
+async function exportWbd() {
+  var w = currentWell;
+  if (!w) { alert('Pick a well first'); return; }
+  var token = getToken();
+  if (!token) { alert('Sign in again to export'); return; }
+  var btn = document.getElementById('btnExport');
+  var orig = btn ? btn.textContent : 'Export';
+  if (btn) { btn.textContent = 'Building...'; btn.disabled = true; }
+  try {
+    var url = API_BASE + '/wbd/' + encodeURIComponent(w.sn) + '/export';
+    var res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) {
+      var msg = await res.text();
+      alert('Export failed: ' + res.status + ' ' + msg);
+      return;
+    }
+    // Pull filename from Content-Disposition
+    var cd = res.headers.get('Content-Disposition') || '';
+    var m = cd.match(/filename="([^"]+)"/);
+    var filename = m ? m[1] : ('WBD_' + w.sn.replace(/\W+/g,'_') + '.xlsx');
+    var blob = await res.blob();
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  } catch (err) {
+    alert('Export error: ' + err);
+  } finally {
+    if (btn) { btn.textContent = orig; btn.disabled = false; }
   }
 }
 

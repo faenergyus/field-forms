@@ -1066,6 +1066,156 @@ async def parse_wbd_file(
         except Exception: pass
 
 
+@app.get("/wbd/{short}/export")
+def export_wbd_xlsx(short: str, user: str = Depends(get_current_user)):
+    """Export a well's full WBD data as a multi-sheet .xlsx workbook.
+
+    Sheets: Summary, Schematic Versions, Casings, Perforations, Plugs, Formation Tops,
+    Tubing, Rods, Workover Events.
+    """
+    import io as _io
+    from fastapi.responses import StreamingResponse
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+    except ImportError:
+        raise HTTPException(500, "openpyxl not installed on server")
+
+    conn = get_ops_conn()
+    cur = conn.cursor()
+
+    # Pumper master
+    cur.execute("""
+        SELECT [Short Name], [Well Name], [API10 (String)], Company, Status, Type,
+               [Pumper Name], Engineer, Stop, Unit, _LeaseType, Location
+        FROM dbo.Pumper_Data_Calcs WHERE [Short Name] = ?
+    """, short)
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, f"Well '{short}' not found")
+    cols = [d[0] for d in cur.description]
+    rec = dict(zip(cols, row))
+
+    short_to_wid = _master_short_to_well_id(cur)
+    wid = short_to_wid.get(short)
+
+    wb = openpyxl.Workbook()
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill("solid", fgColor="1C4A1C")
+    title_font = Font(bold=True, size=12, color="1C4A1C")
+
+    def add_sheet(name, headers, rows):
+        ws = wb.create_sheet(name)
+        for i, h in enumerate(headers, 1):
+            c = ws.cell(row=1, column=i, value=h)
+            c.font = header_font
+            c.fill = header_fill
+            c.alignment = Alignment(horizontal="left")
+        for ri, row in enumerate(rows, 2):
+            for ci, val in enumerate(row, 1):
+                ws.cell(row=ri, column=ci, value=val)
+        # Auto-size
+        for col in ws.columns:
+            mx = max((len(str(c.value)) if c.value is not None else 0) for c in col)
+            ws.column_dimensions[col[0].column_letter].width = min(max(mx + 2, 10), 60)
+        return ws
+
+    # Summary sheet
+    summary = wb.active
+    summary.title = "Summary"
+    summary["A1"] = f"Well Info Export — {rec['Short Name']}"
+    summary["A1"].font = title_font
+    summary.merge_cells("A1:D1")
+    summary_rows = [
+        ("Well Name",  rec["Well Name"]),
+        ("Short Name", rec["Short Name"]),
+        ("API",        rec["API10 (String)"]),
+        ("Company",    rec["Company"]),
+        ("Status",     rec["Status"]),
+        ("Type",       rec["Type"]),
+        ("Pumper",     rec["Pumper Name"]),
+        ("Engineer",   rec["Engineer"]),
+        ("Stop",       rec["Stop"]),
+        ("Unit",       rec["Unit"]),
+        ("Lease Type", rec["_LeaseType"]),
+        ("Location",   rec["Location"]),
+        ("",           ""),
+        ("Exported",   datetime.now().strftime("%Y-%m-%d %H:%M:%S") + f" by {user}"),
+    ]
+    for ri, (k, v) in enumerate(summary_rows, 3):
+        summary.cell(row=ri, column=1, value=k).font = Font(bold=True)
+        summary.cell(row=ri, column=2, value=str(v) if v is not None else "")
+    summary.column_dimensions["A"].width = 18
+    summary.column_dimensions["B"].width = 50
+
+    # Schematic versions
+    if wid is not None:
+        cur.execute("""
+            SELECT wbd_id, wbd_date, status, td, pbtd, source_file, file_format, data_extracted
+            FROM dbo.wbd_versions WHERE well_id = ? ORDER BY wbd_date DESC
+        """, wid)
+        v_rows = [tuple(r) for r in cur.fetchall()]
+        add_sheet("Schematic Versions",
+                  ["wbd_id","wbd_date","status","td","pbtd","source_file","file_format","data_extracted"],
+                  v_rows)
+
+        wbd_ids = [r[0] for r in v_rows if r[7]]   # only extracted versions for child detail
+        if wbd_ids:
+            placeholders = ",".join("?" * len(wbd_ids))
+
+            def fetch_all(table, fields):
+                cur.execute(f"SELECT wbd_id, {','.join(fields)} FROM dbo.{table} WHERE wbd_id IN ({placeholders}) ORDER BY wbd_id", *wbd_ids)
+                return [tuple(r) for r in cur.fetchall()]
+
+            add_sheet("Casings",
+                      ["wbd_id","casing_type","size","weight","grade","set_depth","hole_size","cement_sacks","toc","circ_to_surface","notes"],
+                      fetch_all("wbd_casing", ["casing_type","size","weight","grade","set_depth","hole_size","cement_sacks","toc","circ_to_surface","notes"]))
+            add_sheet("Perforations",
+                      ["wbd_id","top_depth","bottom_depth","spf","zone","perf_date","is_squeezed","squeeze_date","notes"],
+                      fetch_all("wbd_perforations", ["top_depth","bottom_depth","spf","zone","perf_date","is_squeezed","squeeze_date","notes"]))
+            add_sheet("Plugs",
+                      ["wbd_id","plug_type","depth","toc","cement_sacks","notes"],
+                      fetch_all("wbd_plugs", ["plug_type","depth","toc","cement_sacks","notes"]))
+            add_sheet("Formation Tops",
+                      ["wbd_id","formation_name","depth"],
+                      fetch_all("wbd_formation_tops", ["formation_name","depth"]))
+            add_sheet("Tubing",
+                      ["wbd_id","description","depth","joints","notes"],
+                      fetch_all("wbd_tubing", ["description","depth","joints","notes"]))
+            add_sheet("Rods",
+                      ["wbd_id","description","count","length","depth","notes"],
+                      fetch_all("wbd_rods", ["description","count","length","depth","notes"]))
+
+    # Workover events
+    cur.execute("""
+        SELECT event_date, start_date, afe, failure_cause, secondary_cause,
+               failed_component, component_detail, failure_analysis,
+               pumping_unit, spm, pump_size, pump_type, pump_new,
+               sn_depth, tac_depth,
+               rods_1, rods_78, rods_34, rods_58, rods_fg, rods_sinker, rod_type, rod_couplers_new,
+               tbg_count_278, tbg_count_278_coated, tbg_count_238, tbg_count_238_coated, tbg_coating,
+               summary
+        FROM dbo.wbd_workover_events WHERE sn = ? ORDER BY event_date DESC
+    """, short)
+    e_cols = [d[0] for d in cur.description]
+    e_rows = [tuple(r) for r in cur.fetchall()]
+    add_sheet("Workover Events", e_cols, e_rows)
+
+    conn.close()
+
+    buf = _io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    safe = "".join(c if c.isalnum() else "_" for c in short).strip("_")
+    fname = f"WBD_{safe}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'}
+    )
+
+
 @app.delete("/wbd/version/{wbd_id}")
 def soft_delete_wbd_version(wbd_id: int, user: str = Depends(get_editor)):
     """Soft delete: flip data_extracted = 0 so the version disappears from UI but stays in DB."""
