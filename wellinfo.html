@@ -183,21 +183,9 @@
       </div>
 
       <div id="tab-wbd" class="tab-panel active">
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
-          <div id="versionSelector" style="display:none;">
-            <label style="font-size:0.8rem;font-weight:600;color:#333;">WBD Version: </label>
-            <select id="versionSelect" style="padding:4px 8px;border:1px solid #999;border-radius:4px;font-size:0.8rem;" onchange="onVersionChange()"></select>
-          </div>
-          <div style="margin-left:auto;display:flex;gap:6px;">
-            <button type="button" id="btnExport" class="wbd-btn secondary" onclick="exportWbd()" style="display:none;">Export</button>
-            <div id="wbdToolbar" style="display:none;">
-              <input type="file" id="wbdUploadFile" style="display:none;" accept=".xlsx,.xls,.pdf,.pptx,.ppt" onchange="uploadWbdFile(this)">
-              <button type="button" id="btnUpload" class="wbd-btn" onclick="document.getElementById('wbdUploadFile').click()">Upload</button>
-              <button type="button" id="btnEdit"   class="wbd-btn" onclick="openEditor(false)">Edit</button>
-              <button type="button" id="btnAdd"    class="wbd-btn" onclick="openEditor(true)">Add Version</button>
-              <button type="button" id="btnDelete" class="wbd-btn danger" onclick="deleteVersion()">Delete</button>
-            </div>
-          </div>
+        <div id="versionSelector" style="display:none;margin-bottom:12px;">
+          <label style="font-size:0.8rem;font-weight:600;color:#333;">WBD Version: </label>
+          <select id="versionSelect" style="padding:4px 8px;border:1px solid #999;border-radius:4px;font-size:0.8rem;" onchange="onVersionChange()"></select>
         </div>
         <div id="wbdEditor" style="display:none;"></div>
         <div id="wbdViewer">
@@ -214,11 +202,15 @@
             <label style="font-size:0.8rem;font-weight:600;color:#333;">Version: </label>
             <select id="tablesVersionSelect" style="padding:4px 8px;border:1px solid #999;border-radius:4px;font-size:0.8rem;min-width:280px;" onchange="renderTablesVersion()"></select>
           </div>
-          <div id="tablesToolbar" style="display:none;margin-left:auto;">
+          <input type="file" id="wbdUploadFile" style="display:none;" accept=".xlsx,.xls,.pdf,.pptx,.ppt" onchange="uploadWbdFile(this)">
+          <button type="button" id="btnExport" class="wbd-btn secondary" onclick="exportWbd()" style="display:none;margin-left:auto;">Export</button>
+          <div id="tablesToolbar" style="display:none;">
             <button type="button" id="btnTablesEdit"   class="wbd-btn"           onclick="enterTablesEditMode()">Edit</button>
             <button type="button" id="btnTablesSave"   class="wbd-btn"           onclick="saveTablesEdits()"  style="display:none;">Save</button>
             <button type="button" id="btnTablesCancel" class="wbd-btn secondary" onclick="cancelTablesEdits()" style="display:none;">Cancel</button>
+            <button type="button" id="btnTablesUpload" class="wbd-btn"           onclick="document.getElementById('wbdUploadFile').click()">Upload</button>
             <button type="button" id="btnTablesAdd"    class="wbd-btn"           onclick="openEditorFromTables(true)">Add Version</button>
+            <button type="button" id="btnTablesDelete" class="wbd-btn danger"    onclick="deleteVersionFromTables()">Delete</button>
           </div>
         </div>
         <div id="equipmentContent"></div>
@@ -490,9 +482,7 @@ function renderWellInfo(name) {
   renderJobHistoryFull(w);
   // Tables tab has its own per-version dropdown — initialize it
   setupTablesTab(w);
-  // Show edit toolbar only for engineers/admins/techs; export available to anyone signed in
-  var toolbar = document.getElementById('wbdToolbar');
-  if (toolbar) toolbar.style.display = isEditor() ? 'block' : 'none';
+  // Action toolbar lives on the Tables tab now; setupTablesTab() handles its visibility.
   var expBtn = document.getElementById('btnExport');
   if (expBtn) expBtn.style.display = 'inline-block';
   document.getElementById('wellDisplay').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -564,7 +554,7 @@ function openEditor(addMode) {
   };
   document.getElementById('wbdViewer').style.display = 'none';
   document.getElementById('wbdEditor').style.display = 'block';
-  document.getElementById('wbdToolbar').style.display = 'none';
+  (document.getElementById('wbdToolbar')||{style:{}}).style.display = 'none';
   renderEditor();
 }
 
@@ -663,7 +653,7 @@ function cancelEditor() {
   document.getElementById('wbdEditor').style.display = 'none';
   document.getElementById('wbdEditor').innerHTML = '';
   document.getElementById('wbdViewer').style.display = 'block';
-  document.getElementById('wbdToolbar').style.display = 'block';
+  (document.getElementById('wbdToolbar')||{style:{}}).style.display = 'block';
   window._editor = null;
 }
 
@@ -817,7 +807,7 @@ async function uploadWbdFile(inputEl) {
     };
     document.getElementById('wbdViewer').style.display = 'none';
     document.getElementById('wbdEditor').style.display = 'block';
-    document.getElementById('wbdToolbar').style.display = 'none';
+    (document.getElementById('wbdToolbar')||{style:{}}).style.display = 'none';
     renderEditor();
     // Banner above the form so user knows it's parsed-pending-save
     var banner = document.createElement('div');
@@ -1431,10 +1421,15 @@ function renderAllTables(w) {
   div.innerHTML = html;
 }
 
-// Edit/Add from Tables tab — same as WBD tab editor flow, but switches the user to WBD tab
+// Add Version from Tables tab — opens the editor inline on the WBD tab (it lives there)
 function openEditorFromTables(addMode) {
   switchTab('wbd');
   openEditor(addMode);
+}
+
+function deleteVersionFromTables() {
+  switchTab('wbd');
+  deleteVersion();
 }
 
 // Old time-series renderer kept for reference but no longer called
