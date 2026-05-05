@@ -215,8 +215,10 @@
             <select id="tablesVersionSelect" style="padding:4px 8px;border:1px solid #999;border-radius:4px;font-size:0.8rem;min-width:280px;" onchange="renderTablesVersion()"></select>
           </div>
           <div id="tablesToolbar" style="display:none;margin-left:auto;">
-            <button type="button" class="wbd-btn" onclick="openEditorFromTables(false)">Edit</button>
-            <button type="button" class="wbd-btn" onclick="openEditorFromTables(true)">Add Version</button>
+            <button type="button" id="btnTablesEdit"   class="wbd-btn"           onclick="enterTablesEditMode()">Edit</button>
+            <button type="button" id="btnTablesSave"   class="wbd-btn"           onclick="saveTablesEdits()"  style="display:none;">Save</button>
+            <button type="button" id="btnTablesCancel" class="wbd-btn secondary" onclick="cancelTablesEdits()" style="display:none;">Cancel</button>
+            <button type="button" id="btnTablesAdd"    class="wbd-btn"           onclick="openEditorFromTables(true)">Add Version</button>
           </div>
         </div>
         <div id="equipmentContent"></div>
@@ -965,6 +967,195 @@ function switchTab(name) {
   }
 }
 
+// Tables tab — in-place editing state ---------------------------------------
+var TABLES_EDIT_MODE = false;
+// Per-version buffer of full schematic data, edited in place.
+// Shape: { [wbd_id]: { meta:{...}, casing:[...], perforations:[...], plugs:[...], formation_tops:[...], tubing:[...], rods:[...] } }
+var TABLES_BUFFER = {};
+var TABLES_DIRTY = {};   // {wbd_id: true} for versions touched
+
+// Field maps: short JSON keys (page) → SQL/PUT-payload field names
+var TBL_FIELDS = {
+  casing: [
+    {key:'casing_type', label:'Type', map:'ty'},
+    {key:'size',         label:'Size',     map:'sz'},
+    {key:'weight',       label:'Weight',   map:'wt'},
+    {key:'grade',        label:'Grade',    map:'gr'},
+    {key:'set_depth',    label:'Set @',    map:'dp'},
+    {key:'hole_size',    label:'Hole Size',map:'hs'},
+    {key:'cement_sacks', label:'Sxs',      map:'cs'},
+    {key:'toc',          label:'TOC',      map:'tc'},
+    {key:'circ_to_surface', label:'Circ',  map:null},
+    {key:'notes',        label:'Notes',    map:'notes'},
+  ],
+  perforations: [
+    {key:'top_depth',    label:'Top',      map:'td'},
+    {key:'bottom_depth', label:'Bottom',   map:'bd'},
+    {key:'spf',          label:'SPF',      map:'spf'},
+    {key:'zone',         label:'Zone',     map:'zn'},
+    {key:'perf_date',    label:'Date',     map:'dt'},
+    {key:'is_squeezed',  label:'Squeezed', map:'sq', kind:'bool'},
+    {key:'squeeze_date', label:'Sq Date',  map:'sqd'},
+    {key:'notes',        label:'Notes',    map:'notes'},
+  ],
+  plugs: [
+    {key:'plug_type',    label:'Type',     map:'ty'},
+    {key:'depth',        label:'Depth',    map:'dp'},
+    {key:'toc',          label:'TOC',      map:'tc'},
+    {key:'cement_sacks', label:'Sxs',      map:'cs'},
+    {key:'notes',        label:'Notes',    map:'notes'},
+  ],
+  formation_tops: [
+    {key:'formation_name', label:'Formation', map:'fm'},
+    {key:'depth',          label:'Depth',     map:'dp'},
+  ],
+  tubing: [
+    {key:'description', label:'Description', map:'desc'},
+    {key:'depth',       label:'Depth',       map:'dp'},
+    {key:'joints',      label:'Joints',      map:'jts'},
+    {key:'notes',       label:'Notes',       map:'notes'},
+  ],
+  rods: [
+    {key:'description', label:'Description', map:'desc'},
+    {key:'count',       label:'Count',       map:'cnt'},
+    {key:'length',      label:'Length',      map:'len'},
+    {key:'depth',       label:'Depth',       map:'dp'},
+    {key:'notes',       label:'Notes',       map:'notes'},
+  ],
+};
+var TBL_GROUPS = ['casing','perforations','plugs','formation_tops','tubing','rods'];
+
+function initTablesBuffer() {
+  TABLES_BUFFER = {};
+  TABLES_DIRTY = {};
+  ((currentWell && currentWell._timeline) || []).forEach(function(t) {
+    if (t.kind !== 'schematic') return;
+    var s = t.data;
+    var entry = { meta: { wbd_date: s.dt || '', status: s.st || 'CURRENT', td: s.td || '', pbtd: s.pb || '' }, _label: (s.dt || '—') + ' ' + (s.st || '') };
+    TBL_GROUPS.forEach(function(g) {
+      var arr = (g === 'casing'        ? s.csg :
+                 g === 'perforations'  ? s.pf  :
+                 g === 'plugs'         ? s.pl  :
+                 g === 'formation_tops'? s.ft  :
+                 g === 'tubing'        ? s.tb  :
+                 g === 'rods'          ? s.rd  : []) || [];
+      entry[g] = arr.map(function(r) {
+        var rec = {};
+        TBL_FIELDS[g].forEach(function(f) {
+          if (f.map) rec[f.key] = r[f.map];
+          else rec[f.key] = '';
+        });
+        return rec;
+      });
+    });
+    TABLES_BUFFER[s.id] = entry;
+  });
+}
+
+function enterTablesEditMode() {
+  if (!currentWell) return;
+  initTablesBuffer();
+  TABLES_EDIT_MODE = true;
+  document.getElementById('btnTablesEdit').style.display   = 'none';
+  document.getElementById('btnTablesAdd').style.display    = 'none';
+  document.getElementById('btnTablesSave').style.display   = 'inline-block';
+  document.getElementById('btnTablesCancel').style.display = 'inline-block';
+  renderAllTables(currentWell);
+}
+
+function cancelTablesEdits() {
+  TABLES_EDIT_MODE = false;
+  TABLES_BUFFER = {};
+  TABLES_DIRTY = {};
+  document.getElementById('btnTablesEdit').style.display   = 'inline-block';
+  document.getElementById('btnTablesAdd').style.display    = 'inline-block';
+  document.getElementById('btnTablesSave').style.display   = 'none';
+  document.getElementById('btnTablesCancel').style.display = 'none';
+  renderAllTables(currentWell);
+}
+
+async function saveTablesEdits() {
+  var dirty = Object.keys(TABLES_DIRTY).filter(function(k){ return TABLES_DIRTY[k]; });
+  if (!dirty.length) { cancelTablesEdits(); return; }
+  var token = getToken();
+  if (!token) { alert('Sign in again to save'); return; }
+  var btn = document.getElementById('btnTablesSave');
+  if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
+  try {
+    for (var i = 0; i < dirty.length; i++) {
+      var wbd_id = dirty[i];
+      var ent = TABLES_BUFFER[wbd_id];
+      var body = {
+        meta: ent.meta,
+        casing:         ent.casing.map(stripEmpty),
+        perforations:   ent.perforations.map(stripEmpty),
+        plugs:          ent.plugs.map(stripEmpty),
+        formation_tops: ent.formation_tops.map(stripEmpty),
+        tubing:         ent.tubing.map(stripEmpty),
+        rods:           ent.rods.map(stripEmpty),
+      };
+      var res = await fetch(API_BASE + '/wbd/version/' + wbd_id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        var msg = await res.text();
+        alert('Save failed for version ' + wbd_id + ': ' + res.status + ' ' + msg);
+        return;
+      }
+    }
+    var fresh = await loadWellDetail(currentWell.sn);
+    if (fresh) renderWellInfo(currentWell.sn);
+  } catch (err) {
+    alert('Save error: ' + err);
+  } finally {
+    if (btn) { btn.textContent = 'Save'; btn.disabled = false; }
+  }
+}
+
+function stripEmpty(rec) {
+  // Convert empty strings to null so SQL gets clean values; keep booleans
+  var out = {};
+  Object.keys(rec).forEach(function(k){
+    var v = rec[k];
+    if (v === '' || v === undefined) out[k] = null;
+    else out[k] = v;
+  });
+  return out;
+}
+
+// Called from inputs onchange
+function tblOnChange(wbd_id, group, rowIdx, field, ev) {
+  if (!TABLES_BUFFER[wbd_id]) return;
+  var v = ev.target.value;
+  if (ev.target.type === 'checkbox') v = ev.target.checked ? true : false;
+  TABLES_BUFFER[wbd_id][group][rowIdx][field] = v;
+  TABLES_DIRTY[wbd_id] = true;
+}
+
+function tblAddRow(wbd_id, group) {
+  if (!TABLES_BUFFER[wbd_id]) return;
+  var rec = {};
+  TBL_FIELDS[group].forEach(function(f){ rec[f.key] = (f.kind === 'bool') ? null : ''; });
+  TABLES_BUFFER[wbd_id][group].push(rec);
+  TABLES_DIRTY[wbd_id] = true;
+  renderAllTables(currentWell);
+}
+
+function tblDeleteRow(wbd_id, group, rowIdx) {
+  if (!TABLES_BUFFER[wbd_id]) return;
+  TABLES_BUFFER[wbd_id][group].splice(rowIdx, 1);
+  TABLES_DIRTY[wbd_id] = true;
+  renderAllTables(currentWell);
+}
+
+function tblOnMetaChange(wbd_id, field, ev) {
+  if (!TABLES_BUFFER[wbd_id]) return;
+  TABLES_BUFFER[wbd_id].meta[field] = ev.target.value;
+  TABLES_DIRTY[wbd_id] = true;
+}
+
 // Tables tab — one unified table per group; first column = version label;
 // rows = every component row from every version stacked together.
 function setupTablesTab(w) {
@@ -1016,6 +1207,49 @@ function renderAllTables(w) {
     return html;
   }
 
+  // ── Editable schematic-group table (used in edit mode) ──
+  function editableTableHTML(title, group) {
+    var fields = TBL_FIELDS[group];
+    // Has any rows in any wbd_id?
+    var anyRows = Object.keys(TABLES_BUFFER).some(function(wid){ return (TABLES_BUFFER[wid][group] || []).length > 0; });
+    if (!anyRows && Object.keys(TABLES_BUFFER).length === 0) return '';
+
+    var html = '<h3>' + esc(title) + '</h3>'
+             + '<div style="overflow-x:auto;border:1px solid #c0c0c0;background:#fff;margin-bottom:14px;">'
+             + '<table class="eq-table" style="margin:0;border:none;"><thead><tr>'
+             + '<th style="position:sticky;left:0;background:#f0f4f0;z-index:2;">Version</th>';
+    fields.forEach(function(f){ html += '<th>' + esc(f.label) + '</th>'; });
+    html += '<th style="width:30px;"></th></tr></thead><tbody>';
+
+    Object.keys(TABLES_BUFFER).forEach(function(wid) {
+      var ent = TABLES_BUFFER[wid];
+      (ent[group] || []).forEach(function(rec, idx){
+        html += '<tr>';
+        html += '<td class="eq-label" style="position:sticky;left:0;background:#fff;white-space:nowrap;">' + esc(ent._label) + '</td>';
+        fields.forEach(function(f){
+          var v = rec[f.key];
+          if (f.kind === 'bool') {
+            html += '<td><select onchange="tblOnChange(\''+wid+'\',\''+group+'\','+idx+',\''+f.key+'\',event)">'
+                  + '<option value=""'    + (v==null  ? ' selected':'') + '>—</option>'
+                  + '<option value="true"' + (v===true ? ' selected':'') + '>Yes</option>'
+                  + '<option value="false"'+ (v===false? ' selected':'') + '>No</option>'
+                  + '</select></td>';
+          } else {
+            html += '<td><input type="text" value="' + esc(v == null ? '' : v) + '" oninput="tblOnChange(\''+wid+'\',\''+group+'\','+idx+',\''+f.key+'\',event)"></td>';
+          }
+        });
+        html += '<td class="row-del" onclick="tblDeleteRow(\''+wid+'\',\''+group+'\','+idx+')">×</td>';
+        html += '</tr>';
+      });
+      // "+ Add row" link tied to this version, only if buffer has this wid
+      html += '<tr><td colspan="'+(fields.length+2)+'" style="padding:4px 8px;">'
+            + '<span class="ed-add-row" onclick="tblAddRow(\''+wid+'\',\''+group+'\')">+ Add ' + esc(group.replace('_',' ')) + ' row to ' + esc(ent._label) + '</span>'
+            + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+    return html;
+  }
+
   function isEmpty(v) { return v === null || v === undefined || v === '' || v === 0 || v === '0' || v === '<Empty>'; }
   function anyNonEmpty(obj, keys) {
     for (var i = 0; i < keys.length; i++) if (!isEmpty(obj[keys[i]])) return true;
@@ -1023,6 +1257,36 @@ function renderAllTables(w) {
   }
 
   var html = '';
+
+  // Edit mode: editable metadata + each schematic-group editable table
+  if (TABLES_EDIT_MODE) {
+    html += '<h3>Version metadata</h3>'
+         + '<div style="overflow-x:auto;border:1px solid #c0c0c0;background:#fff;margin-bottom:14px;">'
+         + '<table class="eq-table" style="margin:0;border:none;"><thead><tr>'
+         + '<th style="position:sticky;left:0;background:#f0f4f0;z-index:2;">Version (wbd_id)</th>'
+         + '<th>Date</th><th>Status</th><th>TD</th><th>PBTD</th>'
+         + '</tr></thead><tbody>';
+    Object.keys(TABLES_BUFFER).forEach(function(wid) {
+      var ent = TABLES_BUFFER[wid];
+      html += '<tr><td class="eq-label" style="position:sticky;left:0;background:#fff;white-space:nowrap;">' + esc(wid) + ' — ' + esc(ent._label) + '</td>';
+      ['wbd_date','status','td','pbtd'].forEach(function(field){
+        html += '<td><input type="text" value="' + esc(ent.meta[field] || '') + '" oninput="tblOnMetaChange(\''+wid+'\',\''+field+'\',event)"></td>';
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+
+    TBL_GROUPS.forEach(function(g) {
+      var label = g === 'formation_tops' ? 'Formation Tops'
+                : g === 'perforations'  ? 'Perforations'
+                : g.charAt(0).toUpperCase() + g.slice(1);
+      html += editableTableHTML(label, g);
+    });
+    div.innerHTML = html;
+    return;
+  }
+
+  // ── Read-only mode (default) ────────────────────────────────────────────────
 
   // ── Casing (schematics only)
   var csgRows = [];
