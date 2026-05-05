@@ -189,6 +189,8 @@
             <select id="versionSelect" style="padding:4px 8px;border:1px solid #999;border-radius:4px;font-size:0.8rem;" onchange="onVersionChange()"></select>
           </div>
           <div id="wbdToolbar" style="display:none;margin-left:auto;">
+            <input type="file" id="wbdUploadFile" style="display:none;" accept=".xlsx,.xls,.pdf,.pptx,.ppt" onchange="uploadWbdFile(this)">
+            <button type="button" id="btnUpload" class="wbd-btn" onclick="document.getElementById('wbdUploadFile').click()">Upload</button>
             <button type="button" id="btnEdit"   class="wbd-btn" onclick="openEditor(false)">Edit</button>
             <button type="button" id="btnAdd"    class="wbd-btn" onclick="openEditor(true)">Add Version</button>
             <button type="button" id="btnDelete" class="wbd-btn danger" onclick="deleteVersion()">Delete</button>
@@ -687,6 +689,78 @@ async function saveEditor() {
     if (fresh) renderWellInfo(e.short);
   } catch (err) {
     alert('Save error: ' + err);
+  }
+}
+
+async function uploadWbdFile(inputEl) {
+  var file = inputEl.files[0];
+  if (!file) return;
+  var w = currentWell;
+  if (!w) { alert('Pick a well first'); return; }
+  var token = getToken();
+  if (!token) { alert('Sign in again to upload'); inputEl.value = ''; return; }
+
+  var btn = document.getElementById('btnUpload');
+  var original = btn ? btn.textContent : 'Upload';
+  if (btn) { btn.textContent = 'Parsing...'; btn.disabled = true; }
+  try {
+    var fd = new FormData();
+    fd.append('file', file);
+    fd.append('short', w.sn);
+    var res = await fetch(API_BASE + '/wbd/parse', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token },
+      body: fd
+    });
+    if (!res.ok) {
+      var msg = await res.text();
+      alert('Parse failed: ' + res.status + ' ' + msg);
+      return;
+    }
+    var data = await res.json();
+    if (data.version_count_in_file > 1) {
+      var ok = confirm('File contained ' + data.version_count_in_file + ' WBD versions. Showing the most recent. Continue?');
+      if (!ok) return;
+    }
+    // Find latest schematic for clone_from id (so existing tubing/rod data is retained
+    // unless overwritten by the upload)
+    var clone = null;
+    for (var i = 0; i < (w._timeline || []).length; i++) {
+      if (w._timeline[i].kind === 'schematic') { clone = w._timeline[i].data; break; }
+    }
+    // Open editor in add-mode pre-filled with parsed data
+    window._editor = {
+      addMode: true,
+      cloneFromId: clone ? clone.id : null,
+      editingId: null,
+      short: w.sn,
+      meta: {
+        wbd_date: data.meta.wbd_date || new Date().toISOString().slice(0, 10),
+        status:   data.meta.status   || 'CURRENT',
+        td:       data.meta.td       || (clone ? clone.td : ''),
+        pbtd:     data.meta.pbtd     || (clone ? clone.pb : ''),
+      },
+      casing:         (data.casing         || []).map(function(c){ return c; }),
+      perforations:   (data.perforations   || []).map(function(p){ return p; }),
+      plugs:          (data.plugs          || []).map(function(p){ return p; }),
+      formation_tops: (data.formation_tops || []).map(function(f){ return f; }),
+      tubing:         (data.tubing         || []).map(function(t){ return t; }),
+      rods:           (data.rods           || []).map(function(r){ return r; }),
+    };
+    document.getElementById('wbdViewer').style.display = 'none';
+    document.getElementById('wbdEditor').style.display = 'block';
+    document.getElementById('wbdToolbar').style.display = 'none';
+    renderEditor();
+    // Banner above the form so user knows it's parsed-pending-save
+    var banner = document.createElement('div');
+    banner.style.cssText = 'background:#fff8d8;border:1px solid #d8c060;padding:8px 12px;border-radius:4px;margin-bottom:12px;font-size:0.85rem;';
+    banner.textContent = 'Parsed from ' + (data.filename || 'uploaded file') + ' — review below and click "Create Version" to save, or "Cancel" to discard.';
+    document.getElementById('wbdEditor').insertBefore(banner, document.getElementById('wbdEditor').firstChild);
+  } catch (err) {
+    alert('Upload error: ' + err);
+  } finally {
+    if (btn) { btn.textContent = original; btn.disabled = false; }
+    inputEl.value = '';   // reset so same file can be re-picked
   }
 }
 

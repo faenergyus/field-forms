@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Optional
 
 import pyodbc
-from fastapi import FastAPI, Query, HTTPException, Depends, Header
+from fastapi import FastAPI, Query, HTTPException, Depends, Header, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 from google.oauth2 import id_token
@@ -959,6 +959,110 @@ def create_wbd_version(req: NewVersionRequest, user: str = Depends(get_editor)):
     conn.close()
     log.info("WBD version %d created (clone_from=%s) by %s", new_id, req.clone_from_wbd_id, user)
     return {"ok": True, "wbd_id": new_id, "created_by": user}
+
+
+@app.post("/wbd/parse")
+async def parse_wbd_file(
+    file: UploadFile = File(...),
+    short: Optional[str] = Form(None),
+    user: str = Depends(get_editor),
+):
+    """Accept an uploaded WBD file (.xlsx/.xls/.pdf/.pptx/.ppt), run the extraction
+    parser, and return the parsed structure for preview before save.
+
+    Does NOT write to SQL — the client previews/edits in the editor and saves via
+    POST /wbd/version + PUT /wbd/version/{id}.
+    """
+    if file is None:
+        raise HTTPException(400, "no file uploaded")
+    import tempfile, os as _os, sys as _sys, importlib
+
+    # Save upload to temp
+    suffix = _os.path.splitext(file.filename or '')[1].lower() or '.xlsx'
+    fd, tmp_path = tempfile.mkstemp(suffix=suffix)
+    try:
+        with _os.fdopen(fd, 'wb') as f:
+            content = await file.read()
+            f.write(content)
+
+        # Import / reload extract_wbd module (located alongside api_server.py)
+        ext_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'extract_wbd.py')
+        if not _os.path.exists(ext_path):
+            raise HTTPException(500, f"extract_wbd.py not found at {ext_path}")
+
+        spec = importlib.util.spec_from_file_location('extract_wbd', ext_path)
+        ext = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ext)
+
+        # Reset module globals (parsers append to these)
+        ext.wells = {}
+        ext.wbd_versions = []
+        ext.casing_rows = []
+        ext.perf_rows = []
+        ext.plug_rows = []
+        ext.fish_rows = []
+        ext.formation_top_rows = []
+        ext.tubing_rows = []
+        ext.rod_rows = []
+
+        well_label = (short or 'UPLOADED').strip().upper()
+        try:
+            ext.process_wbd_file(_os.path.abspath(tmp_path), well_label, 'upload')
+        except Exception as e:
+            raise HTTPException(400, f"Parser failed: {e}")
+
+        # The parser may emit 0+ wbd_versions. Pick the most recent (or only) one.
+        if not ext.wbd_versions:
+            raise HTTPException(400, "Parser found no WBD data in this file. Wrong template, blank sheets, or unsupported format.")
+        # Sort by date desc (None last) and pick first
+        def _vk(v):
+            d = v.get('wbd_date') or ''
+            return (1 if not d else 0, str(d))
+        ext.wbd_versions.sort(key=_vk)
+        v = ext.wbd_versions[-1]   # most recent
+        wbd_id = v.get('wbd_id')
+
+        def filt(rows):
+            return [r for r in rows if r.get('wbd_id') == wbd_id]
+
+        def serialize(rows, drop=()):
+            out = []
+            for r in rows:
+                d = {}
+                for k, val in r.items():
+                    if k in drop or k in ('well_id', 'wbd_id'): continue
+                    if val is None: d[k] = None
+                    elif isinstance(val, (str, int, float, bool)): d[k] = val
+                    else: d[k] = str(val)
+                out.append(d)
+            return out
+
+        result = {
+            "ok": True,
+            "filename": file.filename,
+            "well_label": well_label,
+            "version_count_in_file": len(ext.wbd_versions),
+            "meta": {
+                "wbd_date": v.get('wbd_date'),
+                "status": v.get('status') or 'CURRENT',
+                "td": str(v['td']) if v.get('td') is not None else None,
+                "pbtd": str(v['pbtd']) if v.get('pbtd') is not None else None,
+            },
+            "casing":         serialize(filt(ext.casing_rows)),
+            "perforations":   serialize(filt(ext.perf_rows)),
+            "plugs":          serialize(filt(ext.plug_rows)),
+            "formation_tops": serialize(filt(ext.formation_top_rows)),
+            "tubing":         serialize(filt(ext.tubing_rows)),
+            "rods":           serialize(filt(ext.rod_rows)),
+        }
+        log.info("WBD parse by %s: %s -> %d csg / %d pf / %d ft / %d pl / %d tb / %d rd",
+                 user, file.filename,
+                 len(result["casing"]), len(result["perforations"]), len(result["formation_tops"]),
+                 len(result["plugs"]), len(result["tubing"]), len(result["rods"]))
+        return result
+    finally:
+        try: _os.unlink(tmp_path)
+        except Exception: pass
 
 
 @app.delete("/wbd/version/{wbd_id}")
