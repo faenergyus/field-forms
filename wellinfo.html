@@ -832,12 +832,12 @@ function renderEquipmentOverTime(w) {
       ['TAC depth',             'tac_depth'],
     ]},
     { title: 'Rods', fields: [
-      ['1"',         'rods_1', 'rod_len'],
-      ['7/8"',       'rods_78', 'rod_len'],
-      ['3/4"',       'rods_34', 'rod_len'],
-      ['5/8"',       'rods_58', 'rod_len'],
-      ['Fiberglass', 'rods_fg', 'rod_len'],
-      ['Sinker',     'rods_sinker', 'rod_len'],
+      ['1"',         'rods_1', 'rod_len_steel'],
+      ['7/8"',       'rods_78', 'rod_len_steel'],
+      ['3/4"',       'rods_34', 'rod_len_steel'],
+      ['5/8"',       'rods_58', 'rod_len_steel'],
+      ['Fiberglass', 'rods_fg', 'rod_len_fg'],
+      ['Sinker',     'rods_sinker', 'rod_len_steel'],
       ['Total length', '_rod_total', 'compute_total'],
       ['Type',       'rod_type'],
       ['New couplers', 'rod_couplers_new'],
@@ -865,11 +865,14 @@ function renderEquipmentOverTime(w) {
   });
   thead += '</tr>';
 
-  var ROD_LEN = 25; // ft per joint
-  var ROD_KEYS = ['rods_1','rods_78','rods_34','rods_58','rods_fg','rods_sinker'];
+  // ft per joint: steel rods 25', fiberglass 37.5'
+  var ROD_LEN_PER = { rods_1: 25, rods_78: 25, rods_34: 25, rods_58: 25, rods_sinker: 25, rods_fg: 37.5 };
   function rodTotal(e) {
     var t = 0, any = false;
-    ROD_KEYS.forEach(function(k){ var v = parseFloat(e[k]); if (!isNaN(v) && v > 0) { t += v * ROD_LEN; any = true; } });
+    Object.keys(ROD_LEN_PER).forEach(function(k){
+      var v = parseFloat(e[k]);
+      if (!isNaN(v) && v > 0) { t += v * ROD_LEN_PER[k]; any = true; }
+    });
     return any ? t : null;
   }
 
@@ -886,9 +889,10 @@ function renderEquipmentOverTime(w) {
         }
         var v = e[key];
         if (v === null || v === undefined || v === '' || v === '<Empty>') return null;
-        if (render === 'rod_len') {
+        if (render === 'rod_len_steel' || render === 'rod_len_fg') {
           var n = parseFloat(v);
-          if (!isNaN(n) && n > 0) return v + ' (' + (n * ROD_LEN).toLocaleString() + "')";
+          var per = render === 'rod_len_fg' ? 37.5 : 25;
+          if (!isNaN(n) && n > 0) return v + ' (' + Math.round(n * per).toLocaleString() + "')";
         }
         return v;
       });
@@ -1456,19 +1460,20 @@ function drawWBD(w) {
     s += '<text x="' + rX + '" y="' + rY + '" font-size="10" font-weight="700" fill="#000" font-style="italic" text-decoration="underline">Rods</text>';
     rY += 13;
     var rodLines = [];
-    var ROD_LEN = 25;  // ft per joint (standard sucker rod)
-    function rodLine(label, count) {
+    // ft per joint — steel rods 25', fiberglass 37.5'
+    var ROD_LEN = { steel: 25, fg: 37.5 };
+    function rodLine(label, count, lenPer) {
       var n = parseFloat(count);
-      var lenTxt = (!isNaN(n) && n > 0) ? '  (' + (n * ROD_LEN).toLocaleString() + "')" : '';
+      var lenTxt = (!isNaN(n) && n > 0) ? '  (' + Math.round(n * lenPer).toLocaleString() + "')" : '';
       return label + ': ' + count + ' ea' + lenTxt;
     }
     var totalLen = 0;
-    if (wo.rods_1)      { rodLines.push(rodLine('1"    ', wo.rods_1));    totalLen += parseFloat(wo.rods_1) * ROD_LEN; }
-    if (wo.rods_78)     { rodLines.push(rodLine('7/8"  ', wo.rods_78));   totalLen += parseFloat(wo.rods_78) * ROD_LEN; }
-    if (wo.rods_34)     { rodLines.push(rodLine('3/4"  ', wo.rods_34));   totalLen += parseFloat(wo.rods_34) * ROD_LEN; }
-    if (wo.rods_58)     { rodLines.push(rodLine('5/8"  ', wo.rods_58));   totalLen += parseFloat(wo.rods_58) * ROD_LEN; }
-    if (wo.rods_fg)     { rodLines.push(rodLine('FG    ', wo.rods_fg));   totalLen += parseFloat(wo.rods_fg) * ROD_LEN; }
-    if (wo.rods_sinker) { rodLines.push(rodLine('Sinker', wo.rods_sinker)); totalLen += parseFloat(wo.rods_sinker) * ROD_LEN; }
+    if (wo.rods_1)      { rodLines.push(rodLine('1"    ', wo.rods_1, ROD_LEN.steel));    totalLen += parseFloat(wo.rods_1) * ROD_LEN.steel; }
+    if (wo.rods_78)     { rodLines.push(rodLine('7/8"  ', wo.rods_78, ROD_LEN.steel));   totalLen += parseFloat(wo.rods_78) * ROD_LEN.steel; }
+    if (wo.rods_34)     { rodLines.push(rodLine('3/4"  ', wo.rods_34, ROD_LEN.steel));   totalLen += parseFloat(wo.rods_34) * ROD_LEN.steel; }
+    if (wo.rods_58)     { rodLines.push(rodLine('5/8"  ', wo.rods_58, ROD_LEN.steel));   totalLen += parseFloat(wo.rods_58) * ROD_LEN.steel; }
+    if (wo.rods_fg)     { rodLines.push(rodLine('FG    ', wo.rods_fg, ROD_LEN.fg));      totalLen += parseFloat(wo.rods_fg) * ROD_LEN.fg; }
+    if (wo.rods_sinker) { rodLines.push(rodLine('Sinker', wo.rods_sinker, ROD_LEN.steel)); totalLen += parseFloat(wo.rods_sinker) * ROD_LEN.steel; }
     if (totalLen > 0)   rodLines.push("Total : " + Math.round(totalLen).toLocaleString() + "'");
     if (wo.rod_type)    rodLines.push('Type  : ' + wo.rod_type);
     if (!rodLines.length) rodLines.push('—');
