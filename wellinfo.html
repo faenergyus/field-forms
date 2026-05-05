@@ -371,16 +371,10 @@ function renderWellInfo(name) {
     vDiv.style.display = 'none';
   }
 
-  // Default: first item with actual schematic data, otherwise first workover with data
-  currentVersionIdx = 0;
-  for (var ti = 0; ti < timeline.length; ti++) {
-    var t = timeline[ti];
-    if (t.kind === 'schematic') {
-      var s = t.data;
-      var hasData = (s.csg && s.csg.length) || (s.pf && s.pf.length) || s.td || s.pb;
-      if (hasData) { currentVersionIdx = ti; break; }
-    }
-  }
+  // Default to the most recent item in the timeline (timeline is sorted desc by date).
+  // This shows the latest known state: latest workover if newer than the latest schematic,
+  // else latest schematic. resolveSources() will pair it with the correct counterpart.
+  currentVersionIdx = timeline.length > 0 ? 0 : 0;
   if (timeline.length > 0) sel.value = currentVersionIdx;
   renderVersion();
   document.getElementById('wellDisplay').scrollIntoView({ behavior: 'smooth', block: 'start' });
