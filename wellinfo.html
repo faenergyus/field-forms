@@ -417,7 +417,7 @@ async function selectWell(name) {
 // Render
 function v(val) { return val || '\u2014'; }
 function vc(val) { return val ? 'data-val' : 'data-val empty'; }
-function esc(s) { if (s == null || s === '') return ''; return String(s).replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s) { if (s == null || s === '') return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 function casingCard(title, arr, color) {
   if (!arr || arr.every(function(x) { return !x; })) return '';
