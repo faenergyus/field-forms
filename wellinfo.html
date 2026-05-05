@@ -700,6 +700,37 @@ function workoverHasEquipment(w) {
   return false;
 }
 
+// Build merged equipment by walking the timeline (most recent first) and taking the most recent
+// non-null value per field across ALL workovers ≤ asOfDate. This handles the realistic case where
+// e.g. one job updated tubing counts but not rod counts — older rod totals carry forward.
+var EQUIP_FIELDS = ['pump_size','pump_type','pump_new','pumping_unit','spm',
+                    'sn_depth','tac_depth',
+                    'rods_1','rods_78','rods_34','rods_58','rods_fg','rods_sinker','rod_type','rod_couplers_new',
+                    'tbg_count_278','tbg_count_278_coated','tbg_count_238','tbg_count_238_coated','tbg_coating'];
+function mergeEquipment(events, asOfDate) {
+  var merged = {};
+  var sourceDates = {};   // {field: date_provided}
+  var anchor = null;      // first workover (newest) ≤ asOfDate
+  events.forEach(function(e) {
+    if (asOfDate && (e.event_date || '0') > asOfDate) return;
+    if (!anchor) anchor = e;
+    EQUIP_FIELDS.forEach(function(f) {
+      if (merged[f] !== undefined) return;
+      var v = e[f];
+      if (v === null || v === undefined || v === '' || v === 0 || v === '0') return;
+      merged[f] = v;
+      sourceDates[f] = e.event_date;
+    });
+  });
+  if (!anchor) return null;
+  merged.event_date = anchor.event_date;
+  merged.failure_cause = anchor.failure_cause;
+  merged.failed_component = anchor.failed_component;
+  merged.job_xkey = anchor.job_xkey;
+  merged._sourceDates = sourceDates;
+  return merged;
+}
+
 // For a given timeline pick, find the corresponding schematic and equipment sources.
 // Workover picked w/ data: equipment = picked event; schematic = most recent <= picked.date
 // Workover picked w/o data: equipment = most recent prior workover WITH data (carried forward)
@@ -730,19 +761,16 @@ function resolveSources(timeline, idx) {
     return null;
   }
 
+  // Build a merged equipment record by walking back per-field (most realistic well state)
+  var asOfDate = picked.kind === 'workover' ? picked.date : null;  // null = use all (most recent of each field)
+  var allEvents = (currentWell && currentWell.events) || [];
+  var sortedEvents = allEvents.slice().sort(function(a, b) { return (b.event_date || '0').localeCompare(a.event_date || '0'); });
+  workover = mergeEquipment(sortedEvents, asOfDate);
+
   if (picked.kind === 'workover') {
-    var pickedHasData = workoverHasEquipment(picked.data);
-    if (pickedHasData) {
-      workover = picked.data;
-    } else {
-      // Carry forward from most recent prior workover with equipment data
-      workover = findEquipmentWorkover(idx + 1);
-      equipmentCarriedFrom = workover ? workover.event_date : null;
-    }
     schematic = findSchematic(picked.date) || findSchematic(null);
   } else {
     schematic = picked.data;
-    workover = findEquipmentWorkover(0);  // latest with data
   }
   return { schematic: schematic, workover: workover, picked: picked, equipmentCarriedFrom: equipmentCarriedFrom };
 }
@@ -1424,6 +1452,12 @@ function drawWBD(w) {
     rY += 13;
     if (wo.pump_size) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">Size: ' + esc(wo.pump_size) + '</text>'; rY += 11; }
     if (wo.pump_type) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">Type: ' + esc(wo.pump_type) + '</text>'; rY += 11; }
+    // Pump depth: SN depth is where the seating nipple sits; pump set just below SN (~8 ft)
+    var pumpDepthVal = parseDepthLoose(wo.sn_depth);
+    if (pumpDepthVal) {
+      var pdShown = Math.round(pumpDepthVal + 8);
+      s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">Depth: ~' + pdShown.toLocaleString() + "' (SN+8')</text>"; rY += 11;
+    }
     if (wo.pumping_unit) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">Unit: ' + esc(wo.pumping_unit) + '</text>'; rY += 11; }
     if (wo.spm) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">SPM:  ' + esc(wo.spm) + '</text>'; rY += 11; }
     if (wo.failure_cause || wo.failed_component) {
