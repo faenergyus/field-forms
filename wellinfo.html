@@ -997,11 +997,8 @@ function renderAllTables(w) {
   }
 
   function tableHTML(title, headers, rows) {
+    if (!rows.length) return '';   // hide the section entirely if no rows
     var html = '<h3>' + esc(title) + '</h3>';
-    if (!rows.length) {
-      html += '<div class="eq-empty">— no data —</div>';
-      return html;
-    }
     html += '<div style="overflow-x:auto;border:1px solid #c0c0c0;background:#fff;margin-bottom:14px;">'
          + '<table class="eq-table" style="margin:0;border:none;"><thead><tr>';
     headers.forEach(function(h, i){
@@ -1019,19 +1016,13 @@ function renderAllTables(w) {
     return html;
   }
 
-  var html = '';
+  function isEmpty(v) { return v === null || v === undefined || v === '' || v === 0 || v === '0' || v === '<Empty>'; }
+  function anyNonEmpty(obj, keys) {
+    for (var i = 0; i < keys.length; i++) if (!isEmpty(obj[keys[i]])) return true;
+    return false;
+  }
 
-  // ── Versions overview (all schematics + workovers in one table)
-  var vRows = [];
-  schems.forEach(function(t){
-    var s = t.data;
-    vRows.push([vlabel(t), 'Schematic', s.dt || '', s.st || '', s.td || '', s.pb || '', s.id || '']);
-  });
-  workovers.forEach(function(t){
-    var wo = t.data;
-    vRows.push([vlabel(t), 'Workover', wo.event_date || '', (wo.failure_cause||'') + (wo.failed_component ? ' / ' + wo.failed_component : ''), '', '', wo.afe || '']);
-  });
-  html += tableHTML('Versions', ['Version','Type','Date','Status / Cause','TD','PBTD','ID/AFE'], vRows);
+  var html = '';
 
   // ── Casing (schematics only)
   var csgRows = [];
@@ -1066,10 +1057,12 @@ function renderAllTables(w) {
   schems.forEach(function(t){ (t.data.tb || []).forEach(function(x){ tbRows.push([vlabel(t), x.desc, x.dp, x.jts, x.notes]); }); });
   html += tableHTML('Tubing (schematic detail)', ['Version','Description','Depth','Joints','Notes'], tbRows);
 
-  // ── Tubing — workover counts (one row per workover)
+  // ── Tubing — workover counts (skip workovers with no tubing data)
+  var tbgKeys = ['tbg_count_278','tbg_count_278_coated','tbg_count_238','tbg_count_238_coated','tbg_coating','sn_depth','tac_depth','tbg_replaced_278','tbg_replaced_278_coated','tbg_replaced_238','tbg_replaced_238_coated'];
   var tbgwoRows = [];
   workovers.forEach(function(t){
     var wo = t.data;
+    if (!anyNonEmpty(wo, tbgKeys)) return;
     tbgwoRows.push([vlabel(t), wo.tbg_count_278, wo.tbg_count_278_coated, wo.tbg_count_238, wo.tbg_count_238_coated, wo.tbg_coating, wo.sn_depth, wo.tac_depth, wo.tbg_replaced_278, wo.tbg_replaced_278_coated, wo.tbg_replaced_238, wo.tbg_replaced_238_coated]);
   });
   html += tableHTML('Tubing (workover counts)',
@@ -1081,28 +1074,34 @@ function renderAllTables(w) {
   schems.forEach(function(t){ (t.data.rd || []).forEach(function(r){ rdRows.push([vlabel(t), r.desc, r.cnt, r.len, r.dp, r.notes]); }); });
   html += tableHTML('Rods (schematic detail)', ['Version','Description','Count','Length','Depth','Notes'], rdRows);
 
-  // ── Rods — workover counts
+  // ── Rods — workover counts (skip workovers with no rod data)
+  var rdKeys = ['rods_1','rods_78','rods_34','rods_58','rods_fg','rods_sinker','rod_type','rod_couplers_new','rods_replaced_1','rods_replaced_78','rods_replaced_34','rods_replaced_58','rods_replaced_fg','rods_replaced_sinker'];
   var rdwoRows = [];
   workovers.forEach(function(t){
     var wo = t.data;
+    if (!anyNonEmpty(wo, rdKeys)) return;
     rdwoRows.push([vlabel(t), wo.rods_1, wo.rods_78, wo.rods_34, wo.rods_58, wo.rods_fg, wo.rods_sinker, wo.rod_type, wo.rod_couplers_new, wo.rods_replaced_1, wo.rods_replaced_78, wo.rods_replaced_34, wo.rods_replaced_58, wo.rods_replaced_fg, wo.rods_replaced_sinker]);
   });
   html += tableHTML('Rods (workover counts)',
     ['Version','1"','7/8"','3/4"','5/8"','FG','Sinker','Type','New couplers','Repl 1"','Repl 7/8"','Repl 3/4"','Repl 5/8"','Repl FG','Repl sinker'],
     rdwoRows);
 
-  // ── Pump (workover only)
+  // ── Pump (skip workovers with no pump data)
+  var pumpKeys = ['pump_size','pump_type','pump_new','pumping_unit','spm'];
   var pumpRows = [];
   workovers.forEach(function(t){
     var wo = t.data;
+    if (!anyNonEmpty(wo, pumpKeys)) return;
     pumpRows.push([vlabel(t), wo.pump_size, wo.pump_type, wo.pump_new, wo.pumping_unit, wo.spm]);
   });
   html += tableHTML('Pump', ['Version','Size','Type','New?','Pumping Unit','SPM'], pumpRows);
 
-  // ── Job flags (workover only)
+  // ── Job flags (skip workovers with no flag data)
+  var jobKeys = ['failure_cause','failed_component','corrosion','pull_tubing','cleanout','acid','enduralloy','summary'];
   var jobRows = [];
   workovers.forEach(function(t){
     var wo = t.data;
+    if (!anyNonEmpty(wo, jobKeys)) return;
     jobRows.push([vlabel(t), wo.failure_cause, wo.failed_component, wo.corrosion, wo.pull_tubing, wo.cleanout, wo.acid, wo.enduralloy, (wo.summary || '').substring(0,200)]);
   });
   html += tableHTML('Job flags', ['Version','Cause','Component','Corrosion','Pull tubing','Cleanout','Acid','Enduralloy','Summary'], jobRows);
