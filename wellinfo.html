@@ -448,7 +448,7 @@ function renderWellInfo(name) {
   // Equipment + Job History don't depend on WBD version — render once per well
   renderEquipmentOverTime(w);
   renderJobHistoryFull(w);
-  // Show edit toolbar only for engineers/admins
+  // Show edit toolbar only for engineers/admins/techs
   var toolbar = document.getElementById('wbdToolbar');
   if (toolbar) toolbar.style.display = isEditor() ? 'block' : 'none';
   document.getElementById('wellDisplay').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -457,7 +457,7 @@ function renderWellInfo(name) {
 function isEditor() {
   try {
     var s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
-    return s.role === 'engineer' || s.role === 'admin';
+    return s.role === 'engineer' || s.role === 'admin' || s.role === 'tech';
   } catch(e) { return false; }
 }
 function getToken() {

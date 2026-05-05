@@ -599,7 +599,7 @@ async def whoami_pre(authorization: Optional[str] = Header(None)):
     except HTTPException:
         return {"email": None, "role": None, "can_edit": False}
     role = _fetch_accounts().get(user.lower(), "")
-    return {"email": user, "role": role, "can_edit": role in {"engineer", "admin"}}
+    return {"email": user, "role": role, "can_edit": role in EDITOR_ROLES}
 
 
 @app.get("/wbd/{short}", response_class=ORJSONResponse)
@@ -737,7 +737,7 @@ import csv as _csv
 import io as _io
 
 ACCOUNTS_CSV_URL = "https://docs.google.com/spreadsheets/d/146yuHYjs3RF3wtCK3Qj9NXH94DrStwhieTGqPeLQRfA/gviz/tq?tqx=out:csv&sheet=Accounts"
-EDITOR_ROLES = {"engineer", "admin"}
+EDITOR_ROLES = {"engineer", "admin", "tech"}
 
 _accounts_cache = {"data": {}, "ts": 0}
 def _fetch_accounts():
