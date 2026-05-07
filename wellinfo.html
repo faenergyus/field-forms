@@ -289,7 +289,7 @@
           <div id="pasteFromClaudeErr" style="color:#a02020;font-size:0.85rem;min-height:18px;margin-bottom:8px;"></div>
           <div style="text-align:right;">
             <button type="button" class="wbd-btn secondary" onclick="closePasteFromClaude()">Cancel</button>
-            <button type="button" class="wbd-btn"           onclick="parseFromClaude()">Parse → open editor</button>
+            <button type="button" class="wbd-btn"           onclick="parseFromClaude()">Next: review &amp; edit →</button>
           </div>
         </div>
       </div>
@@ -673,7 +673,7 @@ function renderEditor() {
 
   html += '<div style="margin-top:18px;text-align:right;">'
        + '<button type="button" class="wbd-btn secondary" onclick="cancelEditor()">Cancel</button>'
-       + '<button type="button" class="wbd-btn" onclick="saveEditor()">' + (e.addMode ? 'Create Version' : 'Save Changes') + '</button>'
+       + '<button type="button" class="wbd-btn" onclick="saveEditor()">' + (e.addMode ? 'Save to WBD' : 'Save Changes') + '</button>'
        + '</div>';
   document.getElementById('wbdEditor').innerHTML = html;
 
@@ -1201,7 +1201,7 @@ function parseFromClaude() {
   renderEditor();
   var banner = document.createElement('div');
   banner.style.cssText = 'background:#fff8d8;border:1px solid #d8c060;padding:8px 12px;border-radius:4px;margin-bottom:12px;font-size:0.85rem;';
-  banner.textContent = 'Pasted from Claude — review below and click "Create Version" to save, or "Cancel" to discard.';
+  banner.textContent = 'Pasted from Claude — review and adjust below, then click "Save to WBD" to commit, or "Cancel" to discard.';
   var ed = document.getElementById('wbdEditor');
   if (ed.firstChild) ed.insertBefore(banner, ed.firstChild);
   else ed.appendChild(banner);
