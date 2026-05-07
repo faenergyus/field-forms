@@ -202,14 +202,12 @@
             <label style="font-size:0.8rem;font-weight:600;color:#333;">Version: </label>
             <select id="tablesVersionSelect" style="padding:4px 8px;border:1px solid #999;border-radius:4px;font-size:0.8rem;min-width:280px;" onchange="renderTablesVersion()"></select>
           </div>
-          <input type="file" id="wbdUploadFile" style="display:none;" accept=".xlsx,.xls,.pdf,.pptx,.ppt" onchange="uploadWbdFile(this)">
           <button type="button" id="btnExport" class="wbd-btn secondary" onclick="exportWbd()" style="display:none;margin-left:auto;">Export</button>
           <div id="tablesToolbar" style="display:none;">
             <button type="button" id="btnTablesEdit"   class="wbd-btn"           onclick="enterTablesEditMode()">Edit</button>
             <button type="button" id="btnTablesSave"   class="wbd-btn"           onclick="saveTablesEdits()"  style="display:none;">Save</button>
             <button type="button" id="btnTablesCancel" class="wbd-btn secondary" onclick="cancelTablesEdits()" style="display:none;">Cancel</button>
-            <button type="button" id="btnTablesUpload" class="wbd-btn"           onclick="document.getElementById('wbdUploadFile').click()">Upload</button>
-            <button type="button" id="btnTablesPaste"  class="wbd-btn"           onclick="openPasteFromClaude()">Paste from Claude</button>
+            <button type="button" id="btnTablesPaste"  class="wbd-btn"           onclick="openPasteFromClaude()">Upload with Claude</button>
             <button type="button" id="btnTablesAdd"    class="wbd-btn"           onclick="openEditorFromTables(true)">Add Version</button>
             <button type="button" id="btnTablesDelete" class="wbd-btn danger"    onclick="deleteVersionFromTables()">Delete</button>
           </div>
@@ -225,7 +223,7 @@
       <div id="pasteFromClaudeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;">
         <div style="background:#fff;width:min(900px,95vw);max-height:90vh;overflow:auto;border-radius:8px;padding:18px 22px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <h2 style="margin:0;color:#1c4a1c;">Paste WBD JSON from Claude</h2>
+            <h2 style="margin:0;color:#1c4a1c;">Upload with Claude</h2>
             <button type="button" class="wbd-btn secondary" onclick="closePasteFromClaude()">Close</button>
           </div>
           <p style="font-size:0.85rem;color:#444;margin:6px 0 12px;">
