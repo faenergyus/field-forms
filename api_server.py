@@ -1292,10 +1292,10 @@ def _compute_xkey(well_name, end_date):
 def _next_afe(cur, end_date):
     """Auto-generate AFE for AI/page-driven entries.
 
-    Real AFEs follow YYMM## where ## is a per-(YY,MM) sequence counter.
-    AI-generated AFEs prefix with 99 -> 99YYMM## so they're visually distinct
-    from human-entered 6-digit YYMM## AFEs.
-    The counter starts at 01 for that month and bumps to the next free slot.
+    Human AFEs follow YYMM## (6-digit) where ## is a per-(YY,MM) counter.
+    AI-generated AFEs prefix with a single 9 -> 9YYMM## (7-digit) so they're
+    obviously machine-created. Most jobs should NOT be created this way -
+    they should come through the normal workover-report pipeline.
     """
     try:
         from datetime import datetime as _dt
@@ -1303,10 +1303,8 @@ def _next_afe(cur, end_date):
     except Exception:
         return None
     yymm = f"{d.year % 100:02d}{d.month:02d}"   # e.g. '2602'
-    # Look at every existing AFE in this YY-MM band (both 6-digit human and 8-digit AI)
-    # YY-MM band: human 6-digit (YYMM01..YYMM99) and AI 8-digit (99YYMM01..99YYMM99)
-    base_human = int(yymm + "00")               # e.g. 260200
-    base_ai    = int("99" + yymm + "00")        # e.g. 99260200
+    base_human = int(yymm + "00")               # 260200
+    base_ai    = int("9" + yymm + "00")         # 9260200
     cur.execute(
         "SELECT [Job/AFE] FROM dbo.[Job Detail] WHERE "
         "([Job/AFE] BETWEEN ? AND ?) OR ([Job/AFE] BETWEEN ? AND ?)",
@@ -1320,7 +1318,6 @@ def _next_afe(cur, end_date):
             used_counters.add(v - base_human)
         elif base_ai < v < base_ai + 100:
             used_counters.add(v - base_ai)
-    # Find next free counter
     for i in range(1, 100):
         if i not in used_counters:
             return float(base_ai + i)
