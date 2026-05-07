@@ -344,11 +344,24 @@ async function loadWhoAmI() {
   } catch (e) { console.error('whoami failed:', e); }
 }
 
-// Bootstrap: load API config + well list on page ready
+// Bootstrap: load API config + well list on page ready.
+// Supports deep-link via ?sn=<short_name> — auto-selects that well after the
+// list loads. Used by the SCADA map popup ("Open WBD ↗" link).
 (async function() {
   await loadApiBase();
   await loadWellList();
   await loadWhoAmI();
+  try {
+    var qs = new URLSearchParams(window.location.search);
+    var sn = qs.get('sn') || qs.get('well') || qs.get('short');
+    if (sn && WELL_DATA[sn]) {
+      await selectWell(sn);
+    } else if (sn) {
+      // Try a case-insensitive match
+      var match = WELL_NAMES.find(function(n){ return n.toUpperCase() === sn.toUpperCase(); });
+      if (match) await selectWell(match);
+    }
+  } catch (e) { console.warn('deep-link parse failed:', e); }
 })();
 
 // Autocomplete
