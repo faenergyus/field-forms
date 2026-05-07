@@ -229,8 +229,17 @@
 // ── Auth ──────────────────────────────────────────────────────────────────
 const ACCOUNTS_CSV = 'https://docs.google.com/spreadsheets/d/146yuHYjs3RF3wtCK3Qj9NXH94DrStwhieTGqPeLQRfA/gviz/tq?tqx=out:csv&sheet=Accounts';
 const TRACKER_URL  = 'https://script.google.com/macros/s/AKfycbxOyZbt18JXuPTvkkJrZ3jJgM_xOMQ035CmQWJDolIuEqVKHFP1hNZfbmlcp6dY32Zprw/exec';
-const SESSION_KEY  = 'fae_portal_user';
+const SESSION_KEY  = 'fae_user';
 const SESSION_HRS  = 720;  // 30 days
+(function migrateLegacySession() {
+  try {
+    if (localStorage.getItem(SESSION_KEY)) return;
+    for (const k of ['fae_portal_user', 'fae_scada_user']) {
+      const v = localStorage.getItem(k);
+      if (v) { localStorage.setItem(SESSION_KEY, v); localStorage.removeItem(k); return; }
+    }
+  } catch(e) {}
+})();
 
 function parseAccountsCSV(text) {
   const lines = text.trim().split('\n');

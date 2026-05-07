@@ -226,8 +226,18 @@
 // Auth
 var ACCOUNTS_CSV = 'https://docs.google.com/spreadsheets/d/146yuHYjs3RF3wtCK3Qj9NXH94DrStwhieTGqPeLQRfA/gviz/tq?tqx=out:csv&sheet=Accounts';
 var TRACKER_URL  = 'https://script.google.com/macros/s/AKfycbxOyZbt18JXuPTvkkJrZ3jJgM_xOMQ035CmQWJDolIuEqVKHFP1hNZfbmlcp6dY32Zprw/exec';
-var SESSION_KEY  = 'fae_portal_user';
+var SESSION_KEY  = 'fae_user';
 var SESSION_HRS  = 720;
+(function migrateLegacySession() {
+  try {
+    if (localStorage.getItem(SESSION_KEY)) return;
+    var keys = ['fae_portal_user', 'fae_scada_user'];
+    for (var i = 0; i < keys.length; i++) {
+      var v = localStorage.getItem(keys[i]);
+      if (v) { localStorage.setItem(SESSION_KEY, v); localStorage.removeItem(keys[i]); return; }
+    }
+  } catch(e) {}
+})();
 
 function parseAccountsCSV(text) {
   var lines = text.trim().split('\n');
