@@ -1290,19 +1290,22 @@ def _compute_xkey(well_name, end_date):
 
 
 def _next_afe(cur, end_date):
-    """Auto-generate AFE in YYMMDD format from end date; bump decimal on collision."""
+    """Auto-generate AFE for AI/page-driven entries.
+
+    Format: 99YYMMDD (8 digits, leading '99') so it's visually distinct from
+    human-entered 6-digit YYMMDD AFEs. On duplicate, bump .1, .2, ... etc.
+    """
     try:
         from datetime import datetime as _dt
         d = _dt.strptime(end_date[:10], "%Y-%m-%d").date()
     except Exception:
         return None
-    base = int(f"{d.year % 100:02d}{d.month:02d}{d.day:02d}")
+    base = int(f"99{d.year % 100:02d}{d.month:02d}{d.day:02d}")
     candidate = float(base)
     cur.execute("SELECT [Job/AFE] FROM dbo.[Job Detail] WHERE [Job/AFE] BETWEEN ? AND ?", base, base + 1)
     existing = {float(r[0]) for r in cur.fetchall() if r[0] is not None}
     if candidate not in existing:
         return candidate
-    # Bump .1, .2, ...
     for i in range(1, 100):
         c = base + i / 10.0
         if c not in existing:
