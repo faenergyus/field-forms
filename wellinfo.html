@@ -243,7 +243,26 @@
           <div id="pasteJobErr" style="color:#a02020;font-size:0.85rem;min-height:18px;margin-bottom:8px;"></div>
           <div style="text-align:right;">
             <button type="button" class="wbd-btn secondary" onclick="closePasteJobModal()">Cancel</button>
-            <button type="button" class="wbd-btn"           onclick="submitJobFromClaude()">Save to Job Detail</button>
+            <button type="button" class="wbd-btn"           onclick="reviewJobFromClaude()">Next: review &amp; edit →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Review/edit job before saving -->
+      <div id="reviewJobModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:#fff;width:min(1100px,95vw);max-height:92vh;overflow:auto;border-radius:8px;padding:18px 22px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <h2 style="margin:0;color:#1c4a1c;">Review job details</h2>
+            <button type="button" class="wbd-btn secondary" onclick="closeReviewJobModal()">Close</button>
+          </div>
+          <p style="font-size:0.85rem;color:#444;margin:6px 0 12px;">
+            Review what Claude pulled out. Adjust any field that's wrong, then click Save. AFE will be auto-generated from <i>End date</i> if blank.
+          </p>
+          <div id="reviewJobForm"></div>
+          <div id="reviewJobErr" style="color:#a02020;font-size:0.85rem;min-height:18px;margin:10px 0;"></div>
+          <div style="text-align:right;">
+            <button type="button" class="wbd-btn secondary" onclick="closeReviewJobModal()">Cancel</button>
+            <button type="button" class="wbd-btn"           onclick="saveReviewedJob()">Save to Job Detail</button>
           </div>
         </div>
       </div>
@@ -893,7 +912,8 @@ function copyJobPrompt() {
   window.getSelection().removeAllRanges();
 }
 
-async function submitJobFromClaude() {
+// Parse Claude's JSON, validate, then open the review modal pre-filled
+function reviewJobFromClaude() {
   var w = currentWell;
   if (!w) { alert('Pick a well first'); return; }
   var raw = document.getElementById('jobPasteJson').value.trim();
@@ -904,9 +924,129 @@ async function submitJobFromClaude() {
   var data;
   try { data = JSON.parse(raw); }
   catch(e) { errEl.textContent = 'Not valid JSON: ' + e.message; return; }
-  if (!data.end_date) { errEl.textContent = 'end_date is required (YYYY-MM-DD).'; return; }
 
-  // Default well_name from current selection if not provided
+  if (!data.well_name) data.well_name = w.fn;
+
+  closePasteJobModal();
+  openReviewJobModal(data);
+}
+
+// Field schema for the review modal — groups + labels
+var REVIEW_GROUPS = [
+  { title: 'Job', fields: [
+    ['well_name',       'Well Name',     'text',     56],
+    ['start_date',      'Start',         'date',     18],
+    ['end_date',        'End *',         'date',     18],
+    ['failure_date',    'Failure Date',  'date',     18],
+    ['afe',             'AFE',           'text',     14],
+  ]},
+  { title: 'Failure', fields: [
+    ['failure_cause',     'Failure Cause',     'text', 22],
+    ['secondary_cause',   'Secondary Cause',   'text', 22],
+    ['failed_component',  'Failed Component',  'text', 22],
+    ['component_detail',  'Component Detail',  'text', 30],
+    ['failure_analysis',  'Analysis / Changes','text', 30],
+  ]},
+  { title: 'Pump', fields: [
+    ['pump_size',     'Pump Size',     'text', 22],
+    ['pump_type',     'Pump Type',     'text', 14],
+    ['pump_new',      'Pump New?',     'yn',   8],
+    ['pumping_unit',  'Pumping Unit',  'text', 22],
+    ['spm',           'SPM',           'text', 8],
+  ]},
+  { title: 'Tubing', fields: [
+    ['tbg_count_278',           '2-7/8" jts',           'text', 10],
+    ['tbg_count_278_coated',    '2-7/8" coated',        'text', 10],
+    ['tbg_count_238',           '2-3/8" jts',           'text', 10],
+    ['tbg_count_238_coated',    '2-3/8" coated',        'text', 10],
+    ['tbg_coating',             'Coating',              'text', 14],
+    ['sn_depth',                'SN depth',             'text', 10],
+    ['tac_depth',               'TAC depth',            'text', 10],
+    ['tbg_replaced_278',        'Repl 2-7/8"',          'text', 10],
+    ['tbg_replaced_278_coated', 'Repl 2-7/8" coated',   'text', 10],
+    ['tbg_replaced_238',        'Repl 2-3/8"',          'text', 10],
+    ['tbg_replaced_238_coated', 'Repl 2-3/8" coated',   'text', 10],
+  ]},
+  { title: 'Rods', fields: [
+    ['rods_1',              '1"',                'text', 8],
+    ['rods_78',             '7/8"',              'text', 8],
+    ['rods_34',             '3/4"',              'text', 8],
+    ['rods_58',             '5/8"',              'text', 8],
+    ['rods_fg',             'FG',                'text', 8],
+    ['rods_sinker',         'Sinker',            'text', 8],
+    ['rod_type',            'Type',              'text', 12],
+    ['rod_couplers_new',    'New couplers',      'text', 10],
+    ['rods_replaced_1',     'Repl 1"',           'text', 8],
+    ['rods_replaced_78',    'Repl 7/8"',         'text', 8],
+    ['rods_replaced_34',    'Repl 3/4"',         'text', 8],
+    ['rods_replaced_58',    'Repl 5/8"',         'text', 8],
+    ['rods_replaced_fg',    'Repl FG',           'text', 8],
+    ['rods_replaced_sinker','Repl sinker',       'text', 8],
+  ]},
+  { title: 'Flags', fields: [
+    ['corrosion',     'Corrosion',    'yn',   8],
+    ['pull_tubing',   'Pull tubing',  'yn',   8],
+    ['cleanout',      'Cleanout',     'yn',   8],
+    ['acid',          'Acid',         'yn',   8],
+    ['enduralloy',    'Enduralloy',   'text', 8],
+  ]},
+];
+var REVIEW_BUFFER = {};
+
+function openReviewJobModal(data) {
+  REVIEW_BUFFER = Object.assign({}, data);
+  var div = document.getElementById('reviewJobForm');
+  var html = '';
+  REVIEW_GROUPS.forEach(function(g) {
+    html += '<h3 style="margin:14px 0 6px;color:#1c4a1c;font-size:0.95rem;">' + esc(g.title) + '</h3>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:10px;">';
+    g.fields.forEach(function(f) {
+      var key = f[0], label = f[1], kind = f[2], width = f[3];
+      var val = data[key];
+      if (val == null) val = '';
+      html += '<div style="flex:0 0 auto;">'
+            + '<label style="font-size:0.72rem;color:#555;font-weight:600;display:block;">' + esc(label) + '</label>';
+      if (kind === 'yn') {
+        html += '<select data-key="' + key + '" oninput="reviewOnChange(event)" style="padding:4px 6px;border:1px solid #c0c0c0;border-radius:3px;font-size:0.85rem;">'
+              + '<option value=""'  + (val===''  ? ' selected':'') + '>—</option>'
+              + '<option value="Y"' + (val==='Y' ? ' selected':'') + '>Y</option>'
+              + '<option value="N"' + (val==='N' ? ' selected':'') + '>N</option>'
+              + '</select>';
+      } else {
+        html += '<input type="' + (kind === 'date' ? 'date' : 'text') + '" data-key="' + key + '" value="' + esc(val) + '" oninput="reviewOnChange(event)" style="padding:4px 6px;border:1px solid #c0c0c0;border-radius:3px;font-size:0.85rem;width:' + (width * 8) + 'px;">';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+  // Summary as full-width textarea
+  html += '<h3 style="margin:14px 0 6px;color:#1c4a1c;font-size:0.95rem;">Summary</h3>'
+        + '<textarea data-key="summary" oninput="reviewOnChange(event)" style="width:100%;min-height:120px;font-family:Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #c0c0c0;border-radius:3px;">'
+        + esc(data.summary || '') + '</textarea>';
+
+  div.innerHTML = html;
+  document.getElementById('reviewJobErr').textContent = '';
+  document.getElementById('reviewJobModal').style.display = 'flex';
+}
+
+function reviewOnChange(ev) {
+  var key = ev.target.dataset.key;
+  if (!key) return;
+  REVIEW_BUFFER[key] = ev.target.value;
+}
+
+function closeReviewJobModal() {
+  document.getElementById('reviewJobModal').style.display = 'none';
+  REVIEW_BUFFER = {};
+}
+
+async function saveReviewedJob() {
+  var w = currentWell;
+  if (!w) return;
+  var data = REVIEW_BUFFER;
+  var errEl = document.getElementById('reviewJobErr');
+  errEl.textContent = '';
+  if (!data.end_date) { errEl.textContent = 'End date is required (YYYY-MM-DD).'; return; }
   if (!data.well_name) data.well_name = w.fn;
   data.short = w.sn;
 
@@ -920,12 +1060,11 @@ async function submitJobFromClaude() {
       body: JSON.stringify(data)
     });
     if (!res.ok) {
-      var msg = await res.text();
-      errEl.textContent = 'Save failed: ' + res.status + ' ' + msg;
+      errEl.textContent = 'Save failed: ' + res.status + ' ' + (await res.text());
       return;
     }
     var resp = await res.json();
-    closePasteJobModal();
+    closeReviewJobModal();
     var fresh = await loadWellDetail(w.sn);
     if (fresh) renderWellInfo(w.sn);
     alert('Job ' + resp.action + ' (AFE ' + (resp.afe || 'n/a') + ')');
