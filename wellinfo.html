@@ -216,7 +216,36 @@
       </div>
 
       <div id="tab-history" class="tab-panel">
+        <div id="historyToolbar" style="display:none;text-align:right;margin-bottom:8px;">
+          <button type="button" class="wbd-btn" onclick="openPasteJobFromClaude()">Upload with Claude</button>
+        </div>
         <div id="jobHistory"></div>
+      </div>
+
+      <!-- Upload-job-with-Claude modal -->
+      <div id="pasteJobModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:#fff;width:min(900px,95vw);max-height:90vh;overflow:auto;border-radius:8px;padding:18px 22px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <h2 style="margin:0;color:#1c4a1c;">Upload Job Report with Claude</h2>
+            <button type="button" class="wbd-btn secondary" onclick="closePasteJobModal()">Close</button>
+          </div>
+          <p style="font-size:0.85rem;color:#444;margin:6px 0 12px;">
+            Drag a workover/rig job report into your own Claude (claude.ai or Desktop), paste the prompt below, then paste Claude's JSON output here. If a matching job (same well + end date) already exists in Job Detail it will be updated; otherwise a new row is created with an auto-generated AFE.
+          </p>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+            <div style="font-weight:700;color:#1c4a1c;">1. Prompt to give Claude</div>
+            <button type="button" class="wbd-btn secondary" onclick="copyJobPrompt()" style="padding:3px 10px;">Copy prompt</button>
+          </div>
+          <textarea id="jobPromptText" readonly style="width:100%;height:200px;font-family:Consolas,monospace;font-size:0.78rem;background:#f4f6f4;border:1px solid #c0c0c0;padding:8px;margin:6px 0 14px;"></textarea>
+
+          <div style="font-weight:700;color:#1c4a1c;margin-top:6px;">2. Paste Claude's JSON output here</div>
+          <textarea id="jobPasteJson" placeholder='{ "well_name": "...", "end_date": "YYYY-MM-DD", ... }' style="width:100%;height:160px;font-family:Consolas,monospace;font-size:0.78rem;border:1px solid #c0c0c0;padding:8px;margin:6px 0 4px;"></textarea>
+          <div id="pasteJobErr" style="color:#a02020;font-size:0.85rem;min-height:18px;margin-bottom:8px;"></div>
+          <div style="text-align:right;">
+            <button type="button" class="wbd-btn secondary" onclick="closePasteJobModal()">Cancel</button>
+            <button type="button" class="wbd-btn"           onclick="submitJobFromClaude()">Save to Job Detail</button>
+          </div>
+        </div>
       </div>
 
       <!-- Paste-from-Claude modal -->
@@ -781,6 +810,127 @@ async function exportWbd() {
     alert('Export error: ' + err);
   } finally {
     if (btn) { btn.textContent = orig; btn.disabled = false; }
+  }
+}
+
+// ── Upload-Job-with-Claude flow ──────────────────────────────────────────
+function buildJobPrompt(wellName) {
+  return [
+'You will receive a workover or rig job report (PDF, image, .docx, or pasted text).',
+'Extract structured fields and return ONLY a single JSON object — no surrounding text,',
+'no markdown fences, no explanation.',
+'',
+'Rules:',
+'- All values are strings unless noted. Use null when unknown.',
+'- Dates: YYYY-MM-DD (ISO).',
+'- Counts (rod / tubing joint counts, AFE, SPM): keep as numeric strings if shown.',
+'- Y/N flags: \'Y\' or \'N\' (or null if not addressed in the report).',
+'- well_name: full well name as shown (e.g. \'WEST EUMONT UNIT #130\'). The current well is shown below for reference.',
+'- failure_cause / secondary_cause: e.g. \'Mechanical\', \'Chemical\', \'Elective\'',
+'- failed_component: \'Pump\', \'Tubing\', \'Rods\', \'Casing\', etc.',
+'- pump_size keeps original format (e.g. \'2-1/2" x 1-1/2" x 20\\\'\')',
+'- summary: a concise post-job summary (D1: ..., D2: ..., format if multi-day).',
+'- For tubing/rods, populate the *_count_* fields with the running totals after this job.',
+'  Use the *_replaced_* fields only for what was changed THIS job.',
+'',
+'Current well (for context, override if the report names a different well): ' + (wellName || '(unknown)'),
+'',
+'JSON schema:',
+'{',
+'  "well_name":          str|null,',
+'  "start_date":         str(YYYY-MM-DD)|null,',
+'  "end_date":           str(YYYY-MM-DD)|null,    // REQUIRED',
+'  "failure_date":       str(YYYY-MM-DD)|null,',
+'  "afe":                str|null,                 // optional, will be auto-generated if omitted',
+'  "failure_cause":      str|null,',
+'  "secondary_cause":    str|null,',
+'  "failed_component":   str|null,',
+'  "component_detail":   str|null,',
+'  "failure_analysis":   str|null,',
+'  "pumping_unit":       str|null,',
+'  "spm":                str|null,',
+'  "pump_size":          str|null,',
+'  "pump_type":          str|null,',
+'  "pump_new":           "Y"|"N"|null,',
+'  "sn_depth":           str|null,',
+'  "tac_depth":          str|null,',
+'  "rods_1":             str|null, "rods_78": str|null, "rods_34": str|null,',
+'  "rods_58":            str|null, "rods_fg": str|null, "rods_sinker": str|null,',
+'  "rod_type":           str|null, "rod_couplers_new": str|null,',
+'  "rods_replaced_1":    str|null, "rods_replaced_78": str|null, "rods_replaced_34": str|null,',
+'  "rods_replaced_58":   str|null, "rods_replaced_fg": str|null, "rods_replaced_sinker": str|null,',
+'  "tbg_count_278":      str|null, "tbg_count_278_coated": str|null,',
+'  "tbg_count_238":      str|null, "tbg_count_238_coated": str|null,',
+'  "tbg_replaced_278":   str|null, "tbg_replaced_278_coated": str|null,',
+'  "tbg_replaced_238":   str|null, "tbg_replaced_238_coated": str|null,',
+'  "tbg_coating":        str|null,',
+'  "corrosion":          "Y"|"N"|null,',
+'  "pull_tubing":        "Y"|"N"|null,',
+'  "cleanout":           "Y"|"N"|null,',
+'  "acid":               "Y"|"N"|null,',
+'  "enduralloy":         str|null,',
+'  "summary":            str|null',
+'}',
+'',
+'Return only the JSON object.'
+  ].join('\n');
+}
+
+function openPasteJobFromClaude() {
+  var w = currentWell;
+  document.getElementById('jobPromptText').value = buildJobPrompt(w ? w.fn : '');
+  document.getElementById('jobPasteJson').value = '';
+  document.getElementById('pasteJobErr').textContent = '';
+  document.getElementById('pasteJobModal').style.display = 'flex';
+}
+function closePasteJobModal() { document.getElementById('pasteJobModal').style.display = 'none'; }
+function copyJobPrompt() {
+  var ta = document.getElementById('jobPromptText');
+  ta.select(); ta.setSelectionRange(0, ta.value.length);
+  try { document.execCommand('copy'); } catch(e) {}
+  var btn = [].slice.call(document.querySelectorAll('#pasteJobModal button')).find(function(b){return b.textContent==='Copy prompt';});
+  if (btn) { btn.textContent = 'Copied ✓'; setTimeout(function(){ btn.textContent='Copy prompt'; }, 1500); }
+  window.getSelection().removeAllRanges();
+}
+
+async function submitJobFromClaude() {
+  var w = currentWell;
+  if (!w) { alert('Pick a well first'); return; }
+  var raw = document.getElementById('jobPasteJson').value.trim();
+  var errEl = document.getElementById('pasteJobErr');
+  errEl.textContent = '';
+  if (!raw) { errEl.textContent = 'Paste the JSON from Claude.'; return; }
+  raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  var data;
+  try { data = JSON.parse(raw); }
+  catch(e) { errEl.textContent = 'Not valid JSON: ' + e.message; return; }
+  if (!data.end_date) { errEl.textContent = 'end_date is required (YYYY-MM-DD).'; return; }
+
+  // Default well_name from current selection if not provided
+  if (!data.well_name) data.well_name = w.fn;
+  data.short = w.sn;
+
+  var token = getToken();
+  if (!token) { alert('Sign in again to save'); return; }
+
+  try {
+    var res = await fetch(API_BASE + '/wbd/workover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      var msg = await res.text();
+      errEl.textContent = 'Save failed: ' + res.status + ' ' + msg;
+      return;
+    }
+    var resp = await res.json();
+    closePasteJobModal();
+    var fresh = await loadWellDetail(w.sn);
+    if (fresh) renderWellInfo(w.sn);
+    alert('Job ' + resp.action + ' (AFE ' + (resp.afe || 'n/a') + ')');
+  } catch (err) {
+    errEl.textContent = 'Error: ' + err;
   }
 }
 
@@ -1381,6 +1531,8 @@ function setupTablesTab(w) {
   var verDiv = document.getElementById('tablesVersionSelector');
   if (verDiv) verDiv.style.display = 'none';
   document.getElementById('tablesToolbar').style.display = isEditor() ? 'block' : 'none';
+  var hToolbar = document.getElementById('historyToolbar');
+  if (hToolbar) hToolbar.style.display = isEditor() ? 'block' : 'none';
   renderAllTables(w);
 }
 

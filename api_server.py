@@ -1218,27 +1218,29 @@ def export_wbd_xlsx(short: str, user: str = Depends(get_current_user)):
 
 # Map view-friendly field names → actual [Job Detail] columns
 WORKOVER_FIELD_MAP = {
-    "pump_size":              '[Pump  Size]',
-    "pump_type":              '[Pump  Type]',
-    "pump_new":               '[Pump  New?]',
+    "well_name":              '[Well Name]',
+    "failure_date":           '[Failure Date]',
+    "start_date":             '[Start]',
+    "end_date":               '[End]',
+    "afe":                    '[Job/AFE]',
+    "summary":                '[Post Job Summary]',
+    "failure_cause":          '[Failure Cause]',
+    "secondary_cause":        '[Secondary Cause]',
+    "failed_component":       '[Failed Component]',
+    "component_detail":       '[Component Detail]',
+    "failure_analysis":       '[Failure Analysis/Changes]',
     "pumping_unit":           '[Pumping Unit]',
     "spm":                    '[SPM]',
-    "sn_depth":               '[SN Depth]',
-    "tac_depth":              '[TAC Depth]',
-    "rods_1":                 '[Rods Count 1"]',
-    "rods_78":                '[Rods  7/8"]',
-    "rods_34":                '[Rods  3/4"]',
-    "rods_58":                '[Rods  5/8"]',
-    "rods_fg":                '[Rods  FG]',
-    "rods_sinker":            '[Rods  SINKER]',
-    "rod_type":               '[Rods  Type]',
-    "rod_couplers_new":       '[Rods Couplers New (#)]',
-    "rods_replaced_1":        '[Rods Replaced 1"]',
-    "rods_replaced_78":       '[Rods  7/8"_1]',
-    "rods_replaced_34":       '[Rods  3/4"_2]',
-    "rods_replaced_58":       '[Rods  5/8"_3]',
-    "rods_replaced_fg":       '[Rods  FG_4]',
-    "rods_replaced_sinker":   '[Rods  SINKER_5]',
+    "rt":                     '[RT]',
+    "max_rod_stress":         '[Max Rod Stress]',
+    "pro_ject":               '[Pro-Ject?]',
+    "review":                 '[Review?]',
+    "corrosion":              '[Corrosion?]',
+    "pull_tubing":            '[Pull Tubing?]',
+    "cleanout":               '[Cleanout?]',
+    "acid":                   '[Acid?]',
+    "enduralloy":             '[Enduralloy?]',
+    "tbg_coating":            '[Tubing Joints_ Coating]',
     "tbg_count_278":          '[Tubing Joints Count 2-7/8"]',
     "tbg_count_278_coated":   '[Tubing Joints Count 2-7/8" Coated]',
     "tbg_count_238":          '[Tubing Joints Count 2-3/8"]',
@@ -1247,16 +1249,156 @@ WORKOVER_FIELD_MAP = {
     "tbg_replaced_278_coated":'[Tubing Joints Replaced 2-7/8" Coated]',
     "tbg_replaced_238":       '[Tubing Joints Replaced 2-3/8"]',
     "tbg_replaced_238_coated":'[Tubing Joints Replaced 2-3/8" Coated]',
-    "tbg_coating":            '[Tubing Joints_ Coating]',
-    "failure_cause":          '[Failure Cause]',
-    "failed_component":       '[Failed Component]',
-    "corrosion":              '[Corrosion?]',
-    "pull_tubing":            '[Pull Tubing?]',
-    "cleanout":               '[Cleanout?]',
-    "acid":                   '[Acid?]',
-    "enduralloy":             '[Enduralloy?]',
-    "summary":                '[Post Job Summary]',
+    "sn_depth":               '[SN Depth]',
+    "tac_depth":              '[TAC Depth]',
+    "rods_1":                 '[Rods Count 1"]',
+    "rods_78":                '[Rods  7/8"]',
+    "rods_34":                '[Rods  3/4"]',
+    "rods_58":                '[Rods  5/8"]',
+    "rods_fg":                '[Rods  FG]',
+    "rods_sinker":            '[Rods  SINKER]',
+    "rods_replaced_1":        '[Rods Replaced 1"]',
+    "rods_replaced_78":       '[Rods  7/8"_1]',
+    "rods_replaced_34":       '[Rods  3/4"_2]',
+    "rods_replaced_58":       '[Rods  5/8"_3]',
+    "rods_replaced_fg":       '[Rods  FG_4]',
+    "rods_replaced_sinker":   '[Rods  SINKER_5]',
+    "rod_couplers_new":       '[Rods Couplers New (#)]',
+    "rod_type":               '[Rods  Type]',
+    "pump_size":              '[Pump  Size]',
+    "pump_type":              '[Pump  Type]',
+    "pump_new":               '[Pump  New?]',
+    "xkey":                   '[xKey]',
 }
+
+
+def _compute_xkey(well_name, end_date):
+    """Match the dataflow's xKey formula:  UPPER(Well Name) + ' | ' + Date.ToText([End])
+    Date format used by Power Query default for en-US is M/d/yyyy."""
+    if not well_name or not end_date:
+        return None
+    try:
+        from datetime import datetime as _dt
+        if isinstance(end_date, str):
+            d = _dt.strptime(end_date[:10], "%Y-%m-%d").date()
+        else:
+            d = end_date
+        date_str = f"{d.month}/{d.day}/{d.year}"
+    except Exception:
+        date_str = str(end_date)
+    return (well_name.strip().upper() + " | " + date_str).upper()
+
+
+def _next_afe(cur, end_date):
+    """Auto-generate AFE in YYMMDD format from end date; bump decimal on collision."""
+    try:
+        from datetime import datetime as _dt
+        d = _dt.strptime(end_date[:10], "%Y-%m-%d").date()
+    except Exception:
+        return None
+    base = int(f"{d.year % 100:02d}{d.month:02d}{d.day:02d}")
+    candidate = float(base)
+    cur.execute("SELECT [Job/AFE] FROM dbo.[Job Detail] WHERE [Job/AFE] BETWEEN ? AND ?", base, base + 1)
+    existing = {float(r[0]) for r in cur.fetchall() if r[0] is not None}
+    if candidate not in existing:
+        return candidate
+    # Bump .1, .2, ...
+    for i in range(1, 100):
+        c = base + i / 10.0
+        if c not in existing:
+            return c
+    return None
+
+
+@app.post("/wbd/workover")
+def create_or_upsert_workover(payload: dict, user: str = Depends(get_editor)):
+    """Create a new Job Detail row (or upsert if xKey already exists).
+
+    Accepts the same field names as /wbd/workover/{xkey} PUT plus 'short' (well short
+    name) for resolving the well. If 'afe' is missing, auto-generates from end_date
+    in YYMMDD format (with .N decimal bumps on collision).
+    """
+    from datetime import datetime as _dt
+    if not payload:
+        raise HTTPException(400, "empty payload")
+
+    short = payload.pop("short", None)
+    well_name = payload.get("well_name")
+    end_date = payload.get("end_date")
+    if not end_date:
+        raise HTTPException(400, "end_date required (YYYY-MM-DD)")
+
+    conn = get_ops_conn()
+    cur = conn.cursor()
+
+    # Resolve well_name from short if needed
+    if not well_name and short:
+        cur.execute("SELECT [Well Name] FROM dbo.Pumper_Data_Calcs WHERE [Short Name] = ?", short)
+        r = cur.fetchone()
+        if r:
+            well_name = r[0]
+            payload["well_name"] = well_name
+    if not well_name:
+        conn.close()
+        raise HTTPException(400, "well_name (or 'short') required")
+
+    # Compute xKey + auto-generate AFE if missing
+    xkey = _compute_xkey(well_name, end_date)
+    payload["xkey"] = xkey
+    if not payload.get("afe"):
+        afe = _next_afe(cur, end_date)
+        if afe is not None:
+            payload["afe"] = afe
+
+    # If xKey already exists → update; else insert
+    cur.execute("SELECT COUNT(*) FROM dbo.[Job Detail] WHERE xKey = ?", xkey)
+    exists = cur.fetchone()[0] > 0
+
+    # Coerce dates
+    for k in ("start_date", "end_date", "failure_date"):
+        v = payload.get(k)
+        if v and isinstance(v, str):
+            try: payload[k] = _dt.strptime(v[:10], "%Y-%m-%d").date()
+            except Exception: pass
+    # Coerce afe to number
+    if payload.get("afe") is not None and not isinstance(payload["afe"], (int, float)):
+        try: payload["afe"] = float(payload["afe"])
+        except Exception: pass
+
+    if exists:
+        # Update path
+        set_clauses, params = [], []
+        for k, v in payload.items():
+            col = WORKOVER_FIELD_MAP.get(k)
+            if not col or k == "xkey": continue
+            set_clauses.append(f"{col} = ?")
+            params.append(v)
+        if set_clauses:
+            sql = f"UPDATE dbo.[Job Detail] SET {', '.join(set_clauses)} WHERE xKey = ?"
+            params.append(xkey)
+            cur.execute(sql, *params)
+        action = "updated"
+    else:
+        # Insert path
+        cols, params = [], []
+        for k, v in payload.items():
+            col = WORKOVER_FIELD_MAP.get(k)
+            if not col: continue
+            cols.append(col)
+            params.append(v)
+        if not cols:
+            conn.close()
+            raise HTTPException(400, "no recognized fields in payload")
+        placeholders = ", ".join(["?"] * len(cols))
+        sql = f"INSERT INTO dbo.[Job Detail] ({', '.join(cols)}) VALUES ({placeholders})"
+        cur.execute(sql, *params)
+        action = "created"
+
+    conn.commit()
+    conn.close()
+    log.info("Workover %s by %s: well=%s end=%s afe=%s xkey=%s",
+             action, user, well_name, end_date, payload.get("afe"), xkey)
+    return {"ok": True, "action": action, "xkey": xkey, "afe": payload.get("afe")}
 
 
 @app.put("/wbd/workover/{xkey:path}")
