@@ -209,6 +209,7 @@
             <button type="button" id="btnTablesSave"   class="wbd-btn"           onclick="saveTablesEdits()"  style="display:none;">Save</button>
             <button type="button" id="btnTablesCancel" class="wbd-btn secondary" onclick="cancelTablesEdits()" style="display:none;">Cancel</button>
             <button type="button" id="btnTablesUpload" class="wbd-btn"           onclick="document.getElementById('wbdUploadFile').click()">Upload</button>
+            <button type="button" id="btnTablesPaste"  class="wbd-btn"           onclick="openPasteFromClaude()">Paste from Claude</button>
             <button type="button" id="btnTablesAdd"    class="wbd-btn"           onclick="openEditorFromTables(true)">Add Version</button>
             <button type="button" id="btnTablesDelete" class="wbd-btn danger"    onclick="deleteVersionFromTables()">Delete</button>
           </div>
@@ -218,6 +219,33 @@
 
       <div id="tab-history" class="tab-panel">
         <div id="jobHistory"></div>
+      </div>
+
+      <!-- Paste-from-Claude modal -->
+      <div id="pasteFromClaudeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:#fff;width:min(900px,95vw);max-height:90vh;overflow:auto;border-radius:8px;padding:18px 22px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <h2 style="margin:0;color:#1c4a1c;">Paste WBD JSON from Claude</h2>
+            <button type="button" class="wbd-btn secondary" onclick="closePasteFromClaude()">Close</button>
+          </div>
+          <p style="font-size:0.85rem;color:#444;margin:6px 0 12px;">
+            Use your own Claude (claude.ai or Claude Desktop). Drag your WBD or rig job report PDF/PPT/XLS into Claude, paste the prompt below, and it returns JSON. Paste that JSON here, click <b>Parse</b>, and the editor will open pre-filled for review.
+          </p>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+            <div style="font-weight:700;color:#1c4a1c;">1. Prompt to give Claude</div>
+            <button type="button" class="wbd-btn secondary" onclick="copyClaudePrompt()" style="padding:3px 10px;">Copy prompt</button>
+          </div>
+          <textarea id="claudePromptText" readonly style="width:100%;height:170px;font-family:Consolas,monospace;font-size:0.78rem;background:#f4f6f4;border:1px solid #c0c0c0;padding:8px;margin:6px 0 14px;"></textarea>
+
+          <div style="font-weight:700;color:#1c4a1c;margin-top:6px;">2. Paste Claude's JSON output here</div>
+          <textarea id="claudePasteJson" placeholder='{ "meta": { "wbd_date": "...", ... }, "casing": [...], ... }' style="width:100%;height:160px;font-family:Consolas,monospace;font-size:0.78rem;border:1px solid #c0c0c0;padding:8px;margin:6px 0 4px;"></textarea>
+          <div id="pasteFromClaudeErr" style="color:#a02020;font-size:0.85rem;min-height:18px;margin-bottom:8px;"></div>
+          <div style="text-align:right;">
+            <button type="button" class="wbd-btn secondary" onclick="closePasteFromClaude()">Cancel</button>
+            <button type="button" class="wbd-btn"           onclick="parseFromClaude()">Parse → open editor</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -756,6 +784,140 @@ async function exportWbd() {
   } finally {
     if (btn) { btn.textContent = orig; btn.disabled = false; }
   }
+}
+
+// ── Paste-from-Claude flow ────────────────────────────────────────────────
+// Users with their own Claude (claude.ai / Desktop) drop a WBD or rig-report PDF
+// into Claude, paste the prompt below, and Claude returns JSON. They paste that
+// JSON here and the editor opens pre-filled — same path as the server upload.
+function buildClaudePrompt(wellName) {
+  return [
+'You will receive a wellbore diagram (WBD) or rig job report. Extract structured data',
+'and return ONLY a single JSON object matching the schema below — no surrounding text,',
+'no markdown fences, no explanation.',
+'',
+'Conventions:',
+'- All values are STRINGS (preserve original formatting like \'8-5/8"\', \'24#\', \'4,250\').',
+'  Use null when unknown. Numbers and booleans only where noted.',
+'- meta.status: \'CURRENT\' for the active diagram. Use the document\'s stated status if shown.',
+'- meta.wbd_date: YYYY-MM-DD if available; else YYYY-MM; else null. Often noted at the bottom of the WBD.',
+'- meta.td / meta.pbtd: total depth / plug-back total depth as shown.',
+'- casing.casing_type: one of \'Surface\', \'Intermediate\', \'Production\', \'Liner\' based on size + depth.',
+'  (largest size + shallowest set = Surface; smallest = Liner)',
+'- perforations: ONE row per discrete depth interval. If the WBD lists multiple single-shot',
+'  depths at one SPF (e.g. \'4003\', \'4007\', \'4063\', 1 JSPF), output each as its own row',
+'  with top_depth = bottom_depth = that depth.',
+'- tubing: one row per component (jts, SN, TAC, MA, perf\'d sub, KB, wellhead) in run order.',
+'  depth = cumulative running depth shown.',
+'- rods: only populate if rod string detail is shown (count + size + length).',
+'- formation_tops, plugs: only if shown.',
+'- is_squeezed: boolean; null if unknown.',
+'',
+'Well name (for context): ' + (wellName || '(unknown)'),
+'',
+'JSON schema:',
+'{',
+'  "meta":           { "wbd_date": str|null, "status": str|null, "td": str|null, "pbtd": str|null },',
+'  "casing":         [{ "casing_type", "size", "weight", "grade", "set_depth", "hole_size", "cement_sacks", "toc", "circ_to_surface", "notes" }],',
+'  "perforations":   [{ "top_depth", "bottom_depth", "spf", "zone", "perf_date", "is_squeezed" (bool|null), "squeeze_date", "notes" }],',
+'  "plugs":          [{ "plug_type", "depth", "toc", "cement_sacks", "notes" }],',
+'  "formation_tops": [{ "formation_name", "depth" }],',
+'  "tubing":         [{ "description", "depth", "joints", "notes" }],',
+'  "rods":           [{ "description", "count", "length", "depth", "notes" }]',
+'}',
+'',
+'Return only the JSON object.'
+  ].join('\n');
+}
+
+function openPasteFromClaude() {
+  var w = currentWell;
+  document.getElementById('claudePromptText').value = buildClaudePrompt(w ? w.fn : '');
+  document.getElementById('claudePasteJson').value = '';
+  document.getElementById('pasteFromClaudeErr').textContent = '';
+  document.getElementById('pasteFromClaudeModal').style.display = 'flex';
+}
+function closePasteFromClaude() {
+  document.getElementById('pasteFromClaudeModal').style.display = 'none';
+}
+function copyClaudePrompt() {
+  var ta = document.getElementById('claudePromptText');
+  ta.select();
+  ta.setSelectionRange(0, ta.value.length);
+  try {
+    document.execCommand('copy');
+    var btns = document.querySelectorAll('#pasteFromClaudeModal .wbd-btn.secondary');
+    if (btns.length) {
+      var orig = btns[0].textContent;
+      // Find specifically the copy button by text
+    }
+    var copyBtn = [].slice.call(document.querySelectorAll('#pasteFromClaudeModal button')).find(function(b){return b.textContent === 'Copy prompt';});
+    if (copyBtn) {
+      copyBtn.textContent = 'Copied ✓';
+      setTimeout(function(){ copyBtn.textContent = 'Copy prompt'; }, 1500);
+    }
+  } catch(e) {}
+  window.getSelection().removeAllRanges();
+}
+
+function parseFromClaude() {
+  var w = currentWell;
+  if (!w) { alert('Pick a well first'); return; }
+  var raw = document.getElementById('claudePasteJson').value.trim();
+  var errEl = document.getElementById('pasteFromClaudeErr');
+  errEl.textContent = '';
+  if (!raw) { errEl.textContent = 'Paste the JSON output from Claude.'; return; }
+  // Strip ``` fences if user copied them
+  raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  var data;
+  try { data = JSON.parse(raw); }
+  catch(e) { errEl.textContent = 'Not valid JSON: ' + e.message; return; }
+  // Validate top-level shape
+  var required = ['meta','casing','perforations','plugs','formation_tops','tubing','rods'];
+  for (var i = 0; i < required.length; i++) {
+    if (!(required[i] in data)) { errEl.textContent = 'Missing key: ' + required[i]; return; }
+  }
+  if (typeof data.meta !== 'object' || data.meta === null) { errEl.textContent = 'meta must be an object'; return; }
+
+  // Find latest schematic to clone-from (so we can carry forward existing tubing/rod arrays
+  // not touched by the upload)
+  var clone = null;
+  for (var j = 0; j < (w._timeline || []).length; j++) {
+    if (w._timeline[j].kind === 'schematic') { clone = w._timeline[j].data; break; }
+  }
+  // Open editor in add-mode pre-filled with parsed data
+  var today = new Date().toISOString().slice(0, 10);
+  window._editor = {
+    addMode: true,
+    cloneFromId: clone ? clone.id : null,
+    editingId: null,
+    short: w.sn,
+    meta: {
+      wbd_date: data.meta.wbd_date || today,
+      status:   data.meta.status   || 'CURRENT',
+      td:       data.meta.td       || (clone ? clone.td : ''),
+      pbtd:     data.meta.pbtd     || (clone ? clone.pb : ''),
+    },
+    casing:         (data.casing         || []),
+    perforations:   (data.perforations   || []),
+    plugs:          (data.plugs          || []),
+    formation_tops: (data.formation_tops || []),
+    tubing:         (data.tubing         || []),
+    rods:           (data.rods           || []),
+  };
+  closePasteFromClaude();
+  // Switch to WBD tab so the editor surfaces (existing wbdEditor div lives there)
+  switchTab('wbd');
+  document.getElementById('wbdViewer').style.display = 'none';
+  document.getElementById('wbdEditor').style.display = 'block';
+  (document.getElementById('wbdToolbar')||{style:{}}).style.display = 'none';
+  renderEditor();
+  var banner = document.createElement('div');
+  banner.style.cssText = 'background:#fff8d8;border:1px solid #d8c060;padding:8px 12px;border-radius:4px;margin-bottom:12px;font-size:0.85rem;';
+  banner.textContent = 'Pasted from Claude — review below and click "Create Version" to save, or "Cancel" to discard.';
+  var ed = document.getElementById('wbdEditor');
+  if (ed.firstChild) ed.insertBefore(banner, ed.firstChild);
+  else ed.appendChild(banner);
 }
 
 async function uploadWbdFile(inputEl) {
