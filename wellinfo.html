@@ -1025,9 +1025,14 @@ async function openExistingJobForEdit(eventRow) {
   var data = { well_name: w.fn };
   // Map event_date → end_date (xKey is built from end_date; this drives upsert match)
   if (eventRow.event_date) data.end_date = eventRow.event_date;
-  // Copy only non-null/non-empty scalar fields so we don't blank existing values
+  // Copy only non-null/non-empty scalar fields so we don't blank existing values.
+  // Stash xkey/has_report as `_`-prefixed so the modal can show a 'View Report'
+  // link without including them in the save payload (saveReviewedJob filters those).
+  if (eventRow.job_xkey)  data._job_xkey  = eventRow.job_xkey;
+  if (eventRow.has_report) data._has_report = true;
   Object.keys(eventRow).forEach(function(k) {
-    if (k === 'event_date' || k === 'job_xkey' || k === 'well_name_raw' || k === 'sn') return;
+    if (k === 'event_date' || k === 'job_xkey' || k === 'well_name_raw' || k === 'sn'
+        || k === 'has_report') return;
     var v = eventRow[k];
     if (v === null || v === undefined || v === '') return;
     data[k] = v;
@@ -1126,6 +1131,23 @@ function openReviewJobModal(data) {
   REVIEW_BUFFER = Object.assign({}, data);
   var div = document.getElementById('reviewJobForm');
   var html = '';
+  // Top banner: well name + (if known) a clickable link to the original
+  // workover-report XLSX. Link calls downloadReport() which streams from the
+  // backend with the auth bearer token.
+  if (data._has_report && data._job_xkey) {
+    html += '<div style="margin:0 0 12px;padding:8px 12px;background:#eef6ee;'
+         +  'border-left:4px solid #3a8a3a;border-radius:3px;display:flex;'
+         +  'justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">'
+         +  '<div style="font-weight:700;color:#1c4a1c;font-size:1rem;">' + esc(data.well_name || '') + '</div>'
+         +  '<button type="button" onclick="downloadReport(event,\''
+         +  encodeURIComponent(data._job_xkey) + '\')" '
+         +  'style="background:#1c4a1c;color:#fff;border:none;border-radius:3px;'
+         +  'padding:6px 14px;font-size:0.85rem;cursor:pointer;">📎 View Job Report</button>'
+         +  '</div>';
+  } else if (data.well_name) {
+    html += '<div style="margin:0 0 12px;font-weight:700;color:#1c4a1c;font-size:1rem;">'
+         +  esc(data.well_name) + '</div>';
+  }
   REVIEW_GROUPS.forEach(function(g) {
     html += '<h3 style="margin:14px 0 6px;color:#1c4a1c;font-size:0.95rem;">' + esc(g.title) + '</h3>';
     html += '<div style="display:flex;flex-wrap:wrap;gap:10px;">';
@@ -1262,7 +1284,13 @@ function closeReviewJobModal() {
 async function saveReviewedJob() {
   var w = currentWell;
   if (!w) return;
-  var data = REVIEW_BUFFER;
+  // Strip `_`-prefixed UI-only keys (e.g. _job_xkey, _has_report) — the backend
+  // doesn't know about these and including them would either be ignored or
+  // mis-interpreted.
+  var data = {};
+  Object.keys(REVIEW_BUFFER).forEach(function(k) {
+    if (!k.startsWith('_')) data[k] = REVIEW_BUFFER[k];
+  });
   var errEl = document.getElementById('reviewJobErr');
   errEl.textContent = '';
   if (!data.end_date) { errEl.textContent = 'End date is required (YYYY-MM-DD).'; return; }
