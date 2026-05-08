@@ -1324,6 +1324,176 @@ def _next_afe(cur, end_date):
     return None
 
 
+def _write_extended(cur, xkey, well_id, ext, source="manual"):
+    """Write extended-action rows (perfs/plugs/liners/stim) tagged with given source.
+    Idempotent for that source: deletes prior rows of same source for this xkey first."""
+    if not ext:
+        return
+    # Wipe prior rows we own for this xkey
+    cur.execute("DELETE FROM dbo.wbd_perforations WHERE add_xkey = ? AND source = ?", xkey, source)
+    cur.execute("DELETE FROM dbo.wbd_perforations WHERE squeeze_xkey = ? AND source = ?", xkey, source)
+    cur.execute("UPDATE dbo.wbd_perforations SET squeeze_xkey = NULL, squeeze_date = NULL "
+                "WHERE squeeze_xkey = ? AND source <> ?", xkey, source)
+    cur.execute("DELETE FROM dbo.wbd_plugs WHERE set_xkey = ? AND source = ?", xkey, source)
+    cur.execute("DELETE FROM dbo.wbd_plugs WHERE drilled_xkey = ? AND source = ?", xkey, source)
+    cur.execute("UPDATE dbo.wbd_plugs SET drilled_xkey = NULL, drilled_date = NULL "
+                "WHERE drilled_xkey = ? AND source <> ?", xkey, source)
+    cur.execute("DELETE FROM dbo.wbd_casing WHERE set_xkey = ? AND source = ?", xkey, source)
+    cur.execute("UPDATE dbo.wbd_casing SET pulled_xkey = NULL, pulled_date = NULL "
+                "WHERE pulled_xkey = ? AND source <> ?", xkey, source)
+    cur.execute("DELETE FROM dbo.wbd_job_stim WHERE xkey = ? AND source = ?", xkey, source)
+
+    end_date = ext.get("end_date")  # for stamping date columns
+    job_type = ext.get("job_type")
+    notes    = ext.get("notes")
+    cur.execute("DELETE FROM dbo.wbd_job_extended WHERE xkey = ?", xkey)
+    if job_type or notes:
+        cur.execute("INSERT INTO dbo.wbd_job_extended (xkey, well_id, job_type, source, notes) "
+                    "VALUES (?,?,?,?,?)", xkey, well_id, job_type, source, notes)
+
+    def next_id(table, pk):
+        cur.execute(f"SELECT ISNULL(MAX({pk}), 0) + 1 FROM dbo.{table}")
+        return cur.fetchone()[0]
+
+    for p in ext.get("perfs_added") or []:
+        nid = next_id("wbd_perforations", "perf_id")
+        cur.execute(
+            "INSERT INTO dbo.wbd_perforations (perf_id, well_id, top_depth, bottom_depth, spf, zone, perf_date, add_xkey, source) "
+            "VALUES (?,?,?,?,?,?,?,?,?)",
+            nid, well_id, p.get("top_depth"), p.get("bottom_depth"), p.get("spf"), p.get("zone"),
+            p.get("perf_date") or end_date, xkey, source,
+        )
+    for p in ext.get("perfs_squeezed") or []:
+        # Try to UPDATE an existing perf row for this well that overlaps. Falls back to insert.
+        try:
+            cur.execute(
+                "UPDATE dbo.wbd_perforations SET squeeze_xkey=?, squeeze_date=?, is_squeezed=1 "
+                "WHERE well_id=? AND TRY_CAST(top_depth AS INT) <= ? AND TRY_CAST(bottom_depth AS INT) >= ? "
+                "AND (squeeze_xkey IS NULL OR squeeze_xkey = ?)",
+                xkey, p.get("squeeze_date") or end_date, well_id,
+                int(str(p.get("bottom_depth") or "0").split('.')[0]) or 0,
+                int(str(p.get("top_depth") or "99999").split('.')[0]) or 99999,
+                xkey,
+            )
+            updated = cur.rowcount
+        except Exception:
+            updated = 0
+        if not updated:
+            nid = next_id("wbd_perforations", "perf_id")
+            cur.execute(
+                "INSERT INTO dbo.wbd_perforations (perf_id, well_id, top_depth, bottom_depth, spf, squeeze_xkey, squeeze_date, is_squeezed, source) "
+                "VALUES (?,?,?,?,?,?,?,1,?)",
+                nid, well_id, p.get("top_depth"), p.get("bottom_depth"), p.get("spf"),
+                xkey, p.get("squeeze_date") or end_date, source,
+            )
+    for pl in ext.get("plugs_set") or []:
+        nid = next_id("wbd_plugs", "plug_id")
+        cur.execute(
+            "INSERT INTO dbo.wbd_plugs (plug_id, well_id, plug_type, depth, toc, cement_sacks, set_xkey, set_date, source, notes) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?)",
+            nid, well_id, pl.get("plug_type"), pl.get("depth"), pl.get("toc"), pl.get("cement_sacks"),
+            xkey, pl.get("set_date") or end_date, source, pl.get("notes"),
+        )
+    for pl in ext.get("plugs_drilled") or []:
+        try:
+            cur.execute(
+                "UPDATE dbo.wbd_plugs SET drilled_xkey=?, drilled_date=? "
+                "WHERE well_id=? AND plug_type=? AND TRY_CAST(depth AS INT) = ? AND drilled_xkey IS NULL",
+                xkey, pl.get("drilled_date") or end_date, well_id, pl.get("plug_type"),
+                int(str(pl.get("depth") or "0").split('.')[0]) or 0,
+            )
+            updated = cur.rowcount
+        except Exception:
+            updated = 0
+        if not updated:
+            nid = next_id("wbd_plugs", "plug_id")
+            cur.execute(
+                "INSERT INTO dbo.wbd_plugs (plug_id, well_id, plug_type, depth, drilled_xkey, drilled_date, source, notes) "
+                "VALUES (?,?,?,?,?,?,?,?)",
+                nid, well_id, pl.get("plug_type"), pl.get("depth"),
+                xkey, pl.get("drilled_date") or end_date, source, pl.get("notes"),
+            )
+    for l in ext.get("liners_installed") or []:
+        nid = next_id("wbd_casing", "casing_id")
+        cur.execute(
+            "INSERT INTO dbo.wbd_casing (casing_id, well_id, casing_type, size, weight, set_depth, hole_size, cement_sacks, toc, set_xkey, set_date, source, notes) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            nid, well_id, "Liner", l.get("size"), l.get("weight"),
+            l.get("set_bottom") or l.get("set_depth"), l.get("hole_size"),
+            l.get("cement_sxs") or l.get("cement_sacks"), l.get("toc"),
+            xkey, l.get("set_date") or end_date, source, l.get("notes"),
+        )
+    for l in ext.get("liners_pulled") or []:
+        cur.execute(
+            "UPDATE dbo.wbd_casing SET pulled_xkey=?, pulled_date=? "
+            "WHERE well_id=? AND casing_type='Liner' AND pulled_xkey IS NULL",
+            xkey, l.get("pulled_date") or end_date, well_id,
+        )
+    for s in ext.get("stimulation") or []:
+        cur.execute(
+            "INSERT INTO dbo.wbd_job_stim (xkey, well_id, stim_type, volume, volume_unit, top_depth, bottom_depth, stim_date, source, notes) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?)",
+            xkey, well_id, s.get("stim_type"), s.get("volume"), s.get("volume_unit"),
+            s.get("top_depth"), s.get("bottom_depth"), s.get("stim_date") or end_date, source, s.get("notes"),
+        )
+
+
+@app.get("/wbd/workover/{xkey:path}/extended")
+def get_workover_extended(xkey: str, user: str = Depends(get_current_user)):
+    """Return all extended rows (perfs/plugs/liners/stim/job_type) for one xKey."""
+    conn = get_ops_conn()
+    cur = conn.cursor()
+    out = {"xkey": xkey}
+    def rows(sql, *params):
+        cur.execute(sql, *params)
+        cs = [d[0] for d in cur.description]
+        return [dict(zip(cs, r)) for r in cur.fetchall()]
+
+    out["job_type"] = None
+    cur.execute("SELECT job_type, source, notes FROM dbo.wbd_job_extended WHERE xkey = ?", xkey)
+    r = cur.fetchone()
+    if r:
+        out["job_type"] = r[0]; out["job_extended_source"] = r[1]; out["notes"] = r[2]
+
+    out["perfs_added"]      = rows("SELECT perf_id, top_depth, bottom_depth, spf, zone, perf_date, source FROM dbo.wbd_perforations WHERE add_xkey = ?", xkey)
+    out["perfs_squeezed"]   = rows("SELECT perf_id, top_depth, bottom_depth, spf, zone, squeeze_date, source FROM dbo.wbd_perforations WHERE squeeze_xkey = ?", xkey)
+    out["plugs_set"]        = rows("SELECT plug_id, plug_type, depth, toc, cement_sacks, set_date, source, notes FROM dbo.wbd_plugs WHERE set_xkey = ?", xkey)
+    out["plugs_drilled"]    = rows("SELECT plug_id, plug_type, depth, drilled_date, source, notes FROM dbo.wbd_plugs WHERE drilled_xkey = ?", xkey)
+    out["liners_installed"] = rows("SELECT casing_id, size, weight, set_depth as set_bottom, hole_size, cement_sacks as cement_sxs, toc, set_date, source, notes FROM dbo.wbd_casing WHERE set_xkey = ? AND casing_type = 'Liner'", xkey)
+    out["liners_pulled"]    = rows("SELECT casing_id, size, set_depth as set_bottom, pulled_date, source FROM dbo.wbd_casing WHERE pulled_xkey = ? AND casing_type = 'Liner'", xkey)
+    out["stimulation"]      = rows("SELECT stim_id, stim_type, volume, volume_unit, top_depth, bottom_depth, stim_date, source, notes FROM dbo.wbd_job_stim WHERE xkey = ?", xkey)
+    conn.close()
+    return out
+
+
+@app.put("/wbd/workover/{xkey:path}/extended")
+def edit_workover_extended(xkey: str, payload: dict, user: str = Depends(get_editor)):
+    """Manual edit of extended rows. Writes with source='manual' (preserves narrative_parser rows for other workflows is the intent — but we wipe-and-rewrite all manual rows for this xkey on save)."""
+    conn = get_ops_conn()
+    cur = conn.cursor()
+    # Resolve well_id
+    cur.execute("SELECT well_id FROM dbo.wbd_job_extended WHERE xkey = ?", xkey)
+    r = cur.fetchone()
+    well_id = r[0] if r else None
+    if well_id is None:
+        # Fall back via Job Detail's well_name
+        cur.execute(
+            "SELECT TOP 1 ww.well_id FROM dbo.[Job Detail] jd "
+            "JOIN dbo.Pumper_Data_Calcs pdc ON UPPER(jd.[Well Name]) = UPPER(pdc.[Well Name]) "
+            "                                OR UPPER(jd.[Well Name]) = UPPER(pdc.[Short Name]) "
+            "JOIN dbo.wbd_wells ww ON UPPER(ww.well_name) = UPPER(pdc.[Well Name]) OR UPPER(ww.well_name) = UPPER(pdc.[Short Name]) "
+            "WHERE jd.xKey = ?", xkey
+        )
+        r = cur.fetchone()
+        well_id = r[0] if r else None
+
+    _write_extended(cur, xkey, well_id, payload, source="manual")
+    conn.commit()
+    conn.close()
+    log.info("Extended (manual) updated for %s by %s", xkey, user)
+    return {"ok": True, "xkey": xkey}
+
+
 @app.post("/wbd/workover")
 def create_or_upsert_workover(payload: dict, user: str = Depends(get_editor)):
     """Create a new Job Detail row (or upsert if xKey already exists).
@@ -1407,6 +1577,22 @@ def create_or_upsert_workover(payload: dict, user: str = Depends(get_editor)):
         sql = f"INSERT INTO dbo.[Job Detail] ({', '.join(cols)}) VALUES ({placeholders})"
         cur.execute(sql, *params)
         action = "created"
+
+    # Extended action rows (perfs_added/squeezed, plugs_set/drilled, liners_installed/pulled, stimulation, job_type)
+    ext_keys = ("perfs_added","perfs_squeezed","plugs_set","plugs_drilled","liners_installed","liners_pulled","stimulation","job_type","notes")
+    if any(k in payload for k in ext_keys):
+        # Resolve well_id if we don't have it
+        cur.execute(
+            "SELECT TOP 1 ww.well_id FROM dbo.wbd_wells ww JOIN dbo.Pumper_Data_Calcs pdc "
+            " ON UPPER(ww.well_name) = UPPER(pdc.[Well Name]) OR UPPER(ww.well_name) = UPPER(pdc.[Short Name]) "
+            "WHERE UPPER(pdc.[Well Name]) = UPPER(?) OR UPPER(pdc.[Short Name]) = UPPER(?)",
+            well_name, well_name
+        )
+        rr = cur.fetchone()
+        wid = rr[0] if rr else None
+        ext_payload = {k: payload[k] for k in ext_keys if k in payload}
+        ext_payload["end_date"] = end_date
+        _write_extended(cur, xkey, wid, ext_payload, source="manual")
 
     conn.commit()
     conn.close()

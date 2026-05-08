@@ -888,8 +888,24 @@ function buildJobPrompt(wellName) {
 '  "cleanout":           "Y"|"N"|null,',
 '  "acid":               "Y"|"N"|null,',
 '  "enduralloy":         str|null,',
-'  "summary":            str|null',
+'  "summary":            str|null,',
+'  "job_type":           "Workover"|"Recompletion"|"Plug-back"|"New install"|"Pull"|"Stimulation"|"P&A"|null,',
+'  "perfs_added":        [{ "top_depth": str, "bottom_depth": str, "spf": str|null, "zone": str|null, "perf_date": str|null, "notes": str|null }],',
+'  "perfs_squeezed":     [{ "top_depth": str, "bottom_depth": str, "squeeze_date": str|null, "spf": str|null, "notes": str|null }],',
+'  "plugs_set":          [{ "plug_type": "CIBP"|"RBP"|"Cement plug"|"Iron cement retainer"|"Composite cement retainer"|"Composite plug"|"Frac plug"|"Bridge plug", "depth": str, "toc": str|null, "cement_sacks": str|null, "set_date": str|null, "notes": str|null }],',
+'  "plugs_drilled":      [{ "plug_type": str, "depth": str, "drilled_date": str|null, "notes": str|null }],',
+'  "liners_installed":   [{ "size": str, "weight": str|null, "set_top": str|null, "set_bottom": str, "hole_size": str|null, "cement_sxs": str|null, "toc": str|null, "set_date": str|null, "notes": str|null }],',
+'  "liners_pulled":      [{ "size": str|null, "set_top": str|null, "set_bottom": str|null, "pulled_date": str|null, "notes": str|null }],',
+'  "stimulation":        [{ "stim_type": "Acid"|"Soap acid"|"Xylene"|"Frac"|"Scale"|"Hot oil"|"Paraffin"|"Solvent"|"Methanol", "volume": str|null, "volume_unit": "gal"|"bbl"|"sxs"|null, "top_depth": str|null, "bottom_depth": str|null, "stim_date": str|null, "notes": str|null }]',
 '}',
+'',
+'Notes on action lists (these are arrays — empty [] is OK):',
+'- perfs_added: new perforations shot during this job. List each interval as its own row.',
+'- perfs_squeezed: existing perforations that were cement-squeezed during this job.',
+'- plugs_set: every CIBP, RBP, cement plug, retainer, frac plug, etc. set during this job.',
+'- plugs_drilled: any plugs (set previously) drilled or milled out during this job.',
+'- liners_installed/pulled: rare. Use only if a liner was actually run or pulled.',
+'- stimulation: every acid job, hot oil, scale treatment, etc. List each as a separate row.',
 '',
 'Return only the JSON object.'
   ].join('\n');
@@ -939,6 +955,7 @@ var REVIEW_GROUPS = [
     ['end_date',        'End *',         'date',     18],
     ['failure_date',    'Failure Date',  'date',     18],
     ['afe',             'AFE',           'text',     14],
+    ['job_type',        'Job Type',      'select',   16, ['','Workover','Recompletion','Plug-back','New install','Pull','Stimulation','P&A']],
   ]},
   { title: 'Failure', fields: [
     ['failure_cause',     'Failure Cause',     'text', 22],
@@ -1012,6 +1029,13 @@ function openReviewJobModal(data) {
               + '<option value="Y"' + (val==='Y' ? ' selected':'') + '>Y</option>'
               + '<option value="N"' + (val==='N' ? ' selected':'') + '>N</option>'
               + '</select>';
+      } else if (kind === 'select') {
+        var opts = f[4] || [];
+        html += '<select data-key="' + key + '" oninput="reviewOnChange(event)" style="padding:4px 6px;border:1px solid #c0c0c0;border-radius:3px;font-size:0.85rem;width:' + (width * 9) + 'px;">';
+        opts.forEach(function(o) {
+          html += '<option value="' + esc(o) + '"' + (val === o ? ' selected' : '') + '>' + (o === '' ? '—' : esc(o)) + '</option>';
+        });
+        html += '</select>';
       } else {
         html += '<input type="' + (kind === 'date' ? 'date' : 'text') + '" data-key="' + key + '" value="' + esc(val) + '" oninput="reviewOnChange(event)" style="padding:4px 6px;border:1px solid #c0c0c0;border-radius:3px;font-size:0.85rem;width:' + (width * 8) + 'px;">';
       }
@@ -1019,6 +1043,35 @@ function openReviewJobModal(data) {
     });
     html += '</div>';
   });
+
+  // Action-list mini-tables (perfs added/squeezed, plugs set/drilled, liners installed/pulled, stim)
+  html += renderActionListSection('perfs_added', 'Perfs added', [
+    ['top_depth','Top'], ['bottom_depth','Bottom'], ['spf','SPF'], ['zone','Zone'],
+    ['perf_date','Date'], ['notes','Notes']
+  ], data.perfs_added || []);
+  html += renderActionListSection('perfs_squeezed', 'Perfs squeezed', [
+    ['top_depth','Top'], ['bottom_depth','Bottom'], ['squeeze_date','Date'],
+    ['spf','SPF'], ['notes','Notes']
+  ], data.perfs_squeezed || []);
+  html += renderActionListSection('plugs_set', 'Plugs set', [
+    ['plug_type','Type','plug_select'], ['depth','Depth'], ['toc','TOC'],
+    ['cement_sacks','Sxs'], ['set_date','Date'], ['notes','Notes']
+  ], data.plugs_set || []);
+  html += renderActionListSection('plugs_drilled', 'Plugs drilled out', [
+    ['plug_type','Type','plug_select'], ['depth','Depth'], ['drilled_date','Date'], ['notes','Notes']
+  ], data.plugs_drilled || []);
+  html += renderActionListSection('liners_installed', 'Liners installed', [
+    ['size','Size'], ['weight','Wt'], ['set_top','Top'], ['set_bottom','Bottom'],
+    ['hole_size','Hole'], ['cement_sxs','Sxs'], ['toc','TOC'], ['set_date','Date'], ['notes','Notes']
+  ], data.liners_installed || []);
+  html += renderActionListSection('liners_pulled', 'Liners pulled', [
+    ['size','Size'], ['set_top','Top'], ['set_bottom','Bottom'], ['pulled_date','Date'], ['notes','Notes']
+  ], data.liners_pulled || []);
+  html += renderActionListSection('stimulation', 'Stimulation', [
+    ['stim_type','Type','stim_select'], ['volume','Vol'], ['volume_unit','Unit','vol_unit_select'],
+    ['top_depth','Top'], ['bottom_depth','Bot'], ['stim_date','Date'], ['notes','Notes']
+  ], data.stimulation || []);
+
   // Summary as full-width textarea
   html += '<h3 style="margin:14px 0 6px;color:#1c4a1c;font-size:0.95rem;">Summary</h3>'
         + '<textarea data-key="summary" oninput="reviewOnChange(event)" style="width:100%;min-height:120px;font-family:Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #c0c0c0;border-radius:3px;">'
@@ -1027,6 +1080,60 @@ function openReviewJobModal(data) {
   div.innerHTML = html;
   document.getElementById('reviewJobErr').textContent = '';
   document.getElementById('reviewJobModal').style.display = 'flex';
+}
+
+var PLUG_OPTS = ['','CIBP','RBP','Cement plug','Iron cement retainer','Composite cement retainer','Composite plug','Frac plug','Bridge plug'];
+var STIM_OPTS = ['','Acid','Soap acid','Xylene','Frac','Scale','Hot oil','Paraffin','Solvent','Methanol'];
+var VOL_UNIT_OPTS = ['','gal','bbl','sxs','qts','drums'];
+
+function renderActionListSection(arrayKey, title, columns, rows) {
+  var html = '<h3 style="margin:14px 0 6px;color:#1c4a1c;font-size:0.95rem;">' + esc(title)
+           + ' <span style="font-size:0.75rem;color:#888;font-weight:normal;">(' + rows.length + ')</span>'
+           + ' <button type="button" class="wbd-btn secondary" style="padding:2px 8px;font-size:0.75rem;" onclick="reviewAddRow(\'' + arrayKey + '\')">+ Add row</button></h3>'
+           + '<div style="overflow-x:auto;border:1px solid #e0e0e0;background:#fff;margin-bottom:8px;">'
+           + '<table class="ed-table" style="margin:0;"><thead><tr>';
+  columns.forEach(function(c){ html += '<th>' + esc(c[1]) + '</th>'; });
+  html += '<th style="width:30px;"></th></tr></thead><tbody>';
+  if (rows.length === 0) {
+    html += '<tr><td colspan="' + (columns.length+1) + '" style="text-align:center;color:#aaa;font-style:italic;padding:6px;">— no rows —</td></tr>';
+  }
+  rows.forEach(function(r, idx){
+    html += '<tr>';
+    columns.forEach(function(c){
+      var fkey = c[0], kind = c[2] || 'text';
+      var v = r[fkey] == null ? '' : r[fkey];
+      if (kind === 'plug_select' || kind === 'stim_select' || kind === 'vol_unit_select') {
+        var opts = kind === 'plug_select' ? PLUG_OPTS : kind === 'stim_select' ? STIM_OPTS : VOL_UNIT_OPTS;
+        html += '<td><select onchange="reviewActionChange(\'' + arrayKey + '\',' + idx + ',\'' + fkey + '\',event)">';
+        opts.forEach(function(o) {
+          html += '<option value="' + esc(o) + '"' + (v === o ? ' selected' : '') + '>' + (o === '' ? '—' : esc(o)) + '</option>';
+        });
+        html += '</select></td>';
+      } else {
+        html += '<td><input type="text" value="' + esc(v) + '" oninput="reviewActionChange(\'' + arrayKey + '\',' + idx + ',\'' + fkey + '\',event)"></td>';
+      }
+    });
+    html += '<td class="row-del" onclick="reviewDeleteRow(\'' + arrayKey + '\',' + idx + ')">×</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function reviewActionChange(arrayKey, idx, field, ev) {
+  if (!REVIEW_BUFFER[arrayKey]) REVIEW_BUFFER[arrayKey] = [];
+  if (!REVIEW_BUFFER[arrayKey][idx]) REVIEW_BUFFER[arrayKey][idx] = {};
+  REVIEW_BUFFER[arrayKey][idx][field] = ev.target.value;
+}
+function reviewAddRow(arrayKey) {
+  if (!REVIEW_BUFFER[arrayKey]) REVIEW_BUFFER[arrayKey] = [];
+  REVIEW_BUFFER[arrayKey].push({});
+  openReviewJobModal(REVIEW_BUFFER);  // re-render with the new row visible
+}
+function reviewDeleteRow(arrayKey, idx) {
+  if (!REVIEW_BUFFER[arrayKey]) return;
+  REVIEW_BUFFER[arrayKey].splice(idx, 1);
+  openReviewJobModal(REVIEW_BUFFER);
 }
 
 function reviewOnChange(ev) {
