@@ -130,6 +130,22 @@
     .data-val { font-size: 0.85rem; font-weight: 600; color: #1a1a1a; margin-bottom: 6px; }
     .data-val.empty { color: #b0b0b0; font-weight: 400; }
     .data-val.multi { white-space: pre-line; font-size: 0.78rem; line-height: 1.5; }
+
+    /* Embed mode (?embed=1) — used when iframed inside another app's panel.
+       Hides global chrome (header, login overlay, page intro, well picker)
+       but keeps the actual data display. */
+    body.embed #login-overlay { display: none !important; }
+    body.embed > header,
+    body.embed .back-link,
+    body.embed .page-title,
+    body.embed .page-subtitle,
+    body.embed .picker-section { display: none !important; }
+    body.embed .page { padding: 8px 14px; }
+    body.embed .well-header { padding-top: 0; }
+    /* Optional per-section hide via ?show=wbd|history|equipment */
+    body.embed.only-wbd       .tabs,
+    body.embed.only-history   .tabs,
+    body.embed.only-equipment .tabs { display: none !important; }
   </style>
 </head>
 <body>
@@ -431,21 +447,33 @@ async function loadWhoAmI() {
 
 // Bootstrap: load API config + well list on page ready.
 // Supports deep-link via ?sn=<short_name> — auto-selects that well after the
-// list loads. Used by the SCADA map popup ("Open WBD ↗" link).
+// list loads. Used by the SCADA map popup and panel iframes.
+//   ?embed=1            — strip page chrome (header, picker, login overlay)
+//   ?tab=wbd|history|equipment  — pre-select that sub-tab
+//   ?show=wbd|history|equipment — also hide the tab strip itself (single-section view)
 (async function() {
+  // Apply embed mode early so the chrome never flashes
+  try {
+    var qs = new URLSearchParams(window.location.search);
+    if (qs.get('embed') === '1') document.body.classList.add('embed');
+    var show = qs.get('show');
+    if (show) document.body.classList.add('only-' + show);
+  } catch(e) {}
+
   await loadApiBase();
   await loadWellList();
   await loadWhoAmI();
   try {
-    var qs = new URLSearchParams(window.location.search);
-    var sn = qs.get('sn') || qs.get('well') || qs.get('short');
-    if (sn && WELL_DATA[sn]) {
-      await selectWell(sn);
-    } else if (sn) {
-      // Try a case-insensitive match
-      var match = WELL_NAMES.find(function(n){ return n.toUpperCase() === sn.toUpperCase(); });
+    var qs2 = new URLSearchParams(window.location.search);
+    var sn = qs2.get('sn') || qs2.get('well') || qs2.get('short');
+    if (sn) {
+      var match = WELL_DATA[sn]
+        ? sn
+        : WELL_NAMES.find(function(n){ return n.toUpperCase() === sn.toUpperCase(); });
       if (match) await selectWell(match);
     }
+    var tab = qs2.get('tab') || qs2.get('show');
+    if (tab) switchTab(tab);
   } catch (e) { console.warn('deep-link parse failed:', e); }
 })();
 
