@@ -217,6 +217,7 @@
 
       <div id="tab-history" class="tab-panel">
         <div id="historyToolbar" style="display:none;text-align:right;margin-bottom:8px;">
+          <button type="button" class="wbd-btn secondary" onclick="openManualJobAdd()">Add Manually</button>
           <button type="button" class="wbd-btn" onclick="openPasteJobFromClaude()">Upload with Claude</button>
         </div>
         <div id="jobHistory"></div>
@@ -944,6 +945,71 @@ function reviewJobFromClaude() {
   if (!data.well_name) data.well_name = w.fn;
 
   closePasteJobModal();
+  openReviewJobModal(data);
+}
+
+// Manual add — open the review modal blank (no Claude). Same fields as Claude path,
+// including all extended sections (perfs, plugs, liners, stim, job_type).
+function openManualJobAdd() {
+  var w = currentWell;
+  if (!w) { alert('Pick a well first'); return; }
+  var today = new Date().toISOString().slice(0, 10);
+  openReviewJobModal({
+    well_name: w.fn,
+    end_date:  today,
+    perfs_added: [], perfs_squeezed: [],
+    plugs_set: [], plugs_drilled: [],
+    liners_installed: [], liners_pulled: [],
+    stimulation: []
+  });
+}
+
+// Open an existing Job History row in the review modal — pre-filled with both
+// [Job Detail] fields and the /extended action lists, so engineers can fill in
+// perfs/plugs/liners/stim/job_type retroactively or correct anything mis-parsed.
+// IMPORTANT: only include keys that actually have values from the events feed —
+// empty strings would overwrite existing DB values on save (the API does
+// targeted UPDATE on every key sent).
+async function openExistingJobForEdit(eventRow) {
+  var w = currentWell;
+  if (!w || !eventRow) return;
+  var token = getToken();
+  if (!token) { alert('Sign in again to edit'); return; }
+  var xkey = eventRow.job_xkey;
+  var data = { well_name: w.fn };
+  // Map event_date → end_date (xKey is built from end_date; this drives upsert match)
+  if (eventRow.event_date) data.end_date = eventRow.event_date;
+  // Copy only non-null/non-empty scalar fields so we don't blank existing values
+  Object.keys(eventRow).forEach(function(k) {
+    if (k === 'event_date' || k === 'job_xkey' || k === 'well_name_raw' || k === 'sn') return;
+    var v = eventRow[k];
+    if (v === null || v === undefined || v === '') return;
+    data[k] = v;
+  });
+  // Default empty extended arrays so the section renders even before fetch resolves
+  data.perfs_added = []; data.perfs_squeezed = [];
+  data.plugs_set = []; data.plugs_drilled = [];
+  data.liners_installed = []; data.liners_pulled = [];
+  data.stimulation = [];
+  // Fetch extended (perfs/plugs/liners/stim/job_type) and merge in
+  if (xkey) {
+    try {
+      var res = await fetch(API_BASE + '/wbd/workover/' + encodeURIComponent(xkey) + '/extended', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (res.ok) {
+        var ext = await res.json();
+        if (ext.job_type) data.job_type = ext.job_type;
+        data.perfs_added     = ext.perfs_added     || [];
+        data.perfs_squeezed  = ext.perfs_squeezed  || [];
+        data.plugs_set       = ext.plugs_set       || [];
+        data.plugs_drilled   = ext.plugs_drilled   || [];
+        data.liners_installed= ext.liners_installed|| [];
+        data.liners_pulled   = ext.liners_pulled   || [];
+        data.stimulation     = ext.stimulation     || [];
+      }
+    } catch (e) { /* fall through with empty extended arrays */ }
+  }
   openReviewJobModal(data);
 }
 
@@ -2265,8 +2331,10 @@ function renderJobHistoryFull(w) {
     return (b.event_date || '0').localeCompare(a.event_date || '0');
   });
   var pickedJobKey = null;
+  // Stash visible rows on the well so the click handler can retrieve them by index
+  w._historyVisible = visible;
   var rows = '';
-  visible.forEach(function(e) {
+  visible.forEach(function(e, idx) {
     var isCurrent = e.job_xkey === pickedJobKey;
     var cause = (e.failure_cause || '') + (e.failed_component ? ' / ' + e.failed_component : '');
     var pump = (e.pump_size || '') + (e.pump_type ? ' (' + e.pump_type + ')' : '');
@@ -2291,19 +2359,57 @@ function renderJobHistoryFull(w) {
     var summary = e.summary ? esc(e.summary) : '';
     if (summary.length > 200) summary = summary.substring(0, 200) + '...';
 
-    rows += '<tr' + (isCurrent ? ' class="current"' : '') + '>'
+    var clickable = (typeof isEditor === 'function' && isEditor());
+    // "View Report" link: backend streams the original XLSX from Dropbox.
+    // stopPropagation so the click doesn't also trigger the row's edit handler.
+    var reportCell = '—';
+    if (e.has_report && e.job_xkey) {
+      reportCell = '<a href="' + API_BASE + '/wbd/workover/' + encodeURIComponent(e.job_xkey)
+                 + '/report" onclick="downloadReport(event,\'' + encodeURIComponent(e.job_xkey)
+                 + '\')" title="Download original workover report" '
+                 + 'style="color:#1c4a1c;text-decoration:underline;font-size:0.78rem;">📎 View</a>';
+    }
+    rows += '<tr' + (isCurrent ? ' class="current"' : '') + (clickable ? ' style="cursor:pointer;" title="Click to edit job (including perfs / plugs / liners / stim / job type)" onclick="openExistingJobForEdit(currentWell._historyVisible[' + idx + '])"' : '') + '>'
          + '<td class="job-date">' + esc(e.event_date || '') + (isCurrent ? ' ★' : '') + '</td>'
          + '<td>' + (cause ? '<div class="job-cause">' + esc(cause) + '</div>' : '') + (e.afe ? '<div style="font-size:0.7rem;color:#888">AFE ' + esc(e.afe) + '</div>' : '') + '</td>'
          + '<td>' + esc(pump) + '</td>'
          + '<td style="font-size:0.7rem;">' + (changes.length ? changes.join('<br>') : '—') + '</td>'
          + '<td class="job-summary">' + summary + '</td>'
+         + '<td style="text-align:center;white-space:nowrap;" onclick="event.stopPropagation()">' + reportCell + '</td>'
          + '</tr>';
   });
 
   div.innerHTML = '<h3>Job History — ' + visible.length + ' workover' + (visible.length !== 1 ? 's' : '') + '</h3>'
     + '<table class="job-table">'
-    + '<thead><tr><th>Date</th><th>Cause / AFE</th><th>Pump</th><th>Changes</th><th>Summary</th></tr></thead>'
+    + '<thead><tr><th>Date</th><th>Cause / AFE</th><th>Pump</th><th>Changes</th><th>Summary</th><th>Report</th></tr></thead>'
     + '<tbody>' + rows + '</tbody></table>';
+}
+
+// Workover-report download: backend requires Bearer auth, so we can't just use
+// the <a href> directly. Intercept the click, fetch as a blob with auth header,
+// then trigger a download. Falls through to plain navigation if anything fails.
+async function downloadReport(ev, encodedXkey) {
+  ev.preventDefault();
+  ev.stopPropagation();
+  var token = getToken();
+  if (!token) { alert('Sign in again to download'); return; }
+  var url = API_BASE + '/wbd/workover/' + encodedXkey + '/report';
+  try {
+    var res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) { alert('Download failed: ' + res.status + ' ' + (await res.text())); return; }
+    var blob = await res.blob();
+    var disp = res.headers.get('Content-Disposition') || '';
+    var m = disp.match(/filename="?([^"]+)"?/);
+    var fname = m ? m[1] : 'workover_report.xlsx';
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+  } catch (e) {
+    alert('Download error: ' + e);
+  }
 }
 
 // ── WBD Renderer ──
