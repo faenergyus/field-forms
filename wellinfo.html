@@ -389,10 +389,28 @@ async function loadApiBase() {
   }
 }
 
+function showApiBanner(msg) {
+  var existing = document.getElementById('api-error-banner');
+  if (existing) { existing.textContent = msg; return; }
+  var b = document.createElement('div');
+  b.id = 'api-error-banner';
+  b.style.cssText = 'background:#7f1d1d;color:#fee2e2;padding:10px 14px;border-radius:6px;margin:8px 0;font-size:0.85rem;line-height:1.4';
+  b.textContent = msg;
+  var wrap = document.querySelector('.page') || document.body;
+  wrap.insertBefore(b, wrap.firstChild);
+  // Reveal the wellDisplay too so the banner doesn't get hidden by display:none
+  var wd = document.getElementById('wellDisplay');
+  if (wd) wd.style.display = 'block';
+}
+
 async function loadWellList() {
-  if (!API_BASE) return;
+  if (!API_BASE) { showApiBanner('No API base URL configured.'); return; }
   try {
     var res = await fetch(API_BASE + '/wbd/wells');
+    if (!res.ok) {
+      showApiBanner('Well list API returned HTTP ' + res.status + ' from ' + API_BASE + '/wbd/wells.');
+      return;
+    }
     var json = await res.json();
     var wells = json.wells || [];
     WELL_NAMES = wells.map(function(w){ return w.sn; }).sort();
