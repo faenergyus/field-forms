@@ -158,6 +158,67 @@ def health():
         return {"status": "degraded", "db": str(e), "time": datetime.now().isoformat()}
 
 
+def decode_card_binary(blob):
+    """Decode an XSPOC card binary field (N single-precision floats, first
+    half = load, second half = position). Returns {position, load} or None."""
+    import struct as _struct
+    if blob is None: return None
+    try:
+        b = bytes(blob)
+    except Exception:
+        return None
+    if len(b) < 8 or len(b) % 4 != 0: return None
+    n = len(b) // 4
+    floats = _struct.unpack(f"<{n}f", b)
+    half = n // 2
+    return {"load": list(floats[:half]), "position": list(floats[half:])}
+
+
+@app.get("/scada/dyno-trend/{node_id:path}")
+def get_dyno_trend(
+    node_id: str,
+    days: int = Query(default=14, ge=1, le=90),
+    user: str = Depends(get_current_user),
+):
+    """Per-card max/min surface load + runtime + fillage for a well, last N days.
+
+    Reads tblCardData directly so the SCADA-tab trend chart doesn't depend on
+    cards.json (which only carries a small recent slice). Surface card binary
+    is decoded server-side to compute peak/min polished-rod load.
+    """
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT [Date], NodeID, SurfaceCardB, Runtime, Fillage
+        FROM tblCardData
+        WHERE NodeID = ?
+          AND [Date] >= DATEADD(day, -?, GETDATE())
+          AND SurfaceCardB IS NOT NULL
+        ORDER BY [Date] ASC
+    """, node_id, days)
+
+    out = []
+    for dt, nid, surf_b, runtime, fillage in cur.fetchall():
+        # decode_card_binary returns {position, load} or None
+        card = None
+        try:
+            card = decode_card_binary(surf_b)
+        except Exception:
+            card = None
+        if not card or not card.get("load"):
+            continue
+        loads = card["load"]
+        out.append({
+            "date":      dt.isoformat() if dt else None,
+            "max_load":  max(loads),
+            "min_load":  min(loads),
+            "runtime":   float(runtime) if runtime is not None else None,
+            "fillage":   float(fillage) if fillage is not None else None,
+        })
+    conn.close()
+    return {"node_id": node_id, "days": days, "rows": out}
+
+
 @app.get("/wells")
 def list_wells(user: str = Depends(get_current_user)):
     """List all enabled wells with POCType."""
@@ -641,26 +702,29 @@ def wbd_well(short: str):
 
     # Fetch workover events (independent of whether well_id matches in wbd_wells)
     cur.execute("""
-        SELECT event_date, start_date, afe, failure_cause, secondary_cause,
-               failed_component, component_detail, failure_analysis,
-               pumping_unit, spm, pump_size, pump_type, pump_new,
-               corrosion, pull_tubing, cleanout, acid, enduralloy, tbg_coating,
-               tbg_count_278, tbg_count_278_coated, tbg_count_238, tbg_count_238_coated,
-               tbg_replaced_278, tbg_replaced_278_coated, tbg_replaced_238, tbg_replaced_238_coated,
-               sn_depth, tac_depth,
-               rods_1, rods_78, rods_34, rods_58, rods_fg, rods_sinker,
-               rods_replaced_1, rods_replaced_78, rods_replaced_34, rods_replaced_58, rods_replaced_fg, rods_replaced_sinker,
-               rod_couplers_new, rod_type, summary, job_xkey
-        FROM dbo.wbd_workover_events
-        WHERE sn = ?
-        ORDER BY event_date DESC
+        SELECT we.event_date, we.start_date, we.afe, we.failure_cause, we.secondary_cause,
+               we.failed_component, we.component_detail, we.failure_analysis,
+               we.pumping_unit, we.spm, we.pump_size, we.pump_type, we.pump_new,
+               we.corrosion, we.pull_tubing, we.cleanout, we.acid, we.enduralloy, we.tbg_coating,
+               we.tbg_count_278, we.tbg_count_278_coated, we.tbg_count_238, we.tbg_count_238_coated,
+               we.tbg_replaced_278, we.tbg_replaced_278_coated, we.tbg_replaced_238, we.tbg_replaced_238_coated,
+               we.sn_depth, we.tac_depth,
+               we.rods_1, we.rods_78, we.rods_34, we.rods_58, we.rods_fg, we.rods_sinker,
+               we.rods_replaced_1, we.rods_replaced_78, we.rods_replaced_34, we.rods_replaced_58, we.rods_replaced_fg, we.rods_replaced_sinker,
+               we.rod_couplers_new, we.rod_type, we.summary, we.job_xkey,
+               CASE WHEN jd.[Report Path] IS NOT NULL AND LEN(jd.[Report Path]) > 0 THEN 1 ELSE 0 END AS has_report
+        FROM dbo.wbd_workover_events we
+        LEFT JOIN dbo.[Job Detail] jd ON jd.xKey = we.job_xkey
+        WHERE we.sn = ?
+        ORDER BY we.event_date DESC
     """, short)
     ev_cols = [d[0] for d in cur.description]
     for r in cur.fetchall():
         e = dict(zip(ev_cols, r))
-        # Normalize dates / nulls
+        # Normalize dates / nulls / boolean
         e["event_date"] = str(e["event_date"])[:10] if e.get("event_date") else None
         e["start_date"] = str(e["start_date"])[:10] if e.get("start_date") else None
+        e["has_report"] = bool(e.get("has_report"))
         well["events"].append(e)
 
     if wid is None:
@@ -1436,6 +1500,141 @@ def _write_extended(cur, xkey, well_id, ext, source="manual"):
             xkey, well_id, s.get("stim_type"), s.get("volume"), s.get("volume_unit"),
             s.get("top_depth"), s.get("bottom_depth"), s.get("stim_date") or end_date, source, s.get("notes"),
         )
+
+
+# ---------------------------------------------------------------------------
+# Workover-report download — exposes the original XLSX file for a job. The
+# stored path in [Job Detail].[Report Path] is in 'dbx:/...' form (Dropbox-
+# relative); this endpoint downloads via Dropbox API and streams to the
+# browser. Auth-gated like everything else.
+#
+# Dropbox creds expected at <api_server.py dir>/config.json with a "dropbox"
+# block (app_key, app_secret, refresh_token, root_namespace_id).
+# ---------------------------------------------------------------------------
+_DBX_CFG_API = None
+_DBX_TOKEN_API = None
+
+def _load_api_dropbox_cfg():
+    global _DBX_CFG_API
+    if _DBX_CFG_API is not None:
+        return _DBX_CFG_API
+    try:
+        cfg_path = Path(__file__).parent / "config.json"
+        if cfg_path.is_file():
+            with open(cfg_path) as f:
+                _DBX_CFG_API = (json.load(f).get("dropbox") or {})
+        else:
+            _DBX_CFG_API = {}
+    except Exception as e:
+        log.warning("Could not load Dropbox config: %s", e)
+        _DBX_CFG_API = {}
+    return _DBX_CFG_API
+
+
+def _dbx_token_api():
+    global _DBX_TOKEN_API
+    if _DBX_TOKEN_API:
+        return _DBX_TOKEN_API
+    cfg = _load_api_dropbox_cfg()
+    if not cfg.get("refresh_token"):
+        return None
+    import requests
+    resp = requests.post("https://api.dropboxapi.com/oauth2/token", data={
+        "grant_type":    "refresh_token",
+        "refresh_token": cfg["refresh_token"],
+        "client_id":     cfg["app_key"],
+        "client_secret": cfg["app_secret"],
+    }, timeout=15)
+    resp.raise_for_status()
+    _DBX_TOKEN_API = resp.json()["access_token"]
+    return _DBX_TOKEN_API
+
+
+@app.get("/wbd/workover/{xkey:path}/report-link")
+def get_workover_report_link(xkey: str, user: str = Depends(get_current_user)):
+    """Return a short-lived (4-hour) direct Dropbox URL for the workover report.
+
+    Client can then window.open() the URL — no streaming through this server.
+    """
+    import requests as _r
+    conn = get_ops_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT [Report Path] FROM dbo.[Job Detail] WHERE xKey = ?", xkey)
+    r = cur.fetchone()
+    conn.close()
+    if not r or not r[0]:
+        raise HTTPException(404, "no report path on file for this job")
+    stored = str(r[0]).strip()
+    if not stored.lower().startswith("dbx:"):
+        raise HTTPException(404, "stored path is not in dbx: form")
+    dbx_path = stored[4:]
+    cfg = _load_api_dropbox_cfg()
+    tok = _dbx_token_api()
+    if not tok:
+        raise HTTPException(500, "Dropbox credentials not configured on this server")
+    headers = {"Authorization": f"Bearer {tok}", "Content-Type": "application/json"}
+    ns = cfg.get("root_namespace_id")
+    if ns:
+        headers["Dropbox-API-Path-Root"] = json.dumps({".tag": "root", "root": ns})
+    try:
+        resp = _r.post(
+            "https://api.dropboxapi.com/2/files/get_temporary_link",
+            headers=headers, json={"path": dbx_path}, timeout=15,
+        )
+        if resp.status_code >= 400:
+            log.warning("Dropbox temp-link %s -> %d %s", dbx_path, resp.status_code, resp.text[:200])
+            raise HTTPException(502, f"Dropbox returned {resp.status_code}")
+        data = resp.json()
+    except _r.RequestException as e:
+        raise HTTPException(502, f"Dropbox temp-link failed: {e}")
+    fname = os.path.basename(dbx_path) or "workover_report.xlsx"
+    return {"link": data.get("link"), "filename": fname}
+
+
+@app.get("/wbd/workover/{xkey:path}/report")
+def download_workover_report(xkey: str, user: str = Depends(get_current_user)):
+    """Stream the original workover-report XLSX for a job. Resolves
+    [Job Detail].[Report Path] (dbx:/... form) via Dropbox API and pipes the
+    file body back to the browser. 404 if the row has no path or it's a
+    legacy local-only path the server can't reach.
+    """
+    from fastapi.responses import StreamingResponse
+    import requests as _r
+    conn = get_ops_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT [Report Path] FROM dbo.[Job Detail] WHERE xKey = ?", xkey)
+    r = cur.fetchone()
+    conn.close()
+    if not r or not r[0]:
+        raise HTTPException(404, "no report path on file for this job")
+    stored = str(r[0]).strip()
+    if not stored.lower().startswith("dbx:"):
+        raise HTTPException(404, "stored path is not in dbx: form; can't fetch from Dropbox")
+    dbx_path = stored[4:]
+    cfg = _load_api_dropbox_cfg()
+    tok = _dbx_token_api()
+    if not tok:
+        raise HTTPException(500, "Dropbox credentials not configured on this server")
+    headers = {"Authorization": f"Bearer {tok}",
+               "Dropbox-API-Arg": json.dumps({"path": dbx_path})}
+    ns = cfg.get("root_namespace_id")
+    if ns:
+        headers["Dropbox-API-Path-Root"] = json.dumps({".tag": "root", "root": ns})
+    try:
+        dbx_resp = _r.post("https://content.dropboxapi.com/2/files/download",
+                           headers=headers, stream=True, timeout=60)
+        if dbx_resp.status_code >= 400:
+            log.warning("Dropbox download %s -> %d %s", dbx_path, dbx_resp.status_code, dbx_resp.text[:200])
+            raise HTTPException(502, f"Dropbox returned {dbx_resp.status_code}")
+    except _r.RequestException as e:
+        raise HTTPException(502, f"Dropbox download failed: {e}")
+    fname = os.path.basename(dbx_path) or "workover_report.xlsx"
+    log.info("Streaming workover report %s for %s (xkey=%s)", fname, user, xkey)
+    return StreamingResponse(
+        dbx_resp.iter_content(chunk_size=64 * 1024),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
 
 
 @app.get("/wbd/workover/{xkey:path}/extended")
