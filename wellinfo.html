@@ -105,6 +105,7 @@
     .job-table tr.current { background: #fff8d8; }
     .job-table tr:hover { background: #f5fbf5; }
     .job-table .job-date { font-weight: 700; white-space: nowrap; }
+    .job-table .job-afe { font-size: 0.7rem; color: #888; font-weight: 500; margin-top: 2px; white-space: nowrap; }
     .job-table .job-cause { font-size: 0.7rem; color: #900; }
     .job-table .job-summary { color: #444; font-style: italic; }
     .job-empty { padding: 16px; color: #888; text-align: center; font-style: italic; }
@@ -2446,8 +2447,11 @@ function renderJobHistoryFull(w) {
                  + 'font-size:0.78rem;cursor:pointer;padding:0;">📎 View</button>';
     }
     rows += '<tr' + (isCurrent ? ' class="current"' : '') + (clickable ? ' style="cursor:pointer;" title="Click to edit job (including perfs / plugs / liners / stim / job type)" onclick="openExistingJobForEdit(currentWell._historyVisible[' + idx + '])"' : '') + '>'
-         + '<td class="job-date">' + esc(e.event_date || '') + (isCurrent ? ' ★' : '') + '</td>'
-         + '<td>' + (cause ? '<div class="job-cause">' + esc(cause) + '</div>' : '') + (e.afe ? '<div style="font-size:0.7rem;color:#888">AFE ' + esc(e.afe) + '</div>' : '') + '</td>'
+         + '<td class="job-date">'
+         +   esc(e.event_date || '') + (isCurrent ? ' ★' : '')
+         +   (e.afe ? '<div class="job-afe">AFE ' + esc(e.afe) + '</div>' : '')
+         + '</td>'
+         + '<td>' + (cause ? '<div class="job-cause">' + esc(cause) + '</div>' : '') + '</td>'
          + '<td>' + esc(pump) + '</td>'
          + '<td style="font-size:0.7rem;">' + (changes.length ? changes.join('<br>') : '—') + '</td>'
          + '<td class="job-summary">' + summary + '</td>'
@@ -2457,7 +2461,7 @@ function renderJobHistoryFull(w) {
 
   div.innerHTML = '<h3>Job History — ' + visible.length + ' workover' + (visible.length !== 1 ? 's' : '') + '</h3>'
     + '<table class="job-table">'
-    + '<thead><tr><th>Date</th><th>Cause / AFE</th><th>Pump</th><th>Changes</th><th>Summary</th><th>Report</th></tr></thead>'
+    + '<thead><tr><th>Date / AFE</th><th>Cause</th><th>Pump</th><th>Changes</th><th>Summary</th><th>Report</th></tr></thead>'
     + '<tbody>' + rows + '</tbody></table>';
 }
 
@@ -2469,7 +2473,7 @@ async function downloadReport(ev, encodedXkey) {
   var token = getToken();
   if (!token) { alert('Sign in again to download'); return; }
   if (!API_BASE) { await loadApiBase(); }
-  if (!API_BASE) { alert('API base URL not loaded — try reloading the page.'); return; }
+  if (!API_BASE) { alert('Workover report unavailable — API base URL not loaded.'); return; }
   var url = API_BASE + '/wbd/workover/' + encodedXkey + '/report';
   try {
     var res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
@@ -2479,7 +2483,17 @@ async function downloadReport(ev, encodedXkey) {
       url = API_BASE + '/wbd/workover/' + encodedXkey + '/report';
       res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
     }
-    if (!res.ok) { alert('Download failed: ' + res.status + ' ' + (await res.text())); return; }
+    if (!res.ok) {
+      var bodyTxt = '';
+      try { bodyTxt = (await res.text()).slice(0, 200); } catch(e) {}
+      var hint;
+      if (res.status === 500) hint = 'The api_server is throwing a server-side error on /wbd/workover/.../report — most likely the Ops_Reporting (sf\\\\sqldev) connection is down. Not a GitHub Pages issue.';
+      else if (res.status === 404) hint = 'The api_server says no workover report exists for this xkey.';
+      else if (res.status === 401 || res.status === 403) hint = 'Your sign-in expired — refresh the page and sign in again.';
+      else hint = '';
+      alert('Workover report download failed (HTTP ' + res.status + ').' + (hint ? '\n\n' + hint : '') + (bodyTxt ? '\n\nResponse: ' + bodyTxt : ''));
+      return;
+    }
     var blob = await res.blob();
     var disp = res.headers.get('Content-Disposition') || '';
     var m = disp.match(/filename="?([^"]+)"?/);
