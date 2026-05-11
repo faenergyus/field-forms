@@ -642,9 +642,12 @@ function isEditor() {
   } catch(e) { return false; }
 }
 function getToken() {
+  // SCADA pages save the Google JWT under session.credential; this page
+  // historically used session.token. After SESSION_KEY unification either
+  // can be present depending on which site signed the user in last.
   try {
     var s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
-    return s.token || '';
+    return s.token || s.credential || '';
   } catch(e) { return ''; }
 }
 
@@ -2474,11 +2477,34 @@ async function downloadReport(ev, encodedXkey) {
   if (!token) { alert('Sign in again to download'); return; }
   if (!API_BASE) { await loadApiBase(); }
   if (!API_BASE) { alert('Workover report unavailable — API base URL not loaded.'); return; }
+
+  // Preferred: ask the api for a 4-hour Dropbox temp URL and just open it.
+  // The browser hits Dropbox directly — no server streaming, no auth on the
+  // file request itself.
+  try {
+    var linkRes = await fetch(API_BASE + '/wbd/workover/' + encodedXkey + '/report-link', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (linkRes.ok) {
+      var data = await linkRes.json();
+      if (data && data.link) { window.open(data.link, '_blank'); return; }
+    }
+    if (linkRes.status === 404 && !linkRes._fallthrough) {
+      // Older api server without the new endpoint → fall through to streaming
+    } else if (!linkRes.ok && linkRes.status !== 404) {
+      var lt = ''; try { lt = (await linkRes.text()).slice(0, 200); } catch(e) {}
+      alert('Could not get direct Dropbox link (HTTP ' + linkRes.status + ').' + (lt ? '\n\n' + lt : ''));
+      return;
+    }
+  } catch (e) {
+    console.warn('temp-link path failed, trying stream fallback:', e);
+  }
+
+  // Fallback: legacy streaming endpoint
   var url = API_BASE + '/wbd/workover/' + encodedXkey + '/report';
   try {
     var res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
     if (!res.ok && (res.status === 502 || res.status === 0)) {
-      // Tunnel may have rotated — refresh and retry once
       await loadApiBase();
       url = API_BASE + '/wbd/workover/' + encodedXkey + '/report';
       res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
