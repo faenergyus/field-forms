@@ -2478,16 +2478,21 @@ async function downloadReport(ev, encodedXkey) {
   if (!API_BASE) { await loadApiBase(); }
   if (!API_BASE) { alert('Workover report unavailable — API base URL not loaded.'); return; }
 
-  // Preferred: ask the api for a 4-hour Dropbox temp URL and just open it.
-  // The browser hits Dropbox directly — no server streaming, no auth on the
-  // file request itself.
+  // Preferred: ask the api for a 4-hour Dropbox temp URL, wrap it with the
+  // Microsoft Office Online viewer, and pop a new tab. The viewer renders
+  // the XLSX as a live spreadsheet in the browser (no download → open).
   try {
     var linkRes = await fetch(API_BASE + '/wbd/workover/' + encodedXkey + '/report-link', {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     if (linkRes.ok) {
       var data = await linkRes.json();
-      if (data && data.link) { window.open(data.link, '_blank'); return; }
+      if (data && data.link) {
+        var viewerUrl = 'https://view.officeapps.live.com/op/view.aspx?src='
+                      + encodeURIComponent(data.link);
+        window.open(viewerUrl, '_blank');
+        return;
+      }
     }
     if (linkRes.status === 404 && !linkRes._fallthrough) {
       // Older api server without the new endpoint → fall through to streaming
