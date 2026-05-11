@@ -13,6 +13,7 @@ Endpoints:
 import json
 import logging
 import logging.handlers
+import struct
 import os
 import sys
 from datetime import datetime, timedelta
@@ -20,9 +21,9 @@ from pathlib import Path
 from typing import Optional
 
 import pyodbc
-from fastapi import FastAPI, Query, HTTPException, Depends, Header, UploadFile, File, Form
+from fastapi import FastAPI, Query, HTTPException, Depends, Header, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import ORJSONResponse, Response
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
@@ -144,6 +145,75 @@ app.add_middleware(
     allow_methods=["GET", "PUT", "POST", "DELETE"],
     allow_headers=["*"],
 )
+
+
+# ---------------------------------------------------------------------------
+# KML — only external_wells.kml (third-party wells the user maintains by hand).
+# FAE wells flow through xlsx → SQL → JSON → map; no need to also represent
+# them as KML.
+# ---------------------------------------------------------------------------
+KML_DIR = Path(r"C:\AI\ANALYST\data\kml")
+
+EXTERNAL_KML_STUB = (
+    '<?xml version="1.0" encoding="UTF-8"?>\n'
+    '<kml xmlns="http://www.opengis.net/kml/2.2"><Document>'
+    '<name>External Wells (third party)</name>'
+    '<description>Manually maintained — wells not in Pumper_Data_Calcs '
+    '(offset operators, scout wells, future locations, etc.). Edit in '
+    'Google Earth Pro, upload back via PUT /kml/external_wells.kml.</description>'
+    '<Style id="external_style"><IconStyle>'
+    '<color>ff888888</color><scale>0.8</scale>'
+    '<Icon><href>http://maps.google.com/mapfiles/kml/shapes/open-diamond.png</href></Icon>'
+    '</IconStyle><LabelStyle><scale>0.7</scale></LabelStyle></Style>'
+    '</Document></kml>'
+)
+
+
+def _ensure_external_kml():
+    """Create external_wells.kml stub on first boot. Never overwrite."""
+    KML_DIR.mkdir(parents=True, exist_ok=True)
+    ext = KML_DIR / "external_wells.kml"
+    if not ext.exists():
+        ext.write_text(EXTERNAL_KML_STUB, encoding="utf-8")
+        log.info("Seeded external_wells.kml stub")
+
+
+_ensure_external_kml()
+
+
+def _safe_kml_path(name: str) -> Path:
+    if not name.endswith(".kml") or "/" in name or "\\" in name or ".." in name:
+        raise HTTPException(400, "bad filename")
+    return KML_DIR / name
+
+
+@app.get("/kml/{name}")
+def get_kml(name: str):
+    """Download a KML file from the kml directory (e.g. external_wells.kml)."""
+    path = _safe_kml_path(name)
+    if not path.exists():
+        raise HTTPException(404, "not found")
+    return Response(content=path.read_bytes(),
+                    media_type="application/vnd.google-earth.kml+xml",
+                    headers={"Content-Disposition": f'inline; filename="{name}"'})
+
+
+@app.put("/kml/{name}")
+async def put_kml(name: str, request: Request, user: str = Depends(get_current_user)):
+    """Upload an edited KML file. Auth-gated. Body is the raw KML bytes."""
+    path = _safe_kml_path(name)
+    body = await request.body()
+    if not body or not body.lstrip().startswith(b"<"):
+        raise HTTPException(400, "body doesn't look like KML")
+    # quick well-formedness check
+    try:
+        from xml.etree import ElementTree as ET
+        ET.fromstring(body)
+    except Exception as e:
+        raise HTTPException(400, f"invalid XML: {e}")
+    path.write_bytes(body)
+    log.info("KML uploaded: %s (%d bytes) by %s", name, len(body), user)
+    return {"ok": True, "file": name, "bytes": len(body)}
 
 
 @app.get("/health")
@@ -372,6 +442,110 @@ def get_registers(well: str, user: str = Depends(get_current_user)):
 
 
 # ---------------------------------------------------------------------------
+# Dyno card history (full list metadata + per-card binary on demand)
+# ---------------------------------------------------------------------------
+def _decode_card_blob(blob):
+    """N single-precision floats; first half = load, second half = position."""
+    if blob is None or len(blob) < 8 or len(blob) % 4 != 0:
+        return None
+    n = len(blob) // 4
+    floats = struct.unpack(f"<{n}f", blob)
+    half = n // 2
+    return {"position": list(floats[half:]), "load": list(floats[:half])}
+
+
+@app.get("/card-list/{well}", response_class=ORJSONResponse)
+def card_list(
+    well: str,
+    limit: int = Query(default=500, ge=1, le=10000),
+    days: Optional[int] = Query(default=None, ge=1, le=3650),
+    user: str = Depends(get_current_user),
+):
+    """List card metadata (no binary) for a well, most recent first."""
+    conn = get_conn()
+    cur = conn.cursor()
+    where = "NodeID = ?"
+    params = [well]
+    if days is not None:
+        where += f" AND [Date] > DATEADD(day, -{int(days)}, GETDATE())"
+    cur.execute(
+        f"""
+        SELECT TOP {int(limit)} [Date], CardType, SPM, StrokeLength, Fillage,
+               Area, CardArea, Runtime, CauseID, AnalysisDate
+        FROM tblCardData WITH (NOLOCK)
+        WHERE {where}
+        ORDER BY [Date] DESC
+        """,
+        *params,
+    )
+    rows = []
+    for r in cur.fetchall():
+        rows.append({
+            "Date": r[0].isoformat() if r[0] else None,
+            "CardType": r[1],
+            "SPM": float(r[2]) if r[2] is not None else None,
+            "StrokeLength": float(r[3]) if r[3] is not None else None,
+            "Fillage": float(r[4]) if r[4] is not None else None,
+            "Area": float(r[5]) if r[5] is not None else None,
+            "CardArea": float(r[6]) if r[6] is not None else None,
+            "Runtime": float(r[7]) if r[7] is not None else None,
+            "CauseID": r[8],
+            "AnalysisDate": r[9].isoformat() if r[9] else None,
+        })
+    conn.close()
+    return {"well": well, "count": len(rows), "cards": rows}
+
+
+@app.get("/card/{well}/{card_date}", response_class=ORJSONResponse)
+def card_detail(
+    well: str,
+    card_date: str,
+    user: str = Depends(get_current_user),
+):
+    """Fetch one card's binaries (Surface, Downhole, POC DH) by exact Date."""
+    try:
+        dt = datetime.fromisoformat(card_date.replace("Z", ""))
+    except ValueError:
+        raise HTTPException(400, "Invalid card_date (ISO 8601 expected)")
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT TOP 1 [Date], CardType, SPM, StrokeLength, Fillage, Area, CardArea,
+               Runtime, CauseID, AnalysisDate,
+               SurfaceCardB, DownholeCardB, POCDownholeCardB,
+               PredictedCardB, PermissibleLoadUpB, PermissibleLoadDownB
+        FROM tblCardData WITH (NOLOCK)
+        WHERE NodeID = ? AND [Date] = ?
+        """,
+        well, dt,
+    )
+    r = cur.fetchone()
+    conn.close()
+    if not r:
+        raise HTTPException(404, "Card not found")
+    return {
+        "well": well,
+        "Date": r[0].isoformat() if r[0] else None,
+        "CardType": r[1],
+        "SPM": float(r[2]) if r[2] is not None else None,
+        "StrokeLength": float(r[3]) if r[3] is not None else None,
+        "Fillage": float(r[4]) if r[4] is not None else None,
+        "Area": float(r[5]) if r[5] is not None else None,
+        "CardArea": float(r[6]) if r[6] is not None else None,
+        "Runtime": float(r[7]) if r[7] is not None else None,
+        "CauseID": r[8],
+        "AnalysisDate": r[9].isoformat() if r[9] else None,
+        "SurfaceCardB": _decode_card_blob(r[10]),
+        "DownholeCardB": _decode_card_blob(r[11]),
+        "POCDownholeCardB": _decode_card_blob(r[12]),
+        "PredictedCardB": _decode_card_blob(r[13]),
+        "PermissibleLoadUpB": _decode_card_blob(r[14]),
+        "PermissibleLoadDownB": _decode_card_blob(r[15]),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Chart config persistence (per user + per well)
 # ---------------------------------------------------------------------------
 import hashlib
@@ -429,6 +603,35 @@ def save_default_config(body: ChartConfigBody, user: str = Depends(get_current_u
     path.write_text(json.dumps({"panels": body.panels}, indent=2), encoding="utf-8")
     log.info("Default chart config saved for %s (%d panels)", user, len(body.panels))
     return {"saved": True, "panels": len(body.panels)}
+
+
+# Arbitrary per-user UI prefs (cross-device) — diagnosis collapsed state, etc.
+class UserPrefsBody(BaseModel):
+    prefs: dict
+
+
+def _prefs_path(email: str) -> Path:
+    safe_email = hashlib.md5(email.lower().encode()).hexdigest()[:12]
+    user_dir = CHART_CONFIG_DIR / safe_email
+    user_dir.mkdir(exist_ok=True)
+    return user_dir / "_prefs.json"
+
+
+@app.get("/user-prefs")
+def get_user_prefs(user: str = Depends(get_current_user)):
+    """Get arbitrary UI preferences blob for the user."""
+    path = _prefs_path(user)
+    if path.exists():
+        return json.loads(path.read_text(encoding="utf-8"))
+    return {}
+
+
+@app.put("/user-prefs")
+def save_user_prefs(body: UserPrefsBody, user: str = Depends(get_current_user)):
+    """Replace the user's preferences blob."""
+    path = _prefs_path(user)
+    path.write_text(json.dumps(body.prefs, indent=2), encoding="utf-8")
+    return {"saved": True}
 
 
 # ---------------------------------------------------------------------------
