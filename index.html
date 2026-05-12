@@ -514,7 +514,7 @@
 
   <footer>
     Forty Acres Energy &nbsp;·&nbsp; Field Operations &nbsp;·&nbsp; Internal Use Only
-    <div class="data-note">Dashboard data from Google Sheets Â· Updated 2026-05-05 10:24</div>
+    <div class="data-note">Dashboard data from Google Sheets · Updated 2026-05-12 08:37</div>
   </footer>
 </div>
 
@@ -545,24 +545,24 @@ const CHART_DEFS = [
 
 const ZERO = () => ({ total: 0, byPumper: {}, wellsByPumper: {} });
 
-const DATA = {  // auto-refreshed 2026-05-05 10:25
+const DATA = {  // auto-refreshed 2026-05-12 08:37
   pastweek: {
-    avo      : { total: 14, byPumper: { 'Henry': 13, 'Raúl': 1 }, wellsByPumper: { 'Henry': ["BS&W DRAW", "WEU (Mexico W) Battery", "WEU (New) Battery", "WEU (RR Bell) Battery", "WEU (Seale Federal) Battery", "WEU (State 334) Battery", "WEU (State E) Battery", "WEU (State SPX) Battery", "WEU (State WEH) Battery", "WEU (WEA) Battery", "WEU (WEF 4) Battery", "WEU (WEF) Battery", "WEU (Wilson) Battery"], 'Raúl': ["A B COATES B #001"] } },
-    gwi      : ZERO(),
-    fap      : { total: 4, byPumper: { 'Waldo': 4 }, wellsByPumper: { 'Waldo': ["ARNOTT RAMSAY NCT-B #010", "ARNOTT RAMSAY NCT-B #013", "ARNOTT RAMSAY NCT-B #021", "H G MOBERLY A FEDERAL #003"] } },
+    avo      : ZERO(),
+    gwi      : { total: 1, byPumper: { 'Jason': 1 }, wellsByPumper: { 'Jason': ["STATE C #001"] } },
+    fap      : { total: 20, byPumper: { 'Shane': 1, 'Jason': 4, 'Henry': 8, 'Waldo': 7 }, wellsByPumper: { 'Shane': ["G G TRAVIS #004"], 'Jason': ["STATE C TR 11 #003", "STATE C TR 11 #009"], 'Henry': ["WEST EUMONT UNIT #203", "WEST EUMONT UNIT #206", "WEST EUMONT UNIT #509", "WEST EUMONT UNIT #514", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #518"], 'Waldo': ["ARNOTT RAMSAY NCT-B #006", "ARNOTT RAMSAY NCT-B #008", "ARNOTT RAMSAY NCT-B #009", "ARNOTT RAMSAY NCT-B #010", "ARNOTT RAMSAY NCT-B #012", "ARNOTT RAMSAY NCT-B #020", "ARNOTT RAMSAY NCT-B #021"] } },
     pumpup   : ZERO(),
-    wellsite : { total: 4, byPumper: { 'Eli': 4 }, wellsByPumper: { 'Eli': ["WEST EUMONT UNIT #204", "WEST EUMONT UNIT #218", "WEST EUMONT UNIT #219", "WEST EUMONT UNIT #522"] } },
-    facility : { total: 2, byPumper: { 'Eli': 2 }, wellsByPumper: { 'Eli': ["SHOLES B 25"] } },
+    wellsite : { total: 31, byPumper: { 'Jason': 18, 'Eli': 13 }, wellsByPumper: { 'Jason': ["ELLIOTT #002", "MAVEETY STATE GAS COM #009", "MEYER B 28 A A/C 1 #004", "SHELL STATE #001", "SHELL STATE #011", "STATE A COM #004", "STATE A COM #005", "STATE A COM #008", "STATE A-20 #001", "STATE A-20 #004", "STATE AY #001", "STATE C #002", "STATE C TR 11 #007", "STATE C TR 11 #008", "STATE E #002", "STATE E COM #001", "STATE H 17 #002", "WULFF STATE #002"], 'Eli': ["WEST EUMONT UNIT #218", "WEST EUMONT UNIT #219", "WEST EUMONT UNIT #522", "WEST EUMONT UNIT #524", "WEST EUMONT UNIT #525", "WEST EUMONT UNIT #526"] } },
+    facility : { total: 4, byPumper: { 'Eli': 4 }, wellsByPumper: { 'Eli': ["Fopeano"] } },
     whs      : ZERO(),
     env      : ZERO(),
   },
   ytd: {
-    avo      : { total: 14, byPumper: { 'Henry': 13, 'Raúl': 1 }, wellsByPumper: { 'Henry': ["BS&W DRAW", "WEU (Mexico W) Battery", "WEU (New) Battery", "WEU (RR Bell) Battery", "WEU (Seale Federal) Battery", "WEU (State 334) Battery", "WEU (State E) Battery", "WEU (State SPX) Battery", "WEU (State WEH) Battery", "WEU (WEA) Battery", "WEU (WEF 4) Battery", "WEU (WEF) Battery", "WEU (Wilson) Battery"], 'Raúl': ["A B COATES B #001"] } },
-    gwi      : { total: 46, byPumper: { 'Raul': 1, 'Wynn': 20, 'Armando': 9, 'Waldo': 6, 'Henry': 1, 'Eli': 9 }, wellsByPumper: { 'Raul': ["CARLSON A FEDERAL #001"], 'Wynn': ["CLOSSON B FEDERAL #012", "CLOSSON C #001", "LYNN A #004", "LYNN A #006", "MEYER B 23 #001", "MEYER B 23 #002", "MEYER B 31 A #001", "NEW MEXICO AA STATE #001", "NEW MEXICO AA STATE #007", "OTIS L JONES #002", "SHELL STATE #004", "SHELL STATE #007", "STATE H #002", "STATE H #003", "STATE H #005", "STATE H #006", "STEVENS B #013"], 'Armando': ["HUGHES B-6 #011", "HUGHES B-6 #012", "J F JANDA NCT-G #002", "JANDA STATE #001", "JANDA STATE #002", "MATKINS #006", "OTIS L JONES #001", "OTIS L JONES #002", "SHELL STATE #002"], 'Waldo': ["FEDERAL F #002", "FEDERAL F #003", "FEDERAL F #004", "FEDERAL F #005", "MOBERLY RHODES WF PROJECT #004"], 'Henry': ["WEST EUMONT UNIT #508"], 'Eli': ["BRITT A 6 #002", "HOLT MEXICO STATE COM #001", "HUSKY WOOLWORTH #001", "MAVEETY STATE GAS COM #009", "REED A 3 #002", "REED A 3 #003", "STEELER A #001", "STEELER A #003", "STEELER A #004"] } },
-    fap      : { total: 132, byPumper: { 'Waldo': 10, 'Jason': 93, 'Armando': 6, 'Henry': 23 }, wellsByPumper: { 'Waldo': ["ARNOTT RAMSAY NCT-B #006", "ARNOTT RAMSAY NCT-B #008", "ARNOTT RAMSAY NCT-B #009", "ARNOTT RAMSAY NCT-B #010", "ARNOTT RAMSAY NCT-B #012", "ARNOTT RAMSAY NCT-B #013", "ARNOTT RAMSAY NCT-B #020", "ARNOTT RAMSAY NCT-B #021", "H G MOBERLY A FEDERAL #003"], 'Jason': ["ARNOTT RAMSAY NCT-B #006", "ARNOTT RAMSAY NCT-B #008", "ARNOTT RAMSAY NCT-B #009", "ARNOTT RAMSAY NCT-B #010", "ARNOTT RAMSAY NCT-B #012", "ARNOTT RAMSAY NCT-B #020", "ARNOTT RAMSAY NCT-B #021", "BAYLUS CADE FEDERAL #004", "BAYLUS CADE FEDERAL #006", "BRITT A 6 #005", "C E LAMUNYON #040", "CLOWER STATE #001", "E C HILL B FEDERAL #018", "E C HILL B FEDERAL #020", "ELLIOTT #002", "G G TRAVIS #004", "GILLULLY B FEDERAL RA A #010", "LOCKHART B 31 #003", "LOCKHART B 31 #005", "LOCKHART B 31 #006", "LOCKHART B 31 #009", "MAVEETY STATE GAS COM #009", "MCQUATTERS COM #004", "STATE A A/C 1 #036", "STATE A A/C 1 #043", "STATE A A/C 1 #046", "STATE A A/C 1 #048", "STATE A A/C 1 #061", "STATE A A/C 1 #064", "STATE A A/C 1 #069", "STATE A A/C 1 #081", "STATE A A/C 2 #004", "STATE A A/C 2 #023", "STATE A A/C 2 #025", "STATE A A/C 2 #026", "STATE A A/C 2 #027", "STATE A A/C 2 #029", "STATE A A/C 2 #030", "STATE A A/C 2 #031", "STATE A A/C 2 #054", "STATE A A/C 3 #009", "STATE A A/C 3 COM A #004", "STATE C TR 11 #003", "STATE D #002", "STATE D #005", "STATE D #006", "STATE D #007", "STATE D #008", "STATE E #002", "TRAVIS #005", "WEST EUMONT UNIT #102", "WEST EUMONT UNIT #104", "WEST EUMONT UNIT #106", "WEST EUMONT UNIT #131", "WEST EUMONT UNIT #203", "WEST EUMONT UNIT #204", "WEST EUMONT UNIT #206", "WEST EUMONT UNIT #209", "WEST EUMONT UNIT #210", "WEST EUMONT UNIT #215", "WEST EUMONT UNIT #216", "WEST EUMONT UNIT #510", "WEST EUMONT UNIT #511", "WEST EUMONT UNIT #512", "WEST EUMONT UNIT #513", "WEST EUMONT UNIT #514", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #521"], 'Armando': ["STATE A A/C 1 #081", "STATE A A/C 2 #025"], 'Henry': ["WEST EUMONT UNIT #102", "WEST EUMONT UNIT #104", "WEST EUMONT UNIT #106", "WEST EUMONT UNIT #203", "WEST EUMONT UNIT #204", "WEST EUMONT UNIT #206", "WEST EUMONT UNIT #209", "WEST EUMONT UNIT #210", "WEST EUMONT UNIT #215", "WEST EUMONT UNIT #216", "WEST EUMONT UNIT #220", "WEST EUMONT UNIT #402", "WEST EUMONT UNIT #417", "WEST EUMONT UNIT #510", "WEST EUMONT UNIT #511", "WEST EUMONT UNIT #512", "WEST EUMONT UNIT #513", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #520", "WEST EUMONT UNIT #521"] } },
+    avo      : { total: 265, byPumper: { 'Armando': 86, 'Henry': 146, 'Jason': 2, 'Raul': 15, 'Waldo': 16 }, wellsByPumper: { 'Armando': ["101 SWD BATTERY", "AC 1 115 WSW Facility", "FEDERAL 20 #001", "FEDERAL 714 #003", "HUGHES B CDP", "HUGHES B-6 #011", "HUGHES B-6 #012", "J F JANDA NCT H #002", "J F JANDA NCT H #003", "J F JANDA NCT-G #002", "J F JANDA NCT-J #005", "JANDA STATE #001", "JANDA STATE #002", "MATKINS #001", "MATKINS #002", "MATKINS #003", "MATKINS #004", "MATKINS #005", "MATKINS #006", "STATE 157 F #004", "STATE 157 G #004", "STATE 157 G-A #005", "STATE A A/C 1 #001", "STATE A A/C 1 #002", "STATE A A/C 1 #006", "STATE A A/C 1 #017", "STATE A A/C 1 #022", "STATE A A/C 1 #027", "STATE A A/C 1 #032", "STATE A A/C 1 #036", "STATE A A/C 1 #045", "STATE A A/C 1 #046", "STATE A A/C 1 #047", "STATE A A/C 1 #048", "STATE A A/C 1 #050", "STATE A A/C 1 #052", "STATE A A/C 1 #053", "STATE A A/C 1 #054", "STATE A A/C 1 #061", "STATE A A/C 1 #064", "STATE A A/C 1 #065", "STATE A A/C 1 #069", "STATE A A/C 1 #071", "STATE A A/C 1 #072", "STATE A A/C 1 #073", "STATE A A/C 1 #080", "STATE A A/C 1 #081", "STATE A A/C 1 #084", "STATE A A/C 1 #094", "STATE A A/C 1 #097", "STATE A A/C 1 #098", "STATE A A/C 1 #105", "STATE A A/C 1 #107", "STATE A A/C 1 #108", "STATE A A/C 1 #114", "STATE A A/C 1 #115", "STATE A A/C 1 #116", "STATE A A/C 1 #117", "STATE A A/C 1 #118", "STATE A A/C 1 #119", "STATE A A/C 1 #120", "STATE A A/C 1 #121", "STATE A A/C 1 #122", "STATE A A/C 1 #126", "STATE A A/C 1 #128", "STATE A A/C 1 #132", "STATE A A/C 1 #133", "STATE A A/C 2 #064", "STATE A A/C 3 #010", "STATE A A/C 3 #011", "STATE A A/C 3 #012", "STATE A A/C 3 COM A #004"], 'Waldo': ["ARNOTT RAMSAY NCT-B #001", "ARNOTT RAMSAY NCT-B BATTERY", "FARNSWORTH 4 #002", "FARNSWORTH 4 #003", "FARNSWORTH 4 #007", "FARNSWORTH 4 #010", "FARNSWORTH BATTERY", "FARNSWORTH C #002", "M F LEGAL #005", "RHODES FEDERAL UNIT #087", "RHODES FEDERAL UNIT #226", "SHOLES B 13 #004", "Sholes B Tank Battery", "W T JOYNER #001", "WINNINGHAM #008", "WINNINGHAM #009"], 'Henry': ["BS&W DRAW", "CIF", "CIF Skim Facility", "Oil Sales", "Quapaw supply water", "Raz 3rd Party Water", "Rice 3rd Party Water", "State A Battery", "WEST EUMONT UNIT #101", "WEST EUMONT UNIT #102", "WEST EUMONT UNIT #103", "WEST EUMONT UNIT #104", "WEST EUMONT UNIT #105", "WEST EUMONT UNIT #106", "WEST EUMONT UNIT #107", "WEST EUMONT UNIT #108", "WEST EUMONT UNIT #109", "WEST EUMONT UNIT #110", "WEST EUMONT UNIT #111", "WEST EUMONT UNIT #112", "WEST EUMONT UNIT #113", "WEST EUMONT UNIT #114", "WEST EUMONT UNIT #115", "WEST EUMONT UNIT #116", "WEST EUMONT UNIT #117", "WEST EUMONT UNIT #130", "WEST EUMONT UNIT #131", "WEST EUMONT UNIT #201", "WEST EUMONT UNIT #202", "WEST EUMONT UNIT #203", "WEST EUMONT UNIT #204", "WEST EUMONT UNIT #205", "WEST EUMONT UNIT #206", "WEST EUMONT UNIT #207", "WEST EUMONT UNIT #208", "WEST EUMONT UNIT #209", "WEST EUMONT UNIT #210", "WEST EUMONT UNIT #211", "WEST EUMONT UNIT #212", "WEST EUMONT UNIT #213", "WEST EUMONT UNIT #214", "WEST EUMONT UNIT #215", "WEST EUMONT UNIT #216", "WEST EUMONT UNIT #217", "WEST EUMONT UNIT #218", "WEST EUMONT UNIT #219", "WEST EUMONT UNIT #220", "WEST EUMONT UNIT #225", "WEST EUMONT UNIT #301", "WEST EUMONT UNIT #302", "WEST EUMONT UNIT #303", "WEST EUMONT UNIT #304", "WEST EUMONT UNIT #305", "WEST EUMONT UNIT #401", "WEST EUMONT UNIT #402", "WEST EUMONT UNIT #403", "WEST EUMONT UNIT #404", "WEST EUMONT UNIT #405", "WEST EUMONT UNIT #406", "WEST EUMONT UNIT #408", "WEST EUMONT UNIT #409", "WEST EUMONT UNIT #410", "WEST EUMONT UNIT #411", "WEST EUMONT UNIT #412", "WEST EUMONT UNIT #413", "WEST EUMONT UNIT #414", "WEST EUMONT UNIT #415", "WEST EUMONT UNIT #416", "WEST EUMONT UNIT #417", "WEST EUMONT UNIT #418", "WEST EUMONT UNIT #419", "WEST EUMONT UNIT #420", "WEST EUMONT UNIT #421", "WEST EUMONT UNIT #422", "WEST EUMONT UNIT #501", "WEST EUMONT UNIT #502", "WEST EUMONT UNIT #503", "WEST EUMONT UNIT #504", "WEST EUMONT UNIT #505", "WEST EUMONT UNIT #506", "WEST EUMONT UNIT #507", "WEST EUMONT UNIT #508", "WEST EUMONT UNIT #509", "WEST EUMONT UNIT #510", "WEST EUMONT UNIT #511", "WEST EUMONT UNIT #512", "WEST EUMONT UNIT #513", "WEST EUMONT UNIT #514", "WEST EUMONT UNIT #515", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #517", "WEST EUMONT UNIT #518", "WEST EUMONT UNIT #519", "WEST EUMONT UNIT #520", "WEST EUMONT UNIT #521", "WEST EUMONT UNIT #522", "WEST EUMONT UNIT #523", "WEST EUMONT UNIT #524", "WEST EUMONT UNIT #525", "WEST EUMONT UNIT #526", "WEST EUMONT UNIT #527", "WEST EUMONT UNIT #528", "WEST EUMONT UNIT #601", "WEST EUMONT UNIT #602", "WEST EUMONT UNIT #603", "WEST EUMONT UNIT #604", "WEST EUMONT UNIT #605", "WEST EUMONT UNIT #606", "WEST EUMONT UNIT #607", "WEST EUMONT UNIT #608", "WEST EUMONT UNIT #610", "WEST EUMONT UNIT #611", "WEST EUMONT UNIT #612", "WEST EUMONT UNIT BATTERY", "WEU (417 / LW White 2) Battery", "WEU (Aztec) Battery", "WEU (Bay Federal) Battery", "WEU (Elliott State) Battery", "WEU (Federal D) Battery", "WEU (GM State) Battery", "WEU (Gulf State) Battery", "WEU (Ida White) Battery", "WEU (L C Fopeano) Battery", "WEU (LW White Com) Battery", "WEU (Lea 407) Battery", "WEU (Magruder State) Battery", "WEU (Mexico W) Battery", "WEU (New) Battery", "WEU (RR Bell) Battery", "WEU (Seale Federal) Battery", "WEU (State 334) Battery", "WEU (State E) Battery", "WEU (State SPX) Battery", "WEU (State WEH) Battery", "WEU (WEA) Battery", "WEU (WEF 4) Battery", "WEU (WEF) Battery", "WEU (Wilson) Battery"], 'Raul': ["A B COATES B #001", "ADELE SOWELL #001", "ADELE SOWELL #002", "CARLSON A FEDERAL #001", "COURTLAND MYERS B FEDERAL #003", "DOUBLE SS #002", "MYERS B FEDERAL #010"], 'Jason': ["STATE D #005", "STATE D #007"] } },
+    gwi      : { total: 47, byPumper: { 'Raul': 1, 'Wynn': 20, 'Armando': 9, 'Waldo': 6, 'Henry': 1, 'Eli': 9, 'Jason': 1 }, wellsByPumper: { 'Raul': ["CARLSON A FEDERAL #001"], 'Wynn': ["CLOSSON B FEDERAL #012", "CLOSSON C #001", "LYNN A #004", "LYNN A #006", "MEYER B 23 #001", "MEYER B 23 #002", "MEYER B 31 A #001", "NEW MEXICO AA STATE #001", "NEW MEXICO AA STATE #007", "OTIS L JONES #002", "SHELL STATE #004", "SHELL STATE #007", "STATE H #002", "STATE H #003", "STATE H #005", "STATE H #006", "STEVENS B #013"], 'Armando': ["HUGHES B-6 #011", "HUGHES B-6 #012", "J F JANDA NCT-G #002", "JANDA STATE #001", "JANDA STATE #002", "MATKINS #006", "OTIS L JONES #001", "OTIS L JONES #002", "SHELL STATE #002"], 'Waldo': ["FEDERAL F #002", "FEDERAL F #003", "FEDERAL F #004", "FEDERAL F #005", "MOBERLY RHODES WF PROJECT #004"], 'Henry': ["WEST EUMONT UNIT #508"], 'Eli': ["BRITT A 6 #002", "HOLT MEXICO STATE COM #001", "HUSKY WOOLWORTH #001", "MAVEETY STATE GAS COM #009", "REED A 3 #002", "REED A 3 #003", "STEELER A #001", "STEELER A #003", "STEELER A #004"], 'Jason': ["STATE C #001"] } },
+    fap      : { total: 152, byPumper: { 'Waldo': 17, 'Jason': 97, 'Armando': 6, 'Henry': 31, 'Shane': 1 }, wellsByPumper: { 'Waldo': ["ARNOTT RAMSAY NCT-B #006", "ARNOTT RAMSAY NCT-B #008", "ARNOTT RAMSAY NCT-B #009", "ARNOTT RAMSAY NCT-B #010", "ARNOTT RAMSAY NCT-B #012", "ARNOTT RAMSAY NCT-B #013", "ARNOTT RAMSAY NCT-B #020", "ARNOTT RAMSAY NCT-B #021", "H G MOBERLY A FEDERAL #003"], 'Jason': ["ARNOTT RAMSAY NCT-B #006", "ARNOTT RAMSAY NCT-B #008", "ARNOTT RAMSAY NCT-B #009", "ARNOTT RAMSAY NCT-B #010", "ARNOTT RAMSAY NCT-B #012", "ARNOTT RAMSAY NCT-B #020", "ARNOTT RAMSAY NCT-B #021", "BAYLUS CADE FEDERAL #004", "BAYLUS CADE FEDERAL #006", "BRITT A 6 #005", "C E LAMUNYON #040", "CLOWER STATE #001", "E C HILL B FEDERAL #018", "E C HILL B FEDERAL #020", "ELLIOTT #002", "G G TRAVIS #004", "GILLULLY B FEDERAL RA A #010", "LOCKHART B 31 #003", "LOCKHART B 31 #005", "LOCKHART B 31 #006", "LOCKHART B 31 #009", "MAVEETY STATE GAS COM #009", "MCQUATTERS COM #004", "STATE A A/C 1 #036", "STATE A A/C 1 #043", "STATE A A/C 1 #046", "STATE A A/C 1 #048", "STATE A A/C 1 #061", "STATE A A/C 1 #064", "STATE A A/C 1 #069", "STATE A A/C 1 #081", "STATE A A/C 2 #004", "STATE A A/C 2 #023", "STATE A A/C 2 #025", "STATE A A/C 2 #026", "STATE A A/C 2 #027", "STATE A A/C 2 #029", "STATE A A/C 2 #030", "STATE A A/C 2 #031", "STATE A A/C 2 #054", "STATE A A/C 3 #009", "STATE A A/C 3 COM A #004", "STATE C TR 11 #003", "STATE C TR 11 #009", "STATE D #002", "STATE D #005", "STATE D #006", "STATE D #007", "STATE D #008", "STATE E #002", "TRAVIS #005", "WEST EUMONT UNIT #102", "WEST EUMONT UNIT #104", "WEST EUMONT UNIT #106", "WEST EUMONT UNIT #131", "WEST EUMONT UNIT #203", "WEST EUMONT UNIT #204", "WEST EUMONT UNIT #206", "WEST EUMONT UNIT #209", "WEST EUMONT UNIT #210", "WEST EUMONT UNIT #215", "WEST EUMONT UNIT #216", "WEST EUMONT UNIT #510", "WEST EUMONT UNIT #511", "WEST EUMONT UNIT #512", "WEST EUMONT UNIT #513", "WEST EUMONT UNIT #514", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #521"], 'Armando': ["STATE A A/C 1 #081", "STATE A A/C 2 #025"], 'Henry': ["WEST EUMONT UNIT #102", "WEST EUMONT UNIT #104", "WEST EUMONT UNIT #106", "WEST EUMONT UNIT #203", "WEST EUMONT UNIT #204", "WEST EUMONT UNIT #206", "WEST EUMONT UNIT #209", "WEST EUMONT UNIT #210", "WEST EUMONT UNIT #215", "WEST EUMONT UNIT #216", "WEST EUMONT UNIT #220", "WEST EUMONT UNIT #402", "WEST EUMONT UNIT #417", "WEST EUMONT UNIT #509", "WEST EUMONT UNIT #510", "WEST EUMONT UNIT #511", "WEST EUMONT UNIT #512", "WEST EUMONT UNIT #513", "WEST EUMONT UNIT #514", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #518", "WEST EUMONT UNIT #520", "WEST EUMONT UNIT #521"], 'Shane': ["G G TRAVIS #004"] } },
     pumpup   : { total: 1, byPumper: { 'Armando': 1 }, wellsByPumper: { 'Armando': ["STATE A A/C 2 #024"] } },
-    wellsite : { total: 37, byPumper: { 'Eli': 27, 'Wynn': 2, 'Armando': 8 }, wellsByPumper: { 'Eli': ["STATE E COM #002", "WEST EUMONT UNIT #130", "WEST EUMONT UNIT #204", "WEST EUMONT UNIT #211", "WEST EUMONT UNIT #212", "WEST EUMONT UNIT #214", "WEST EUMONT UNIT #218", "WEST EUMONT UNIT #219", "WEST EUMONT UNIT #522", "WEST EUMONT UNIT #524", "WEST EUMONT UNIT #525"], 'Wynn': ["STATE H #003", "STATE H #006"], 'Armando': ["STATE A A/C 1 #046", "STATE A A/C 1 #061", "STATE A A/C 2 #023", "STATE A A/C 2 #024", "STATE A A/C 2 #025", "STATE A A/C 2 #027", "STATE A A/C 2 #030", "STATE A A/C 2 #047"] } },
-    facility : { total: 8, byPumper: { 'Eli': 8 }, wellsByPumper: { 'Eli': ["SHOLES B 25", "State A A/C 2 CIF", "State A AC 1 Main Additional Battery", "TEAGUE INJECTION STATION", "WEU Bay Federal", "WEU CIF", "WEU Federal D"] } },
+    wellsite : { total: 68, byPumper: { 'Jason': 18, 'Eli': 40, 'Wynn': 2, 'Armando': 8 }, wellsByPumper: { 'Jason': ["ELLIOTT #002", "MAVEETY STATE GAS COM #009", "MEYER B 28 A A/C 1 #004", "SHELL STATE #001", "SHELL STATE #011", "STATE A COM #004", "STATE A COM #005", "STATE A COM #008", "STATE A-20 #001", "STATE A-20 #004", "STATE AY #001", "STATE C #002", "STATE C TR 11 #007", "STATE C TR 11 #008", "STATE E #002", "STATE E COM #001", "STATE H 17 #002", "WULFF STATE #002"], 'Eli': ["STATE E COM #002", "WEST EUMONT UNIT #130", "WEST EUMONT UNIT #204", "WEST EUMONT UNIT #211", "WEST EUMONT UNIT #212", "WEST EUMONT UNIT #214", "WEST EUMONT UNIT #218", "WEST EUMONT UNIT #219", "WEST EUMONT UNIT #522", "WEST EUMONT UNIT #524", "WEST EUMONT UNIT #525", "WEST EUMONT UNIT #526"], 'Wynn': ["STATE H #003", "STATE H #006"], 'Armando': ["STATE A A/C 1 #046", "STATE A A/C 1 #061", "STATE A A/C 2 #023", "STATE A A/C 2 #024", "STATE A A/C 2 #025", "STATE A A/C 2 #027", "STATE A A/C 2 #030", "STATE A A/C 2 #047"] } },
+    facility : { total: 12, byPumper: { 'Eli': 12 }, wellsByPumper: { 'Eli': ["Fopeano", "SHOLES B 25", "State A A/C 2 CIF", "State A AC 1 Main Additional Battery", "TEAGUE INJECTION STATION", "WEU Bay Federal", "WEU CIF", "WEU Federal D"] } },
     whs      : ZERO(),
     env      : ZERO(),
   },
@@ -579,8 +579,48 @@ const DATA = {  // auto-refreshed 2026-05-05 10:25
 };
 
 // <<PUMPER_TASKS_START>>
-const PUMPER_TASKS = {  // auto-refreshed 2026-05-05 10:25
+const PUMPER_TASKS = {  // auto-refreshed 2026-05-12 08:37
   currentWeek: {
+    date: "5/11/2026",
+    tasks: {
+      "Raul": {
+        "Gas Well Surveillance": "Myers B Federal #031",
+        "Well Test": "C D Woolworth  #8",
+        "Fluid Level": "Martin B #003, #004; Mexico G #001",
+      },
+      "Waldo": {
+        "Gas Well Surveillance": "State O #004\nState O #003\nState O #005\nState O #006",
+        "Well Test": "AR: # 6, 20",
+        "Fluid Level": "Cagle C #005",
+      },
+      "Mando": {
+        "Gas Well Surveillance": "State 157 F #004",
+        "Well Test": "BBN BATT 1: AC 2 # 30\nBBN BATT 5: AC 2 # 24\nBBS BATT 43-61-64-69: AC 1 #64\nBBS BATT 18-37-55-81-111: AC 1 #81\nBBS BATT 46: AC 1 # 46\nBBS BATT 48: AC 1 # 48",
+        "Fluid Level": "BBN: A/C 2 # 24, 61, 4, 23, 29, 30, 31, 25, 26, 54\nBBS: A/C 1 # 43, 46, 48, 61, 64, 69; A/C 3 # 9, COM # 4",
+      },
+      "Jason": {
+        "Gas Well Surveillance": "State D #005\nState D #007",
+        "Well Test": "",
+        "Fluid Level": "Britt A 6 #002, State A-20 #001, #004",
+      },
+      "Andy / Shane": {
+        "Gas Well Surveillance": "J C Johnson #004",
+        "Well Test": "C E Lamunyon #68\nC E Lamunyon #62",
+        "Fluid Level": "",
+      },
+      "Wynn": {
+        "Gas Well Surveillance": "Meyer B 31 A #005",
+        "Well Test": "",
+        "Fluid Level": "Lynn A #004",
+      },
+      "Henry": {
+        "Gas Well Surveillance": "WEU 302",
+        "Well Test": "P1 BATT 417: 215, 417\nP1 BATT GM State: no well testing\nP1 BATT Lea 407: no well testing\nP1 BATT LW WHITE COM: no well testing\nP2 BATT BAY FED: 513, 512\nP2 BATT FED D: no well testing\nP2 BATT FOPEANO: no well testing\nP3 BATT GULF State: 130, 102",
+        "Fluid Level": "P1: 217, 402, 215, 220, 417\nP2: 515, 520, 521, 510, 511, 512, 513\nP3: 202, 130, 131, 102, 104, 106",
+      },
+    }
+  },
+  lastWeek: {
     date: "5/4/2026",
     tasks: {
       "Raul": {
@@ -619,54 +659,14 @@ const PUMPER_TASKS = {  // auto-refreshed 2026-05-05 10:25
         "Fluid Level": "P1: 217, 402, 206, 215, 220, 417\nP2: 515, 520, 516, 521, 510, 511, 512, 513, 514\nP3: 202, 130, 131, 102, 104, 106",
       },
     }
-  },
-  lastWeek: {
-    date: "4/27/2026",
-    tasks: {
-      "Raul": {
-        "Gas Well Surveillance": "Myers B Federal #031",
-        "Well Test": "C D Woolworth  #8",
-        "Fluid Level": "Martin B #003, #004; Mexico G #001",
-      },
-      "Waldo": {
-        "Gas Well Surveillance": "State O #004\nState O #003\nState O #005\nState O #006",
-        "Well Test": "AR: # 10, 20, 21",
-        "Fluid Level": "AR: # 8, 13; \nCagle C #005",
-      },
-      "Mando": {
-        "Gas Well Surveillance": "State 157 F #004",
-        "Well Test": "BBN BATT 1: AC 2 # 30, 26\nBBN BATT 5: AC 2 # 25, 24\nBBS BATT 43-61-64-69: AC 1 #64\nBBS BATT 18-37-55-81-111: AC 1 #81\nBBS BATT 46: AC 1 # 46\nBBS BATT 48: AC 1 # 48",
-        "Fluid Level": "BBN: A/C 2 # 24, 61, 4, 23, 29, 30, 31, 25, 26, 54\nBBS: A/C 1 # 43, 46, 48, 61, 64, 69; A/C 3 # 9, COM # 4",
-      },
-      "Jason": {
-        "Gas Well Surveillance": "State D #005\nState D #007",
-        "Well Test": "",
-        "Fluid Level": "Britt A 6 #002, State A-20 #001, #004",
-      },
-      "Andy / Shane": {
-        "Gas Well Surveillance": "J C Johnson #004",
-        "Well Test": "C E Lamunyon #53 (in test)\nC E Lamunyon #68\nC E Lamunyon #62",
-        "Fluid Level": "",
-      },
-      "Wynn": {
-        "Gas Well Surveillance": "Meyer B 31 A #005",
-        "Well Test": "",
-        "Fluid Level": "Lynn A #004",
-      },
-      "Henry": {
-        "Gas Well Surveillance": "WEU 302",
-        "Well Test": "P1 BATT 417: 215, 417\nP1 BATT GM State: no well testing\nP1 BATT Lea 407: no well testing\nP1 BATT LW WHITE COM: no well testing\nP2 BATT BAY FED: 512, 510\nP2 BATT FED D: no well testing\nP2 BATT FOPEANO: no well testing\nP3 BATT GULF State: 106, 130, 104",
-        "Fluid Level": "P1: 217, 402, 206, 215, 220, 417\nP2: 515, 520, 516, 521, 510, 511, 512, 513, 514\nP3: 202, 130, 131, 102, 104, 106",
-      },
-    }
   }
 };
 // <<PUMPER_TASKS_END>>
 
 // <<PRICES_START>>
-const PRICES = {  // auto-refreshed 2026-05-05 10:25
-  wti:  {price:101.8, chg:-4.62, date:"5/5/2026"},
-  waha: {price:-4.16, chg:0.16, date:"5/5/2026"}
+const PRICES = {  // auto-refreshed 2026-05-12 08:37
+  wti:  {price:101.5, chg:3.43, date:"5/12/2026"},
+  waha: {price:-7.37, chg:2.19, date:"4/10/2026"}
 };
 // <<PRICES_END>>
 
