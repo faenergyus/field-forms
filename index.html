@@ -514,7 +514,7 @@
 
   <footer>
     Forty Acres Energy &nbsp;·&nbsp; Field Operations &nbsp;·&nbsp; Internal Use Only
-    <div class="data-note">Dashboard data from Google Sheets Â· Updated 2026-05-12 23:05</div>
+    <div class="data-note">Dashboard data from Google Sheets Â· Updated 2026-05-13 00:05</div>
   </footer>
 </div>
 
@@ -545,14 +545,14 @@ const CHART_DEFS = [
 
 const ZERO = () => ({ total: 0, byPumper: {}, wellsByPumper: {} });
 
-const DATA = {  // auto-refreshed 2026-05-12 23:05
+const DATA = {  // auto-refreshed 2026-05-13 00:05
   pastweek: {
-    avo      : { total: 57, byPumper: { 'Armando': 34, 'Henry': 9, 'Jason': 10, 'Raúl': 1, 'Waldo': 3 }, wellsByPumper: { 'Henry': ["CIF", "CIF Skim Facility", "Oil Sales", "Quapaw supply water", "Raz 3rd Party Water", "Rice 3rd Party Water", "State A Battery", "WEST EUMONT UNIT #101"], 'Waldo': ["FARNSWORTH BATTERY", "FARNSWORTH C #002", "Sholes B Tank Battery"], 'Armando': ["101 SWD BATTERY", "AC 1 115 WSW Facility", "DANCIGER A 8 #002", "FEDERAL 20 #001", "FEDERAL 714 #001", "FEDERAL 714 #002", "FEDERAL 714 #003", "FEDERAL 714 #004", "Federal 714", "HI TOP FEE #001", "HUGHES B CDP", "HUGHES B-6 #011", "HUGHES B-6 #012", "J F JANDA NCT H #002", "J F JANDA NCT H #003", "J F JANDA NCT-G #002", "J F JANDA NCT-J #005", "J F Janda NCT H Battery", "JAMES MATTIE #004", "JANDA STATE #001", "JANDA STATE #002", "Janda State", "MATKINS #001", "MATKINS #002", "MATKINS #003", "MATKINS #004", "MATKINS #005", "MATKINS #006", "MATKINS TNK", "STATE 157 F #004", "STATE 157 G #002", "STATE 157 G #004", "STATE 157 G-A #005", "STATE A A/C 1 #001"], 'Raúl': ["ARCO CRUMP #001"], 'Jason': ["ATLANTIC STATE #003", "Atlantic State Battery", "BERTIE WHITMIRE #009", "BRITT B 8 #002", "Bertie Whitmire", "ELLIOTT B 6 #002", "J HIRAM MOORE STATE #001", "MCQUATTERS COM #004", "SHELL D STATE COM #013", "Shell D State Battery"] } },
+    avo      : { total: 56, byPumper: { 'Armando': 34, 'Henry': 8, 'Jason': 10, 'Raúl': 1, 'Waldo': 3 }, wellsByPumper: { 'Waldo': ["FARNSWORTH BATTERY", "FARNSWORTH C #002", "Sholes B Tank Battery"], 'Henry': ["CIF Skim Facility", "Oil Sales", "Quapaw supply water", "Raz 3rd Party Water", "Rice 3rd Party Water", "State A Battery", "WEST EUMONT UNIT #101"], 'Armando': ["101 SWD BATTERY", "AC 1 115 WSW Facility", "DANCIGER A 8 #002", "FEDERAL 20 #001", "FEDERAL 714 #001", "FEDERAL 714 #002", "FEDERAL 714 #003", "FEDERAL 714 #004", "Federal 714", "HI TOP FEE #001", "HUGHES B CDP", "HUGHES B-6 #011", "HUGHES B-6 #012", "J F JANDA NCT H #002", "J F JANDA NCT H #003", "J F JANDA NCT-G #002", "J F JANDA NCT-J #005", "J F Janda NCT H Battery", "JAMES MATTIE #004", "JANDA STATE #001", "JANDA STATE #002", "Janda State", "MATKINS #001", "MATKINS #002", "MATKINS #003", "MATKINS #004", "MATKINS #005", "MATKINS #006", "MATKINS TNK", "STATE 157 F #004", "STATE 157 G #002", "STATE 157 G #004", "STATE 157 G-A #005", "STATE A A/C 1 #001"], 'Raúl': ["ARCO CRUMP #001"], 'Jason': ["ATLANTIC STATE #003", "Atlantic State Battery", "BERTIE WHITMIRE #009", "BRITT B 8 #002", "Bertie Whitmire", "ELLIOTT B 6 #002", "J HIRAM MOORE STATE #001", "MCQUATTERS COM #004", "SHELL D STATE COM #013", "Shell D State Battery"] } },
     gwi      : { total: 1, byPumper: { 'Jason': 1 }, wellsByPumper: { 'Jason': ["STATE C #001"] } },
-    fap      : { total: 22, byPumper: { 'Shane': 1, 'Jason': 4, 'Henry': 10, 'Waldo': 7 }, wellsByPumper: { 'Shane': ["G G TRAVIS #004"], 'Jason': ["STATE C TR 11 #003", "STATE C TR 11 #009"], 'Henry': ["WEST EUMONT UNIT #203", "WEST EUMONT UNIT #206", "WEST EUMONT UNIT #509", "WEST EUMONT UNIT #514", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #518", "WEST EUMONT UNIT #520", "WEST EUMONT UNIT #521"], 'Waldo': ["ARNOTT RAMSAY NCT-B #006", "ARNOTT RAMSAY NCT-B #008", "ARNOTT RAMSAY NCT-B #009", "ARNOTT RAMSAY NCT-B #010", "ARNOTT RAMSAY NCT-B #012", "ARNOTT RAMSAY NCT-B #020", "ARNOTT RAMSAY NCT-B #021"] } },
+    fap      : { total: 17, byPumper: { 'Henry': 10, 'Waldo': 7 }, wellsByPumper: { 'Henry': ["WEST EUMONT UNIT #203", "WEST EUMONT UNIT #206", "WEST EUMONT UNIT #509", "WEST EUMONT UNIT #514", "WEST EUMONT UNIT #516", "WEST EUMONT UNIT #518", "WEST EUMONT UNIT #520", "WEST EUMONT UNIT #521"], 'Waldo': ["ARNOTT RAMSAY NCT-B #006", "ARNOTT RAMSAY NCT-B #008", "ARNOTT RAMSAY NCT-B #009", "ARNOTT RAMSAY NCT-B #010", "ARNOTT RAMSAY NCT-B #012", "ARNOTT RAMSAY NCT-B #020", "ARNOTT RAMSAY NCT-B #021"] } },
     pumpup   : ZERO(),
     wellsite : { total: 42, byPumper: { 'Jason': 26, 'Eli': 16 }, wellsByPumper: { 'Jason': ["ATLANTIC STATE #003", "BERTIE WHITMIRE #009", "BRITT B 8 #002", "ELLIOTT #002", "ELLIOTT B 6 #002", "J HIRAM MOORE STATE #001", "MAVEETY STATE GAS COM #009", "MCQUATTERS COM #004", "MEYER B 28 A A/C 1 #004", "REED A 3 #002", "REED A 3 #003", "SHELL STATE #001", "SHELL STATE #011", "STATE A COM #004", "STATE A COM #005", "STATE A COM #008", "STATE A-20 #001", "STATE A-20 #004", "STATE AY #001", "STATE C #002", "STATE C TR 11 #007", "STATE C TR 11 #008", "STATE E #002", "STATE E COM #001", "STATE H 17 #002", "WULFF STATE #002"], 'Eli': ["WEST EUMONT UNIT #211", "WEST EUMONT UNIT #212", "WEST EUMONT UNIT #214", "WEST EUMONT UNIT #218", "WEST EUMONT UNIT #219", "WEST EUMONT UNIT #522", "WEST EUMONT UNIT #524", "WEST EUMONT UNIT #525", "WEST EUMONT UNIT #526"] } },
-    facility : { total: 4, byPumper: { 'Eli': 4 }, wellsByPumper: { 'Eli': ["Fopeano"] } },
+    facility : ZERO(),
     whs      : ZERO(),
     env      : ZERO(),
   },
@@ -579,7 +579,7 @@ const DATA = {  // auto-refreshed 2026-05-12 23:05
 };
 
 // <<PUMPER_TASKS_START>>
-const PUMPER_TASKS = {  // auto-refreshed 2026-05-12 23:05
+const PUMPER_TASKS = {  // auto-refreshed 2026-05-13 00:05
   currentWeek: {
     date: "5/11/2026",
     tasks: {
@@ -664,8 +664,8 @@ const PUMPER_TASKS = {  // auto-refreshed 2026-05-12 23:05
 // <<PUMPER_TASKS_END>>
 
 // <<PRICES_START>>
-const PRICES = {  // auto-refreshed 2026-05-12 23:05
-  wti:  {price:101.09, chg:-1.09, date:"5/12/2026"},
+const PRICES = {  // auto-refreshed 2026-05-13 00:05
+  wti:  {price:100.76, chg:-1.42, date:"5/13/2026"},
   waha: {price:-3.87, chg:0.05, date:"5/12/2026"}
 };
 // <<PRICES_END>>
