@@ -2049,6 +2049,24 @@ def soft_delete_wbd_version(wbd_id: int, user: str = Depends(get_editor)):
 
 
 # ---------------------------------------------------------------------------
+# Slash-safe aliases — 162 of 959 wells contain '/' in the short name
+# (e.g. "STATE A A/C 1 #001"). A single-segment {short} route can't match
+# those because uvicorn decodes %2F back to '/' before routing. These
+# {short:path} aliases are registered LAST so they only catch what the
+# specific routes above did not — they never shadow /wbd/wells, /wbd/whoami,
+# /wbd/version/*, /wbd/parse, or /wbd/workover/*.
+# ---------------------------------------------------------------------------
+@app.get("/wbd/{short:path}/export")
+def export_wbd_xlsx_pathsafe(short: str, user: str = Depends(get_current_user)):
+    return export_wbd_xlsx(short, user)
+
+
+@app.get("/wbd/{short:path}", response_class=ORJSONResponse)
+def wbd_well_pathsafe(short: str):
+    return wbd_well(short)
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
