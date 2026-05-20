@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your Field Entries — FAE Field Operations</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4f0; color: #1a1a1a; min-height: 100vh;
+    }
+    /* ── Login overlay ── */
+    #login-overlay {
+      position: fixed; inset: 0; z-index: 9999; background: #0d260d;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
+    }
+    #login-overlay .login-logo { font-size: 2.8rem; font-weight: 900; letter-spacing: -1px; color: #5dc85d; }
+    #login-overlay .login-logo span { color: #fff; font-weight: 300; }
+    #login-overlay .login-tagline { color: #90bc90; font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase; margin-top: -16px; }
+    #login-overlay .login-tagline em { color: #5dc85d; font-style: normal; }
+    #login-overlay .login-title { color: #c8dcc8; font-size: 1rem; margin-bottom: 8px; }
+    #login-overlay .login-error { color: #ff8080; font-size: 0.85rem; display: none; text-align: center; max-width: 280px; }
+    /* ── Header ── */
+    header {
+      background: #1c4a1c; padding: 16px 32px; display: flex; align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+    }
+    .logo-fae { font-size: 1.9rem; font-weight: 900; letter-spacing: -1px; color: #5dc85d; line-height: 1; }
+    .logo-fae span { color: #fff; font-weight: 300; }
+    .logo-tagline { font-size: 0.75rem; color: #90bc90; letter-spacing: 0.1em; margin-top: 2px; }
+    .logo-tagline em { color: #5dc85d; font-style: normal; }
+    .user-badge { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .user-avatar { width: 32px; height: 32px; border-radius: 50%; border: 2px solid #5dc85d; }
+    .user-name { color: #c8dcc8; font-size: 0.82rem; }
+    .user-signout { color: #7a9e7a; font-size: 0.72rem; cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; margin-left: 4px; }
+    /* ── Layout ── */
+    .page { max-width: 1020px; margin: 0 auto; padding: 24px 18px 60px; }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px; color: #3a8a3a;
+      font-size: 0.78rem; font-weight: 600; text-decoration: none; letter-spacing: 0.04em; margin-bottom: 20px;
+    }
+    .back-link:hover { color: #2d7a2d; text-decoration: underline; }
+    .page-title {
+      font-size: 1.3rem; font-weight: 800; color: #1c4a1c;
+      display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+    }
+    .page-subtitle { font-size: 0.75rem; color: #6a8a6a; margin-bottom: 24px; letter-spacing: 0.04em; }
+    .refresh-btn {
+      display: inline-flex; align-items: center; gap: 8px; background: #2d7a2d; color: #fff;
+      border: none; border-radius: 8px; padding: 8px 18px; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; letter-spacing: 0.03em; transition: background 0.15s, transform 0.1s;
+    }
+    .refresh-btn:hover { background: #236a23; transform: translateY(-1px); }
+    .refresh-btn:disabled { background: #7aaa7a; cursor: default; transform: none; }
+    /* ── Summary strip ── */
+    .summary-strip {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px;
+    }
+    .summary-chip {
+      background: #fff; border: 1px solid #dbe8db; border-radius: 8px;
+      padding: 10px 14px; min-width: 116px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .summary-chip .sc-count { font-size: 1.5rem; font-weight: 800; color: #1c4a1c; line-height: 1; }
+    .summary-chip .sc-label { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; color: #6a8a6a; margin-top: 4px; }
+    .summary-chip.total { background: #1c4a1c; border-color: #1c4a1c; }
+    .summary-chip.total .sc-count { color: #5dc85d; }
+    .summary-chip.total .sc-label { color: #acd6ac; }
+    /* ── Form section ── */
+    .form-section {
+      background: #fff; border-radius: 9px; padding: 16px 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07); margin-bottom: 14px;
+    }
+    .form-section h2 {
+      font-size: 0.82rem; font-weight: 800; color: #1c4a1c; text-transform: uppercase;
+      letter-spacing: 0.05em; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+    }
+    .form-section h2 .fs-count {
+      background: #e3f1e3; color: #2d7a2d; border-radius: 10px;
+      font-size: 0.7rem; font-weight: 700; padding: 1px 9px; letter-spacing: 0;
+    }
+    .report-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .report-table th {
+      text-align: left; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: #6a8a6a; font-weight: 700; border-bottom: 1.5px solid #e0ece0; padding: 7px 9px;
+    }
+    .report-table td { padding: 8px 9px; border-bottom: 1px solid #f0f4f0; vertical-align: middle; }
+    .report-table tr:last-child td { border-bottom: none; }
+    .report-table tr:hover td { background: #f8fbf8; }
+    .fs-empty { color: #aaa; font-size: 0.8rem; font-style: italic; padding: 4px 2px; }
+    .fs-error { color: #c0392b; font-size: 0.78rem; padding: 4px 2px; }
+    .report-loading { color: #6a8a6a; font-size: 0.85rem; padding: 40px; text-align: center; }
+    .report-error { color: #c0392b; font-size: 0.85rem; padding: 40px; text-align: center; }
+    .spinner {
+      display: inline-block; width: 16px; height: 16px; border: 2px solid #2d7a2d;
+      border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    footer { text-align: center; color: #8aaa8a; font-size: 0.72rem; margin-top: 36px; padding-top: 16px; border-top: 1px solid #d0e0d0; }
+  </style>
+</head>
+<body>
+
+<!-- ── Login overlay ── -->
+<div id="login-overlay">
+  <div><div class="login-logo">fae<span>II</span></div></div>
+  <div class="login-tagline">forty acres <em>energy</em> &nbsp;·&nbsp; Field Operations Portal</div>
+  <div class="login-title">Sign in to continue</div>
+  <div id="g_id_onload"
+       data-client_id="629380732564-eh0uasomqjdo3up8o2po685g9ep544iq.apps.googleusercontent.com"
+       data-callback="handleCredentialResponse"
+       data-auto_select="true"
+       data-itp_support="true"
+       data-auto_prompt="false">
+  </div>
+  <div class="g_id_signin"
+       data-type="standard" data-size="large" data-theme="filled_blue"
+       data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left">
+  </div>
+  <div class="login-error" id="login-error"></div>
+</div>
+
+<header>
+  <div>
+    <div class="logo-fae">fae<span>II</span></div>
+    <div class="logo-tagline">forty acres <em>energy</em></div>
+  </div>
+  <div class="user-badge" id="user-badge" style="display:none">
+    <img class="user-avatar" id="user-avatar" src="" alt="">
+    <span class="user-name" id="user-name"></span>
+    <button class="user-signout" onclick="signOut()">sign out</button>
+  </div>
+</header>
+
+<div class="page">
+
+  <a class="back-link" href="index.html">← Portal Home</a>
+
+  <div class="page-title">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <rect x="4" y="2" width="16" height="20" rx="2" fill="#d0c8b8" opacity="0.45"/>
+      <rect x="9" y="1" width="6" height="3" rx="1" fill="#3a6a8a"/>
+      <line x1="7.5" y1="8"  x2="16.5" y2="8"  stroke="#2d7a2d" stroke-width="1.6" stroke-linecap="round"/>
+      <line x1="7.5" y1="12" x2="16.5" y2="12" stroke="#2d7a2d" stroke-width="1.6" stroke-linecap="round"/>
+      <line x1="7.5" y1="16" x2="13"   y2="16" stroke="#2d7a2d" stroke-width="1.6" stroke-linecap="round"/>
+    </svg>
+    Your Field Entries
+  </div>
+  <div class="page-subtitle">Forms you submitted in the last 30 days, by dashboard item</div>
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+    <button class="refresh-btn" id="refreshBtn" onclick="loadReport()">↻ Refresh</button>
+    <span id="rangeLabel" style="font-size:0.72rem;color:#6a8a6a"></span>
+  </div>
+
+  <div id="summaryStrip" class="summary-strip"></div>
+  <div id="report-output"><div class="report-loading">Sign in to load your entries.</div></div>
+
+  <footer>
+    Forty Acres Energy &nbsp;·&nbsp; Field Operations &nbsp;·&nbsp; Internal Use Only
+  </footer>
+</div>
+
+<script>
+// ── Auth (shared fae_user session — see Unified Google sign-in) ─────────────
+const ACCOUNTS_CSV = 'https://docs.google.com/spreadsheets/d/146yuHYjs3RF3wtCK3Qj9NXH94DrStwhieTGqPeLQRfA/gviz/tq?tqx=out:csv&sheet=Accounts';
+const TRACKER_URL  = 'https://script.google.com/macros/s/AKfycbxOyZbt18JXuPTvkkJrZ3jJgM_xOMQ035CmQWJDolIuEqVKHFP1hNZfbmlcp6dY32Zprw/exec';
+const SESSION_KEY  = 'fae_user';
+const SESSION_HRS  = 720;  // 30 days
+(function migrateLegacySession() {
+  try {
+    if (localStorage.getItem(SESSION_KEY)) return;
+    for (const k of ['fae_portal_user', 'fae_scada_user']) {
+      const v = localStorage.getItem(k);
+      if (v) { localStorage.setItem(SESSION_KEY, v); localStorage.removeItem(k); return; }
+    }
+  } catch(e) {}
+})();
+
+function parseAccountsCSV(text) {
+  const lines = text.trim().split('\n');
+  return lines.slice(1).map(line => {
+    const cols = line.match(/("(?:[^"]|"")*"|[^,]*)/g).map(c => c.replace(/^"|"$/g,'').trim());
+    return { email: cols[0], displayName: cols[1], pbiName: cols[2], role: cols[3] };
+  });
+}
+
+async function handleCredentialResponse(response) {
+  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  const email   = payload.email.toLowerCase();
+  const picture = payload.picture;
+  const errorEl = document.getElementById('login-error');
+  errorEl.style.cssText = 'display:block;color:#90bc90';
+  errorEl.textContent   = 'Checking access…';
+  try {
+    const csv   = await fetch(ACCOUNTS_CSV).then(r => r.text());
+    const rows  = parseAccountsCSV(csv);
+    const match = rows.find(r => r.email.toLowerCase() === email && r.email !== 'x');
+    if (!match) {
+      errorEl.style.color = '#ff8080';
+      errorEl.textContent = `Access denied for ${email}. Contact Ryan Swift to request access.`;
+      return;
+    }
+    const session = { email, displayName: match.displayName, pbiName: match.pbiName,
+                      role: match.role, picture, expires: Date.now() + SESSION_HRS * 3600000 };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    fetch(TRACKER_URL, { method:'POST', body: JSON.stringify({ email }) }).catch(() => {});
+    showPortal(session);
+    loadReport();
+  } catch(e) {
+    errorEl.style.color = '#ff8080';
+    errorEl.textContent = 'Could not verify access. Check your connection and try again.';
+  }
+}
+
+function showPortal(session) {
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('user-badge').style.display    = 'flex';
+  document.getElementById('user-name').textContent       = 'Welcome, ' + session.displayName;
+  const av = document.getElementById('user-avatar');
+  av.src = session.picture || ''; av.style.display = session.picture ? '' : 'none';
+}
+
+function signOut() { localStorage.removeItem(SESSION_KEY); location.reload(); }
+
+function currentSession() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+    return (s && s.expires > Date.now()) ? s : null;
+  } catch(e) { return null; }
+}
+
+// ── Name normalization (ported from refresh_dashboard.py FORM_NAME_MAP) ─────
+// Forms record a free-text name, not an email. Normalize both the submitter
+// cell and the logged-in user's name to a standard token, then match.
+const FORM_NAME_MAP = {
+  'armando':'Armando','mando':'Mando','hinojosa':'Armando',
+  'henry':'Henry','lozoya':'Henry',
+  'jason':'Jason','martinez':'Jason',
+  'raul':'Raul','raúl':'Raul',
+  'oswaldo':'Waldo','waldo':'Waldo',
+  'eli':'Eli','elias':'Eli',
+  'wynn':'Wynn','jessop':'Wynn',
+  'ryan':'Ryan','swift':'Ryan',
+  'leo':'Leo','aranda':'Leo',
+  'aaron':'Aaron','hernandez':'Aaron',
+  'james':'James','jm9221775':'James',
+  'marisa':'Marisa',
+  'adam':'Adam','holcomb':'Adam',
+  'tyler':'Tyler','hux':'Hux','andy':'Andy','shane':'Shane'
+};
+function normalizeName(raw) {
+  if (!raw) return '';
+  const key = String(raw).trim().toLowerCase();
+  if (FORM_NAME_MAP[key]) return FORM_NAME_MAP[key];
+  const parts = key.split(/\s+/);
+  if (parts[0] && FORM_NAME_MAP[parts[0]]) return FORM_NAME_MAP[parts[0]];
+  if (parts.length > 1 && FORM_NAME_MAP[parts[parts.length-1]]) return FORM_NAME_MAP[parts[parts.length-1]];
+  // Title-case fallback
+  return String(raw).trim().replace(/\w\S*/g, t => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase());
+}
+// Build the set of tokens that identify the logged-in user.
+function userTokens(session) {
+  const toks = new Set();
+  [session.displayName, session.pbiName].forEach(n => {
+    if (!n) return;
+    toks.add(normalizeName(n).toLowerCase());
+    toks.add(String(n).trim().toLowerCase());
+    const parts = String(n).trim().toLowerCase().split(/\s+/);
+    if (parts[0]) toks.add(parts[0]);
+  });
+  toks.delete('');
+  return toks;
+}
+function rowIsMine(personCell, toks) {
+  if (!personCell) return false;
+  const p = String(personCell).trim().toLowerCase();
+  if (!p) return false;
+  if (toks.has(p)) return true;
+  if (toks.has(normalizeName(personCell).toLowerCase())) return true;
+  const parts = p.split(/\s+/);
+  if (parts[0] && toks.has(parts[0])) return true;
+  if (parts.length > 1 && toks.has(parts[parts.length-1])) return true;
+  return false;
+}
+
+// ── Form definitions (ported from refresh_dashboard.py SHEETS_FORMS) ────────
+const SHEET_A = '146yuHYjs3RF3wtCK3Qj9NXH94DrStwhieTGqPeLQRfA';  // shared workbook
+const SHEET_GWI = '1uICvI9zAz9Ai4Snpcee54RoDg0v-rYPoqylsZvs4p60';
+const FORMS = [
+  { key:'gwi',      label:'Gas Well Inspection', sheet:SHEET_GWI, tab:'Gas Well Inspection',
+    dateCols:['Inspection Date','Date'], personCols:['Inspected By'], siteCols:['Well Site'] },
+  { key:'fap',      label:'Fluid Above Pump (FAP)', sheet:SHEET_A, tab:'Form Responses 1',
+    dateCols:['FAP Date','Timestamp'], personCols:['FAP Shot By','Shot By'], siteCols:['Well Name'] },
+  { key:'pumpup',   label:'Pump Up', sheet:SHEET_A, tab:'Pump Up Responses',
+    dateCols:['Test Date','Date','Timestamp'], personCols:['Test Performed By','Performed By'], siteCols:['Well Name'] },
+  { key:'wellsite', label:'Well Site Inspection', sheet:SHEET_A, tab:'Well Inspection Report',
+    dateCols:['Inspection Date','Date','Timestamp'], personCols:['Inspected By'], siteCols:['Well Site'] },
+  { key:'facility', label:'Facility Inspection', sheet:SHEET_A, tab:'Facility Inspection Responses',
+    dateCols:['Inspection Date','Date','Timestamp'], personCols:['Inspected by','Inspected By'], siteCols:['Facility Name','Facility'] },
+  { key:'whs',      label:'Grounding (WHS)', sheet:SHEET_A, tab:'Grounding',
+    dateCols:['Inspection Date','Date','Timestamp'], personCols:['Pumper'], siteCols:['Well Name'] },
+];
+
+// ── CSV parsing (RFC-4180-ish: quotes, embedded commas + newlines) ──────────
+function parseCSV(text) {
+  const rows = []; let row = []; let field = ''; let inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') {
+        if (text[i+1] === '"') { field += '"'; i++; }
+        else inQ = false;
+      } else field += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else if (c === '\r') { /* skip */ }
+      else field += c;
+    }
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+function pickIdx(headers, candidates) {
+  for (const c of candidates) {
+    const i = headers.findIndex(h => h.toLowerCase() === c.toLowerCase());
+    if (i >= 0) return i;
+  }
+  return -1;
+}
+
+function parseEntryDate(s) {
+  if (!s) return null;
+  const v = String(s).trim();
+  if (!v) return null;
+  // Try native parse first (handles ISO + m/d/yyyy [h:mm:ss])
+  let d = new Date(v);
+  if (!isNaN(d)) return d;
+  // Fallback: m/d/yyyy
+  const m = v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if (m) {
+    let yr = parseInt(m[3], 10); if (yr < 100) yr += 2000;
+    d = new Date(yr, parseInt(m[1],10)-1, parseInt(m[2],10));
+    if (!isNaN(d)) return d;
+  }
+  return null;
+}
+
+// ── Report ──────────────────────────────────────────────────────────────────
+const WINDOW_DAYS = 30;
+
+async function fetchForm(form) {
+  const url = `https://docs.google.com/spreadsheets/d/${form.sheet}`
+            + `/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(form.tab)}&headers=1`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const rows = parseCSV(await r.text());
+  if (!rows.length) return [];
+  const headers = rows[0].map(h => h.trim());
+  const dIdx = form.dateCols.map(c => pickIdx(headers, [c])).filter(i => i >= 0);
+  const pIdx = form.personCols.map(c => pickIdx(headers, [c])).filter(i => i >= 0);
+  const sIdx = form.siteCols.map(c => pickIdx(headers, [c])).filter(i => i >= 0);
+  if (!dIdx.length || !pIdx.length) throw new Error('expected columns not found');
+  const out = [];
+  for (let r2 = 1; r2 < rows.length; r2++) {
+    const row = rows[r2];
+    let person = '';
+    for (const i of pIdx) { if (row[i] && row[i].trim()) { person = row[i].trim(); break; } }
+    let dt = null;
+    for (const i of dIdx) { dt = parseEntryDate(row[i]); if (dt) break; }
+    let site = '';
+    for (const i of sIdx) { if (row[i] && row[i].trim()) { site = row[i].trim(); break; } }
+    if (!dt) continue;
+    out.push({ person, date: dt, site });
+  }
+  return out;
+}
+
+async function loadReport() {
+  const session = currentSession();
+  if (!session) { document.getElementById('report-output').innerHTML =
+    '<div class="report-error">Session expired — please sign in again.</div>'; return; }
+
+  const btn = document.getElementById('refreshBtn');
+  const output = document.getElementById('report-output');
+  const strip = document.getElementById('summaryStrip');
+  if (btn) btn.disabled = true;
+  output.innerHTML = '<div class="report-loading"><span class="spinner"></span> &nbsp;Loading your entries…</div>';
+  strip.innerHTML = '';
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - WINDOW_DAYS);
+  cutoff.setHours(0,0,0,0);
+  document.getElementById('rangeLabel').textContent =
+    'Since ' + cutoff.toLocaleDateString() + '  ·  ' + session.displayName;
+
+  const toks = userTokens(session);
+
+  // Fetch all forms in parallel; each resolves to {form, rows} or {form, error}
+  const results = await Promise.all(FORMS.map(async form => {
+    try {
+      const all = await fetchForm(form);
+      const mine = all
+        .filter(e => e.date >= cutoff && rowIsMine(e.person, toks))
+        .sort((a,b) => b.date - a.date);
+      return { form, rows: mine };
+    } catch (e) {
+      return { form, error: String(e.message || e) };
+    }
+  }));
+
+  // Summary strip
+  let total = 0;
+  results.forEach(r => { if (r.rows) total += r.rows.length; });
+  let chips = `<div class="summary-chip total"><div class="sc-count">${total}</div>`
+            + `<div class="sc-label">Total · 30 days</div></div>`;
+  results.forEach(r => {
+    const n = r.rows ? r.rows.length : '–';
+    chips += `<div class="summary-chip"><div class="sc-count">${n}</div>`
+           + `<div class="sc-label">${r.form.label}</div></div>`;
+  });
+  strip.innerHTML = chips;
+
+  // Per-form sections
+  let html = '';
+  results.forEach(r => {
+    const f = r.form;
+    html += `<div class="form-section"><h2>${f.label}`
+          + (r.rows ? ` <span class="fs-count">${r.rows.length}</span>` : '') + `</h2>`;
+    if (r.error) {
+      html += `<div class="fs-error">Could not load this form (${r.error}).</div>`;
+    } else if (!r.rows.length) {
+      html += `<div class="fs-empty">No entries in the last 30 days.</div>`;
+    } else {
+      html += '<table class="report-table"><thead><tr><th>Date</th><th>Well / Site</th></tr></thead><tbody>';
+      r.rows.forEach(e => {
+        html += `<tr><td>${e.date.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}</td>`
+              + `<td>${escapeHtml(e.site || '—')}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    html += '</div>';
+  });
+  output.innerHTML = html;
+  if (btn) btn.disabled = false;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ── Session check (runs last so all functions are defined) ──────────────────
+(function () {
+  const session = currentSession();
+  if (session) { showPortal(session); loadReport(); }
+})();
+</script>
+
+</body>
+</html>
