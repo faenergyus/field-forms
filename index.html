@@ -185,6 +185,34 @@
     }
     .chart-card.span2 { grid-column: span 2; }
 
+    /* ── Entries section ── */
+    .entries-body {
+      overflow: hidden; max-height: 0; transition: max-height 0.35s ease; margin-top: 10px;
+    }
+    .entries-body.open { max-height: 8000px; }
+    .entry-form-card {
+      background: #fff; border-radius: 9px; padding: 13px 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07); margin-bottom: 10px;
+    }
+    .entry-form-head {
+      font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+      color: #1c4a1c; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+    }
+    .entry-form-head .efc-count {
+      background: #e3f1e3; color: #2d7a2d; border-radius: 10px;
+      font-size: 0.68rem; font-weight: 700; padding: 1px 9px; letter-spacing: 0;
+    }
+    .entry-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    .entry-table th {
+      text-align: left; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.07em;
+      color: #6a8a6a; font-weight: 700; border-bottom: 1.5px solid #e0ece0; padding: 6px 8px;
+    }
+    .entry-table td { padding: 7px 8px; border-bottom: 1px solid #f0f4f0; vertical-align: top; }
+    .entry-table tr:last-child td { border-bottom: none; }
+    .entry-table .et-pumper { font-weight: 600; color: #2d5a2d; white-space: nowrap; }
+    .entry-table .et-wells { color: #444; }
+    .entry-empty { color: #aaa; font-size: 0.78rem; font-style: italic; }
+
     /* ── Form Cards ── */
     .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; }
     .card {
@@ -321,6 +349,7 @@
     <div class="section-label" style="margin-bottom:0;flex:1">Activity Dashboard</div>
     <div class="period-pills">
       <button class="pill active" data-period="pastweek">Past Week</button>
+      <button class="pill" data-period="days30">30 Days</button>
       <button class="pill" data-period="ytd">YTD</button>
       <button class="pill" data-period="lastyear">Last Year</button>
     </div>
@@ -396,6 +425,15 @@
       <div class="chart-wrap"><canvas id="c-whs"></canvas></div>
     </div>
 
+  </div>
+
+  <!-- Collapsible Entries (under Charts by Pumper; hidden by default) -->
+  <div class="collapse-header" id="entriesToggle" style="margin-top:14px">
+    <span class="collapse-title" id="entriesTitle">▼ All Entries</span>
+    <span class="collapse-chevron" id="entriesChevron">▼</span>
+  </div>
+  <div class="entries-body" id="entriesBody">
+    <div id="entriesContent"></div>
   </div>
 
   <!-- FORMS -->
@@ -508,18 +546,6 @@
         </svg>
       </div>
       <div><div class="report-link-name">Well Info</div><div class="report-link-cta">View wellbore data →</div></div>
-    </a>
-    <a class="report-link-card" href="field-entries.html">
-      <div class="report-link-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <rect x="4" y="2" width="16" height="20" rx="2" fill="#d0c8b8" opacity="0.45"/>
-          <rect x="9" y="1" width="6" height="3" rx="1" fill="#3a6a8a"/>
-          <line x1="7.5" y1="8"  x2="16.5" y2="8"  stroke="#2d7a2d" stroke-width="1.6" stroke-linecap="round"/>
-          <line x1="7.5" y1="12" x2="16.5" y2="12" stroke="#2d7a2d" stroke-width="1.6" stroke-linecap="round"/>
-          <line x1="7.5" y1="16" x2="13"   y2="16" stroke="#2d7a2d" stroke-width="1.6" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <div><div class="report-link-name">Your Field Entries</div><div class="report-link-cta">Last 30 days →</div></div>
     </a>
   </div>
   </div>
@@ -778,7 +804,10 @@ CHART_DEFS.forEach(cd => {
 
 // ── Update UI for selected period ─────────────────────────────────────────
 function applyPeriod(period) {
-  const d = DATA[period];
+  // 'days30' is populated by the hourly refresh; if it hasn't run yet, fall
+  // back to an all-zero set so tiles/charts don't throw.
+  const d = DATA[period] || { avo:ZERO(), gwi:ZERO(), fap:ZERO(), pumpup:ZERO(),
+                              wellsite:ZERO(), facility:ZERO(), whs:ZERO(), env:ZERO() };
   const isPumper = CURRENT_USER && CURRENT_USER.role === 'pumper';
   const myIdx    = isPumper ? PUMPERS.indexOf(CURRENT_USER.pbiName) : -1;
 
@@ -807,6 +836,87 @@ function applyPeriod(period) {
     });
     chart.update();
   });
+
+  // Entries section
+  applyEntries(period);
+}
+
+// ── Entries section (All Entries / My Entries) ──────────────────────────────
+// Renders DATA[period].{form}.wellsByPumper as a per-form list. Engineers/ops
+// see everyone (All Entries); pumpers see only their own rows (My Entries).
+// Follows whichever period pill is selected.
+const ENTRY_FORMS = [
+  { key:'avo',      label:'AVO Inspection' },
+  { key:'gwi',      label:'Gas Well Inspection' },
+  { key:'fap',      label:'Fluid Levels (FAP)' },
+  { key:'pumpup',   label:'Pump Up Entry' },
+  { key:'wellsite', label:'Well Site Inspection' },
+  { key:'facility', label:'Facility Inspection' },
+  { key:'whs',      label:'Wellhead Grounding' },
+];
+
+function applyEntries(period) {
+  const content = document.getElementById('entriesContent');
+  if (!content) return;
+  const role     = (CURRENT_USER && CURRENT_USER.role || '').toLowerCase();
+  const isPumper = role === 'pumper';
+  const myName   = CURRENT_USER && CURRENT_USER.pbiName;
+
+  // Title (set on the collapse header)
+  const titleEl = document.getElementById('entriesTitle');
+  const open    = document.getElementById('entriesBody').classList.contains('open');
+  const label   = isPumper ? 'My Entries' : 'All Entries';
+  if (titleEl) titleEl.textContent = (open ? '▲ ' : '▼ ') + label;
+
+  const d = DATA[period];
+  if (!d) {
+    content.innerHTML = '<div class="entry-empty">30-day data refreshes hourly — not available yet.</div>';
+    return;
+  }
+
+  let html = '';
+  ENTRY_FORMS.forEach(f => {
+    const fd = d[f.key];
+    const wbp = (fd && fd.wellsByPumper) || {};
+    // Rows: [pumper, wells[]]; for pumpers, keep only their own
+    let rows = Object.keys(wbp)
+      .map(p => [p, wbp[p] || []])
+      .filter(([p, ws]) => ws.length > 0);
+    if (isPumper) rows = rows.filter(([p]) => p === myName);
+    rows.sort((a, b) => b[1].length - a[1].length);
+
+    const count = rows.reduce((s, [, ws]) => s + ws.length, 0);
+    html += '<div class="entry-form-card">'
+          + '<div class="entry-form-head">' + f.label
+          + ' <span class="efc-count">' + count + '</span></div>';
+    if (!rows.length) {
+      html += '<div class="entry-empty">No entries this period.</div>';
+    } else if (isPumper) {
+      // My Entries — just the well list
+      html += '<table class="entry-table"><tbody>';
+      rows.forEach(([, ws]) => {
+        html += '<tr><td class="et-wells">' + ws.map(esc).join(', ') + '</td></tr>';
+      });
+      html += '</tbody></table>';
+    } else {
+      // All Entries — grouped by pumper
+      html += '<table class="entry-table"><thead><tr>'
+            + '<th>Pumper</th><th>#</th><th>Wells / Sites</th></tr></thead><tbody>';
+      rows.forEach(([p, ws]) => {
+        html += '<tr><td class="et-pumper">' + esc(p) + '</td>'
+              + '<td>' + ws.length + '</td>'
+              + '<td class="et-wells">' + ws.map(esc).join(', ') + '</td></tr>';
+      });
+      html += '</tbody></table>';
+    }
+    html += '</div>';
+  });
+  content.innerHTML = html;
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 // ── Period pill clicks ─────────────────────────────────────────────────────
@@ -832,6 +942,16 @@ toggle.addEventListener('click', () => {
   chevron.textContent = open ? '▲' : '▼';
   // Resize after CSS transition completes so charts fill their containers
   if (open) grid.addEventListener('transitionend', resizeAll, { once: true });
+});
+
+// ── Entries collapse toggle ─────────────────────────────────────────────────
+document.getElementById('entriesToggle').addEventListener('click', () => {
+  const body  = document.getElementById('entriesBody');
+  const open  = body.classList.toggle('open');
+  document.getElementById('entriesChevron').textContent = open ? '▲' : '▼';
+  const role  = (CURRENT_USER && CURRENT_USER.role || '').toLowerCase();
+  const label = role === 'pumper' ? 'My Entries' : 'All Entries';
+  document.getElementById('entriesTitle').textContent = (open ? '▲ ' : '▼ ') + label;
 });
 
 // Resize on orientation change / window resize (handles Android rotation)
