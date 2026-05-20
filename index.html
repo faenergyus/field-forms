@@ -196,12 +196,16 @@
     }
     .entry-form-head {
       font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
-      color: #1c4a1c; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+      color: #1c4a1c; display: flex; align-items: center; gap: 8px;
+      cursor: pointer; user-select: none;
     }
     .entry-form-head .efc-count {
       background: #e3f1e3; color: #2d7a2d; border-radius: 10px;
       font-size: 0.68rem; font-weight: 700; padding: 1px 9px; letter-spacing: 0;
     }
+    .entry-form-head .efc-chevron { font-size: 0.7rem; color: #5a8a5a; width: 12px; }
+    .efc-body { display: none; margin-top: 8px; }
+    .efc-body.efc-open { display: block; }
     .entry-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
     .entry-table th {
       text-align: left; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.07em;
@@ -581,7 +585,7 @@ const CHART_DEFS = [
   { id:'c-wellsite-facility', keys:['wellsite','facility'], colors:['#1565c0','#b94c00'], labels:['Well Site','Facility'] },
 ];
 
-const ZERO = () => ({ total: 0, byPumper: {}, wellsByPumper: {} });
+const ZERO = () => ({ total: 0, byPumper: {}, wellsByPumper: {}, entries: [] });
 
 const DATA = {  // auto-refreshed 2026-05-20 15:56
   pastweek: {
@@ -887,41 +891,45 @@ function applyEntries(period) {
   let html = '';
   ENTRY_FORMS.forEach(f => {
     const fd = d[f.key];
-    const wbp = (fd && fd.wellsByPumper) || {};
-    // Rows: [pumper, wells[]]; for pumpers, keep only their own
-    let rows = Object.keys(wbp)
-      .map(p => [p, wbp[p] || []])
-      .filter(([p, ws]) => ws.length > 0);
-    if (isPumper) rows = rows.filter(([p]) => p === myName);
-    rows.sort((a, b) => b[1].length - a[1].length);
+    // entries: [ [pumper, well, dateStr], ... ] — per individual submission
+    let rows = (fd && fd.entries) ? fd.entries.slice() : [];
+    if (isPumper) rows = rows.filter(r => r[0] === myName);
+    // Most recent first
+    rows.sort((a, b) => (new Date(b[2]) - new Date(a[2])) || 0);
 
-    const count = rows.reduce((s, [, ws]) => s + ws.length, 0);
+    const count  = rows.length;
+    const cardId = 'efc-' + f.key;
     html += '<div class="entry-form-card">'
-          + '<div class="entry-form-head">' + f.label
-          + ' <span class="efc-count">' + count + '</span></div>';
-    if (!rows.length) {
+          + '<div class="entry-form-head" onclick="toggleEntryCard(\'' + cardId + '\')">'
+          + '<span class="efc-chevron" id="' + cardId + '-chev">▶</span>'
+          + '<span>' + f.label + '</span>'
+          + '<span class="efc-count">' + count + '</span></div>'
+          + '<div class="efc-body" id="' + cardId + '-body">';
+    if (!count) {
       html += '<div class="entry-empty">No entries this period.</div>';
-    } else if (isPumper) {
-      // My Entries — just the well list
-      html += '<table class="entry-table"><tbody>';
-      rows.forEach(([, ws]) => {
-        html += '<tr><td class="et-wells">' + ws.map(esc).join(', ') + '</td></tr>';
-      });
-      html += '</tbody></table>';
     } else {
-      // All Entries — grouped by pumper
-      html += '<table class="entry-table"><thead><tr>'
-            + '<th>Pumper</th><th>#</th><th>Wells / Sites</th></tr></thead><tbody>';
-      rows.forEach(([p, ws]) => {
-        html += '<tr><td class="et-pumper">' + esc(p) + '</td>'
-              + '<td>' + ws.length + '</td>'
-              + '<td class="et-wells">' + ws.map(esc).join(', ') + '</td></tr>';
+      html += '<table class="entry-table"><thead><tr><th>Date</th>'
+            + (isPumper ? '' : '<th>Pumper</th>')
+            + '<th>Well / Site</th></tr></thead><tbody>';
+      rows.forEach(r => {
+        html += '<tr><td>' + esc(r[2] || '—') + '</td>'
+              + (isPumper ? '' : '<td class="et-pumper">' + esc(r[0] || '—') + '</td>')
+              + '<td class="et-wells">' + esc(r[1] || '—') + '</td></tr>';
       });
       html += '</tbody></table>';
     }
-    html += '</div>';
+    html += '</div></div>';
   });
   content.innerHTML = html;
+}
+
+// Collapse / expand one entry sub-section
+function toggleEntryCard(cardId) {
+  const body = document.getElementById(cardId + '-body');
+  const chev = document.getElementById(cardId + '-chev');
+  if (!body) return;
+  const open = body.classList.toggle('efc-open');
+  if (chev) chev.textContent = open ? '▼' : '▶';
 }
 
 function esc(s) {
