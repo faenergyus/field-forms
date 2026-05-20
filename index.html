@@ -42,9 +42,9 @@
       width: 32px; height: 32px; border-radius: 50%;
       border: 2px solid #5dc85d;
     }
-    .user-name { color: #c8dcc8; font-size: 0.82rem; }
+    .user-name { color: #1f1f1f; font-size: 0.82rem; }
     .user-signout {
-      color: #7a9e7a; font-size: 0.72rem; cursor: pointer;
+      color: #3a3a3a; font-size: 0.72rem; cursor: pointer;
       text-decoration: underline; background: none; border: none;
       padding: 0; margin-left: 4px;
     }
@@ -52,33 +52,34 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #f0f4f0;
+      background: #f5f4f1;
       color: #1a1a1a;
       min-height: 100vh;
     }
 
     /* ── Header ── */
     header {
-      background: #1c4a1c;
-      padding: 16px 32px;
+      background: #8c8c8c;
+      padding: 12px 32px;
       display: flex;
       align-items: center;
       position: relative;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.25);
     }
+    .logo-img { height: 48px; display: block; }
     .price-ticker {
       position: absolute; left: 50%; transform: translateX(-50%);
       display: flex; align-items: center; gap: 24px;
       pointer-events: none;
     }
     .price-item { text-align: center; line-height: 1.2; }
-    .price-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; color: #90bc90; text-transform: uppercase; display: block; }
-    .price-val { font-size: 1rem; font-weight: 700; color: #fff; }
+    .price-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; color: #2e2e2e; text-transform: uppercase; display: block; }
+    .price-val { font-size: 1rem; font-weight: 700; color: #111; }
     .price-chg { font-size: 0.65rem; font-weight: 600; margin-left: 4px; }
-    .price-up { color: #5dc85d; }
-    .price-down { color: #ff7070; }
-    .price-dot { color: #4a724a; font-size: 1.2rem; line-height: 1; }
-    .price-date { font-size: 0.58rem; color: #6a8a6a; display: block; }
+    .price-up { color: #155f15; }
+    .price-down { color: #a32020; }
+    .price-dot { color: #555; font-size: 1.2rem; line-height: 1; }
+    .price-date { font-size: 0.58rem; color: #444; display: block; }
     @media (max-width: 600px) {
       header { flex-wrap: wrap; padding: 12px 16px 8px; }
       .price-ticker {
@@ -292,8 +293,7 @@
 
 <header>
   <div>
-    <div class="logo-fae">fae<span>II</span></div>
-    <div class="logo-tagline">forty acres <em>energy</em></div>
+    <img class="logo-img" src="40ACFAEII.png" alt="Forty Acres Energy — FAE II">
   </div>
   <div class="price-ticker" id="price-ticker">
     <div class="price-item">
