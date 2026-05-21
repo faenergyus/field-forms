@@ -1013,6 +1013,30 @@ document.getElementById('tasksToggle').addEventListener('click', () => {
 const ACCOUNTS_CSV  = 'https://docs.google.com/spreadsheets/d/146yuHYjs3RF3wtCK3Qj9NXH94DrStwhieTGqPeLQRfA/gviz/tq?tqx=out:csv&sheet=Accounts&headers=1';
 const TRACKER_URL   = 'https://script.google.com/macros/s/AKfycbxOyZbt18JXuPTvkkJrZ3jJgM_xOMQ035CmQWJDolIuEqVKHFP1hNZfbmlcp6dY32Zprw/exec';
 const SESSION_KEY   = 'fae_user';
+// ── Cross-subdomain SSO ────────────────────────────────────────────────
+// Mirror the auth session to a .40ac.us cookie so one Google sign-in
+// covers analyst / scada / forms.40ac.us. Reversible: delete this block.
+(function () {
+  try {
+    var m = document.cookie.match(/(?:^|;\s*)fae40_sso=([^;]+)/);
+    if (m && !localStorage.getItem(SESSION_KEY))
+      localStorage.setItem(SESSION_KEY, decodeURIComponent(m[1]));
+  } catch (e) {}
+  try {
+    var _set = localStorage.setItem.bind(localStorage);
+    var _rem = localStorage.removeItem.bind(localStorage);
+    localStorage.setItem = function (k, v) {
+      _set(k, v);
+      if (k === SESSION_KEY) { try { document.cookie = 'fae40_sso=' +
+        encodeURIComponent(v) + ';domain=.40ac.us;path=/;max-age=2592000;Secure;SameSite=Lax'; } catch (e) {} }
+    };
+    localStorage.removeItem = function (k) {
+      _rem(k);
+      if (k === SESSION_KEY) { try { document.cookie =
+        'fae40_sso=;domain=.40ac.us;path=/;max-age=0;Secure;SameSite=Lax'; } catch (e) {} }
+    };
+  } catch (e) {}
+})();
 const SESSION_HRS   = 720;  // hours before re-login required (30 days)
 (function migrateLegacySession() {
   try {
