@@ -10,7 +10,7 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #f0f4f0;
+      background: #f5f4f1;
       color: #1a1a1a;
       min-height: 100vh;
     }
@@ -32,20 +32,17 @@
 
     /* ── Header ── */
     header {
-      background: #1c4a1c;
-      padding: 16px 32px;
+      background: #d9d9d9;
+      padding: 12px 32px;
       display: flex;
       align-items: center;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
     }
-    .logo-fae { font-size: 1.9rem; font-weight: 900; letter-spacing: -1px; color: #5dc85d; line-height: 1; }
-    .logo-fae span { color: #fff; font-weight: 300; }
-    .logo-tagline { font-size: 0.75rem; color: #90bc90; letter-spacing: 0.1em; margin-top: 2px; }
-    .logo-tagline em { color: #5dc85d; font-style: normal; }
+    .logo-img { height: 48px; display: block; }
     .user-badge { display: flex; align-items: center; gap: 8px; margin-left: auto; }
     .user-avatar { width: 32px; height: 32px; border-radius: 50%; border: 2px solid #5dc85d; }
-    .user-name { color: #c8dcc8; font-size: 0.82rem; }
-    .user-signout { color: #7a9e7a; font-size: 0.72rem; cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; margin-left: 4px; }
+    .user-name { color: #1f1f1f; font-size: 0.82rem; }
+    .user-signout { color: #3a3a3a; font-size: 0.72rem; cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; margin-left: 4px; }
 
     /* ── Layout ── */
     .page { max-width: 1020px; margin: 0 auto; padding: 24px 18px 60px; }
@@ -180,8 +177,7 @@
 
 <header>
   <div>
-    <div class="logo-fae">fae<span>II</span></div>
-    <div class="logo-tagline">forty acres <em>energy</em></div>
+    <img class="logo-img" src="40ACFAEII.png?v=3" alt="Forty Acres Energy — FAE II">
   </div>
   <div class="user-badge" id="user-badge" style="display:none">
     <img class="user-avatar" id="user-avatar" src="" alt="">

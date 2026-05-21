@@ -3,3262 +3,396 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
   <title>Well Info — FAE Field Operations</title>
-  <!-- build: 2026-05-04 perfs+ftops+tubing+rods+pump -->
-
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f4f0; color: #1a1a1a; min-height: 100vh; }
-
-    #login-overlay { position: fixed; inset: 0; z-index: 9999; background: #0d260d; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f4f1; color: #1a1a1a; min-height: 100vh;
+    }
+    /* ── Login overlay ── */
+    #login-overlay {
+      position: fixed; inset: 0; z-index: 9999; background: #0d260d;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
+    }
     #login-overlay .login-logo { font-size: 2.8rem; font-weight: 900; letter-spacing: -1px; color: #5dc85d; }
     #login-overlay .login-logo span { color: #fff; font-weight: 300; }
     #login-overlay .login-tagline { color: #90bc90; font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase; margin-top: -16px; }
     #login-overlay .login-tagline em { color: #5dc85d; font-style: normal; }
     #login-overlay .login-title { color: #c8dcc8; font-size: 1rem; margin-bottom: 8px; }
     #login-overlay .login-error { color: #ff8080; font-size: 0.85rem; display: none; text-align: center; max-width: 280px; }
-
-    header { background: #1c4a1c; padding: 16px 32px; display: flex; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.35); }
-    .logo-fae { font-size: 1.9rem; font-weight: 900; letter-spacing: -1px; color: #5dc85d; line-height: 1; }
-    .logo-fae span { color: #fff; font-weight: 300; }
-    .logo-tagline { font-size: 0.75rem; color: #90bc90; letter-spacing: 0.1em; margin-top: 2px; }
-    .logo-tagline em { color: #5dc85d; font-style: normal; }
-    .user-badge { display: none; align-items: center; gap: 8px; margin-left: auto; }
-    .user-avatar { width: 32px; height: 32px; border-radius: 50%; border: 2px solid #5dc85d; }
-    .user-name { color: #c8dcc8; font-size: 0.82rem; }
-    .user-signout { color: #7a9e7a; font-size: 0.72rem; cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; margin-left: 4px; }
-
-    .page { max-width: 1100px; margin: 0 auto; padding: 24px 18px 60px; }
-    .back-link { display: inline-flex; align-items: center; gap: 6px; color: #3a8a3a; font-size: 0.78rem; font-weight: 600; text-decoration: none; letter-spacing: 0.04em; margin-bottom: 20px; }
-    .back-link:hover { color: #2d7a2d; text-decoration: underline; }
-    .page-title { font-size: 1.3rem; font-weight: 800; color: #1c4a1c; margin-bottom: 6px; }
-    .page-subtitle { font-size: 0.75rem; color: #6a8a6a; margin-bottom: 24px; letter-spacing: 0.04em; }
-
-    .picker-section { background: #fff; border-radius: 9px; padding: 18px 20px; border-left: 4px solid #3a8a3a; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 24px; }
-    .autocomplete-wrap { position: relative; max-width: 500px; }
-    #wellInput { width: 100%; padding: 10px 14px; border: 1.5px solid #b8ccb8; border-radius: 7px; font-size: 0.92rem; outline: none; }
-    #wellInput:focus { border-color: #3a8a3a; box-shadow: 0 0 0 3px rgba(58,138,58,0.15); }
-    .ac-list { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-radius: 0 0 7px 7px; max-height: 240px; overflow-y: auto; z-index: 100; display: none; }
-    .ac-item { padding: 8px 14px; cursor: pointer; font-size: 0.88rem; }
-    .ac-item:hover, .ac-item.active { background: #e8f4e8; }
-    .ac-item mark { background: #d4ecd4; color: #1c4a1c; font-weight: 600; }
-    .well-count { font-size: 0.72rem; color: #6a8a6a; margin-top: 6px; }
-
-    #wellDisplay { display: none; }
-    .well-header { font-size: 1.1rem; font-weight: 700; color: #1c4a1c; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #3a8a3a; }
-    .well-layout { display: flex; flex-direction: column; gap: 24px; }
-
-    #wbdContainer { background: #e8e8e8; padding: 20px 0; display: flex; align-items: flex-start; justify-content: center; }
-    #wbdContainer svg { width: 100%; max-width: 850px; height: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.2); background: #fff; }
-
-    /* WBD edit toolbar */
-    .wbd-btn { background: #1c4a1c; color: #fff; border: none; padding: 6px 14px; font-size: 0.8rem; font-weight: 600; cursor: pointer; border-radius: 4px; margin-left: 6px; }
-    .wbd-btn:hover { background: #2a5a2a; }
-    .wbd-btn.danger { background: #a02020; }
-    .wbd-btn.danger:hover { background: #c02828; }
-    .wbd-btn.secondary { background: #777; }
-    .wbd-btn.secondary:hover { background: #888; }
-
-    /* Editor forms */
-    #wbdEditor { background: #fff; border: 1px solid #c0c0c0; padding: 16px; border-radius: 6px; }
-    #wbdEditor h3 { font-size: 0.95rem; color: #1c4a1c; margin: 14px 0 6px; }
-    #wbdEditor h3:first-child { margin-top: 0; }
-    .ed-meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
-    .ed-meta label { font-size: 0.75rem; color: #555; font-weight: 600; }
-    .ed-meta input, .ed-meta select { width: 100%; padding: 4px 6px; border: 1px solid #c0c0c0; border-radius: 3px; font-size: 0.85rem; }
-    .ed-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
-    .ed-table th { background: #f0f4f0; padding: 4px 6px; text-align: left; border: 1px solid #c8d8c8; font-size: 0.7rem; color: #1c4a1c; }
-    .ed-table td { padding: 2px; border: 1px solid #e0e0e0; }
-    .ed-table input, .ed-table select { width: 100%; padding: 3px 5px; border: 1px solid transparent; font-size: 0.78rem; background: transparent; }
-    .ed-table input:focus, .ed-table select:focus { background: #fffbe5; border-color: #c0c0c0; outline: none; }
-    .ed-table .row-del { color: #a02020; cursor: pointer; text-align: center; padding: 4px; font-weight: 700; user-select: none; }
-    .ed-add-row { font-size: 0.75rem; color: #1c4a1c; cursor: pointer; padding: 4px 0; user-select: none; }
-    .ed-add-row:hover { color: #2a5a2a; text-decoration: underline; }
-
-    /* Tabs */
-    .tabs { display: flex; gap: 2px; border-bottom: 2px solid #1c4a1c; margin-bottom: 16px; margin-top: 8px; }
-    .tab-btn { background: #e8f0e8; color: #1c4a1c; border: 1px solid #b8ccb8; border-bottom: none; padding: 8px 18px; font-size: 0.88rem; font-weight: 600; cursor: pointer; border-radius: 6px 6px 0 0; transition: background 0.15s; }
-    .tab-btn:hover { background: #d8e8d8; }
-    .tab-btn.active { background: #1c4a1c; color: #fff; border-color: #1c4a1c; }
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
-
-    /* Equipment tab */
-    #equipmentContent h3 { font-size: 1rem; margin: 16px 0 8px; color: #1c4a1c; }
-    #equipmentContent h3:first-child { margin-top: 0; }
-    .eq-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; background: #fff; border: 1px solid #c0c0c0; margin-bottom: 4px; }
-    .eq-table th { background: #f0f4f0; padding: 7px 10px; text-align: left; border-bottom: 1px solid #c0c0c0; font-weight: 700; color: #1c4a1c; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
-    .eq-table td { padding: 7px 10px; border-bottom: 1px solid #eaeaea; vertical-align: top; color: #222; }
-    .eq-table td.eq-label { font-weight: 600; color: #555; width: 200px; }
-    .eq-empty { color: #888; font-style: italic; padding: 8px 0; }
-    .eq-source { font-size: 0.78rem; color: #666; font-style: italic; margin-bottom: 12px; }
-
-    /* Job History list */
-    #jobHistory h3 { font-size: 1rem; margin-bottom: 8px; color: #1c4a1c; }
-    .job-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; background: #fff; border: 1px solid #c0c0c0; }
-    .job-table th { background: #f0f4f0; padding: 6px 8px; text-align: left; border-bottom: 1px solid #c0c0c0; font-weight: 700; color: #1c4a1c; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
-    .job-table td { padding: 6px 8px; border-bottom: 1px solid #eaeaea; vertical-align: top; color: #222; }
-    .job-table tr.current { background: #fff8d8; }
-    .job-table tr:hover { background: #f5fbf5; }
-    .job-table .job-date { font-weight: 700; white-space: nowrap; }
-    .job-table .job-afe { font-size: 0.7rem; color: #888; font-weight: 500; margin-top: 2px; white-space: nowrap; }
-    .job-table .job-cause { font-size: 0.7rem; color: #900; }
-    .job-table .job-summary { color: #444; font-style: italic; }
-    .job-empty { padding: 16px; color: #888; text-align: center; font-style: italic; }
-
-    /* Well General Info Header — matches WBD reference */
-    .well-general { background: #fff; border: 2px solid #333; margin-bottom: 20px; font-size: 0.8rem; }
-    .well-general-title { background: #333; color: #fff; text-align: center; padding: 6px; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.03em; }
-    .well-general-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid #ccc; }
-    .well-general-grid.two { grid-template-columns: 1fr 1fr; }
-    .wg-cell { padding: 4px 10px; border-right: 1px solid #e0e0e0; display: flex; align-items: baseline; gap: 4px; }
-    .wg-cell:last-child { border-right: none; }
-    .wg-label { font-size: 0.68rem; color: #666; font-weight: 600; white-space: nowrap; }
-    .wg-val { font-size: 0.82rem; font-weight: 700; color: #111; }
-    @media (max-width: 600px) { .well-general-grid { grid-template-columns: 1fr 1fr; } .well-general-grid.two { grid-template-columns: 1fr; } }
-
-    .data-cards { display: flex; flex-direction: column; gap: 14px; }
-    .data-card { background: #fff; border-radius: 9px; padding: 14px 16px; border-left: 4px solid #3a8a3a; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
-    .data-card h3 { font-size: 0.78rem; font-weight: 700; color: #3a8a3a; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
-    .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
-    .data-grid.four { grid-template-columns: repeat(4, 1fr); }
-    @media (max-width: 500px) { .data-grid.four { grid-template-columns: 1fr 1fr; } }
-    .data-label { font-size: 0.68rem; color: #6a8a6a; text-transform: uppercase; letter-spacing: 0.04em; }
-    .data-val { font-size: 0.85rem; font-weight: 600; color: #1a1a1a; margin-bottom: 6px; }
-    .data-val.empty { color: #b0b0b0; font-weight: 400; }
-    .data-val.multi { white-space: pre-line; font-size: 0.78rem; line-height: 1.5; }
-
-    /* Embed mode (?embed=1) — used when iframed inside another app's panel.
-       Hides global chrome (header, login overlay, page intro, well picker)
-       but keeps the actual data display. */
-    body.embed #login-overlay { display: none !important; }
-    body.embed > header,
-    body.embed .back-link,
-    body.embed .page-title,
-    body.embed .page-subtitle,
-    body.embed .picker-section { display: none !important; }
-    body.embed .page { padding: 8px 14px; }
-    body.embed .well-header { padding-top: 0; }
-    /* Optional per-section hide via ?show=wbd|history|equipment */
-    body.embed.only-wbd       .tabs,
-    body.embed.only-history   .tabs,
-    body.embed.only-equipment .tabs { display: none !important; }
+    /* ── Header ── */
+    header {
+      background: #d9d9d9; padding: 12px 32px; display: flex; align-items: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    }
+    .logo-img { height: 48px; display: block; }
+    .user-badge { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .user-avatar { width: 32px; height: 32px; border-radius: 50%; border: 2px solid #2d7a2d; }
+    .user-name { color: #1f1f1f; font-size: 0.82rem; }
+    .user-signout { color: #3a3a3a; font-size: 0.72rem; cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; margin-left: 4px; }
+    /* ── Layout ── */
+    .page { max-width: 640px; margin: 0 auto; padding: 24px 18px 60px; }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px; color: #2d7a2d;
+      font-size: 0.78rem; font-weight: 600; text-decoration: none; letter-spacing: 0.04em; margin-bottom: 20px;
+    }
+    .back-link:hover { color: #1c5a1c; text-decoration: underline; }
+    .page-title {
+      font-size: 1.3rem; font-weight: 800; color: #1c4a1c;
+      display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+    }
+    .page-subtitle { font-size: 0.75rem; color: #6a8a6a; margin-bottom: 22px; letter-spacing: 0.04em; }
+    /* ── Well picker ── */
+    .picker { position: relative; margin-bottom: 20px; }
+    .picker input {
+      width: 100%; padding: 11px 14px; font-size: 0.95rem;
+      border: 1.5px solid #c0c0c0; border-radius: 8px; background: #fff;
+    }
+    .picker input:focus { outline: none; border-color: #2d7a2d; }
+    .ac-list {
+      position: absolute; top: 100%; left: 0; right: 0; background: #fff;
+      border: 1.5px solid #2d7a2d; border-top: none; border-radius: 0 0 8px 8px;
+      max-height: 260px; overflow-y: auto; z-index: 50; display: none;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    }
+    .ac-item { padding: 9px 14px; cursor: pointer; font-size: 0.88rem; }
+    .ac-item:hover, .ac-item.active { background: #eaf5ea; color: #1c4a1c; }
+    .ac-item mark { background: none; color: #2d7a2d; font-weight: 700; }
+    .well-count { font-size: 0.72rem; color: #8aaa8a; margin-top: 4px; }
+    /* ── Result table ── */
+    .well-card {
+      background: #fff; border-radius: 9px; padding: 20px 22px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08); display: none;
+    }
+    .well-card h2 {
+      font-size: 1.05rem; color: #1c4a1c; margin-bottom: 14px;
+      padding-bottom: 8px; border-bottom: 2px solid #3a8a3a;
+    }
+    .info-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+    .info-table td { padding: 11px 8px; border-bottom: 1px solid #eef2ee; }
+    .info-table tr:last-child td { border-bottom: none; }
+    .info-table .lbl {
+      color: #5a7a5a; font-weight: 600; font-size: 0.78rem;
+      text-transform: uppercase; letter-spacing: 0.05em; width: 56%;
+    }
+    .info-table .val { color: #1a2a1a; font-weight: 700; text-align: right; font-size: 1rem; }
+    .info-table .val.none { color: #b0b0b0; font-weight: 400; }
+    .state-msg { color: #6a8a6a; font-size: 0.85rem; padding: 30px 0; text-align: center; }
+    .state-msg.err { color: #c0392b; }
+    .spinner {
+      display: inline-block; width: 15px; height: 15px; border: 2px solid #2d7a2d;
+      border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite;
+      vertical-align: middle; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    footer { text-align: center; color: #8aaa8a; font-size: 0.72rem; margin-top: 36px; padding-top: 16px; border-top: 1px solid #d0e0d0; }
   </style>
 </head>
 <body>
-  <div id="login-overlay">
-    <div class="login-logo">fae<span>II</span></div>
-    <div class="login-tagline">Forty Acres <em>Energy</em></div>
-    <div class="login-title">Well Info</div>
-    <div id="g_id_onload"
+
+<!-- ── Login overlay ── -->
+<div id="login-overlay">
+  <div><div class="login-logo">fae<span>II</span></div></div>
+  <div class="login-tagline">forty acres <em>energy</em> &nbsp;·&nbsp; Field Operations Portal</div>
+  <div class="login-title">Sign in to continue</div>
+  <div id="g_id_onload"
        data-client_id="629380732564-eh0uasomqjdo3up8o2po685g9ep544iq.apps.googleusercontent.com"
-       data-context="signin" data-ux_mode="popup" data-auto_prompt="false"
-       data-itp_support="true"
-       data-callback="handleCredentialResponse"></div>
-    <div class="g_id_signin" data-type="standard" data-theme="filled_black" data-text="signin_with" data-size="large" data-logo_alignment="left"></div>
-    <div id="login-error" class="login-error"></div>
+       data-callback="handleCredentialResponse"
+       data-auto_select="true" data-itp_support="true" data-auto_prompt="false">
+  </div>
+  <div class="g_id_signin"
+       data-type="standard" data-size="large" data-theme="filled_blue"
+       data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left">
+  </div>
+  <div class="login-error" id="login-error"></div>
+</div>
+
+<header>
+  <div>
+    <img class="logo-img" src="40ACFAEII.png?v=3" alt="Forty Acres Energy — FAE II">
+  </div>
+  <div class="user-badge" id="user-badge" style="display:none">
+    <img class="user-avatar" id="user-avatar" src="" alt="">
+    <span class="user-name" id="user-name"></span>
+    <button class="user-signout" onclick="signOut()">sign out</button>
+  </div>
+</header>
+
+<div class="page">
+  <a class="back-link" href="index.html">← Portal Home</a>
+
+  <div class="page-title">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <rect x="8" y="1" width="8" height="22" rx="1" fill="#d0c8b8" opacity="0.4"/>
+      <rect x="9.5" y="2" width="5" height="18" rx="0.5" fill="#4a9a4a" opacity="0.7"/>
+      <rect x="10.5" y="4" width="3" height="14" rx="0.5" fill="#3a6a8a" opacity="0.8"/>
+      <line x1="11" y1="10" x2="13" y2="10" stroke="#c0392b" stroke-width="1.5"/>
+      <line x1="11" y1="13" x2="13" y2="13" stroke="#c0392b" stroke-width="1.5"/>
+    </svg>
+    Well Info
+  </div>
+  <div class="page-subtitle">Key completion data for a well — live from the operations database</div>
+
+  <div class="picker">
+    <input id="wellInput" type="text" placeholder="Type a well name…" autocomplete="off" disabled>
+    <div class="ac-list" id="acList"></div>
+    <div class="well-count" id="wellCount"></div>
   </div>
 
-  <header>
-    <div>
-      <div class="logo-fae">fae<span>II</span></div>
-      <div class="logo-tagline">Forty Acres <em>Energy</em></div>
-    </div>
-    <div class="user-badge" id="user-badge">
-      <img class="user-avatar" id="user-avatar" src="" alt="">
-      <div>
-        <div class="user-name" id="user-name"></div>
-        <button class="user-signout" onclick="signOut()">Sign out</button>
-      </div>
-    </div>
-  </header>
-
-  <div class="page">
-    <a class="back-link" href="index.html">&#8592; Back to Portal</a>
-    <div class="page-title">Well Info</div>
-    <div class="page-subtitle">Wellbore diagrams and completion data</div>
-
-    <div class="picker-section">
-      <div class="autocomplete-wrap">
-        <input type="text" id="wellInput" placeholder="Start typing well name..." autocomplete="off">
-        <div class="ac-list" id="acList"></div>
-      </div>
-      <div class="well-count" id="wellCount"></div>
-    </div>
-
-    <div id="wellDisplay">
-      <div class="well-header" id="wellHeader"></div>
-      <div id="wellGeneral"></div>
-
-      <div class="tabs">
-        <button type="button" class="tab-btn active" data-tab="wbd" onclick="switchTab('wbd')">WBD</button>
-        <button type="button" class="tab-btn" data-tab="equipment" onclick="switchTab('equipment')">Tables</button>
-        <button type="button" class="tab-btn" data-tab="history" onclick="switchTab('history')">Job History</button>
-      </div>
-
-      <div id="tab-wbd" class="tab-panel active">
-        <div id="versionSelector" style="display:none;margin-bottom:12px;">
-          <label style="font-size:0.8rem;font-weight:600;color:#333;">WBD Version: </label>
-          <select id="versionSelect" style="padding:4px 8px;border:1px solid #999;border-radius:4px;font-size:0.8rem;" onchange="onVersionChange()"></select>
-        </div>
-        <div id="wbdEditor" style="display:none;"></div>
-        <div id="wbdViewer">
-          <div class="well-layout">
-            <div id="wbdContainer"></div>
-            <div class="data-cards" id="dataCards"></div>
-          </div>
-        </div>
-      </div>
-
-      <div id="tab-equipment" class="tab-panel">
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
-          <div id="tablesVersionSelector">
-            <label style="font-size:0.8rem;font-weight:600;color:#333;">Version: </label>
-            <select id="tablesVersionSelect" style="padding:4px 8px;border:1px solid #999;border-radius:4px;font-size:0.8rem;min-width:280px;" onchange="renderTablesVersion()"></select>
-          </div>
-          <button type="button" id="btnExport" class="wbd-btn secondary" onclick="exportWbd()" style="display:none;margin-left:auto;">Export</button>
-          <div id="tablesToolbar" style="display:none;">
-            <button type="button" id="btnTablesEdit"   class="wbd-btn"           onclick="enterTablesEditMode()">Edit</button>
-            <button type="button" id="btnTablesSave"   class="wbd-btn"           onclick="saveTablesEdits()"  style="display:none;">Save</button>
-            <button type="button" id="btnTablesCancel" class="wbd-btn secondary" onclick="cancelTablesEdits()" style="display:none;">Cancel</button>
-            <button type="button" id="btnTablesPaste"  class="wbd-btn"           onclick="openPasteFromClaude()">Upload with Claude</button>
-            <button type="button" id="btnTablesAdd"    class="wbd-btn"           onclick="openEditorFromTables(true)">Add Version</button>
-            <button type="button" id="btnTablesDelete" class="wbd-btn danger"    onclick="deleteVersionFromTables()">Delete</button>
-          </div>
-        </div>
-        <div id="equipmentContent"></div>
-      </div>
-
-      <div id="tab-history" class="tab-panel">
-        <div id="historyToolbar" style="display:none;text-align:right;margin-bottom:8px;">
-          <button type="button" class="wbd-btn secondary" onclick="openManualJobAdd()">Add Manually</button>
-          <button type="button" class="wbd-btn" onclick="openPasteJobFromClaude()">Upload with Claude</button>
-        </div>
-        <div id="jobHistory"></div>
-      </div>
-
-      <!-- Upload-job-with-Claude modal -->
-      <div id="pasteJobModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;">
-        <div style="background:#fff;width:min(900px,95vw);max-height:90vh;overflow:auto;border-radius:8px;padding:18px 22px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <h2 style="margin:0;color:#1c4a1c;">Upload Job Report with Claude</h2>
-            <button type="button" class="wbd-btn secondary" onclick="closePasteJobModal()">Close</button>
-          </div>
-          <p style="font-size:0.85rem;color:#444;margin:6px 0 12px;">
-            Drag a workover/rig job report into your own Claude (claude.ai or Desktop), paste the prompt below, then paste Claude's JSON output here. If a matching job (same well + end date) already exists in Job Detail it will be updated; otherwise a new row is created with an auto-generated AFE.
-          </p>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
-            <div style="font-weight:700;color:#1c4a1c;">1. Prompt to give Claude</div>
-            <button type="button" class="wbd-btn secondary" onclick="copyJobPrompt()" style="padding:3px 10px;">Copy prompt</button>
-          </div>
-          <textarea id="jobPromptText" readonly style="width:100%;height:200px;font-family:Consolas,monospace;font-size:0.78rem;background:#f4f6f4;border:1px solid #c0c0c0;padding:8px;margin:6px 0 14px;"></textarea>
-
-          <div style="font-weight:700;color:#1c4a1c;margin-top:6px;">2. Paste Claude's JSON output here</div>
-          <textarea id="jobPasteJson" placeholder='{ "well_name": "...", "end_date": "YYYY-MM-DD", ... }' style="width:100%;height:160px;font-family:Consolas,monospace;font-size:0.78rem;border:1px solid #c0c0c0;padding:8px;margin:6px 0 4px;"></textarea>
-          <div id="pasteJobErr" style="color:#a02020;font-size:0.85rem;min-height:18px;margin-bottom:8px;"></div>
-          <div style="text-align:right;">
-            <button type="button" class="wbd-btn secondary" onclick="closePasteJobModal()">Cancel</button>
-            <button type="button" class="wbd-btn"           onclick="reviewJobFromClaude()">Next: review &amp; edit →</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Review/edit job before saving -->
-      <div id="reviewJobModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;">
-        <div style="background:#fff;width:min(1100px,95vw);max-height:92vh;overflow:auto;border-radius:8px;padding:18px 22px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <h2 style="margin:0;color:#1c4a1c;">Review job details</h2>
-            <button type="button" class="wbd-btn secondary" onclick="closeReviewJobModal()">Close</button>
-          </div>
-          <p style="font-size:0.85rem;color:#444;margin:6px 0 12px;">
-            Review what Claude pulled out. Adjust any field that's wrong, then click Save. AFE will be auto-generated from <i>End date</i> if blank.
-          </p>
-          <div id="reviewJobForm"></div>
-          <div id="reviewJobErr" style="color:#a02020;font-size:0.85rem;min-height:18px;margin:10px 0;"></div>
-          <div style="text-align:right;">
-            <button type="button" class="wbd-btn secondary" onclick="closeReviewJobModal()">Cancel</button>
-            <button type="button" class="wbd-btn"           onclick="saveReviewedJob()">Save to Job Detail</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Paste-from-Claude modal -->
-      <div id="pasteFromClaudeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;">
-        <div style="background:#fff;width:min(900px,95vw);max-height:90vh;overflow:auto;border-radius:8px;padding:18px 22px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <h2 style="margin:0;color:#1c4a1c;">Upload with Claude</h2>
-            <button type="button" class="wbd-btn secondary" onclick="closePasteFromClaude()">Close</button>
-          </div>
-          <p style="font-size:0.85rem;color:#444;margin:6px 0 12px;">
-            Use your own Claude (claude.ai or Claude Desktop). Drag your WBD or rig job report PDF/PPT/XLS into Claude, paste the prompt below, and it returns JSON. Paste that JSON here, click <b>Parse</b>, and the editor will open pre-filled for review.
-          </p>
-
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
-            <div style="font-weight:700;color:#1c4a1c;">1. Prompt to give Claude</div>
-            <button type="button" class="wbd-btn secondary" onclick="copyClaudePrompt()" style="padding:3px 10px;">Copy prompt</button>
-          </div>
-          <textarea id="claudePromptText" readonly style="width:100%;height:170px;font-family:Consolas,monospace;font-size:0.78rem;background:#f4f6f4;border:1px solid #c0c0c0;padding:8px;margin:6px 0 14px;"></textarea>
-
-          <div style="font-weight:700;color:#1c4a1c;margin-top:6px;">2. Paste Claude's JSON output here</div>
-          <textarea id="claudePasteJson" placeholder='{ "meta": { "wbd_date": "...", ... }, "casing": [...], ... }' style="width:100%;height:160px;font-family:Consolas,monospace;font-size:0.78rem;border:1px solid #c0c0c0;padding:8px;margin:6px 0 4px;"></textarea>
-          <div id="pasteFromClaudeErr" style="color:#a02020;font-size:0.85rem;min-height:18px;margin-bottom:8px;"></div>
-          <div style="text-align:right;">
-            <button type="button" class="wbd-btn secondary" onclick="closePasteFromClaude()">Cancel</button>
-            <button type="button" class="wbd-btn"           onclick="parseFromClaude()">Next: review &amp; edit →</button>
-          </div>
-        </div>
-      </div>
-    </div>
+  <div class="well-card" id="wellCard">
+    <h2 id="wellCardTitle"></h2>
+    <div id="wellCardBody"></div>
   </div>
+
+  <footer>
+    Forty Acres Energy &nbsp;·&nbsp; Field Operations &nbsp;·&nbsp; Internal Use Only
+  </footer>
+</div>
 
 <script>
-// Auth
-var ACCOUNTS_CSV = 'https://docs.google.com/spreadsheets/d/146yuHYjs3RF3wtCK3Qj9NXH94DrStwhieTGqPeLQRfA/gviz/tq?tqx=out:csv&sheet=Accounts';
-var TRACKER_URL  = 'https://script.google.com/macros/s/AKfycbxOyZbt18JXuPTvkkJrZ3jJgM_xOMQ035CmQWJDolIuEqVKHFP1hNZfbmlcp6dY32Zprw/exec';
-var SESSION_KEY  = 'fae_user';
-var SESSION_HRS  = 720;
+// ── Auth (shared fae_user unified sign-in) ──────────────────────────────────
+const ACCOUNTS_CSV = 'https://docs.google.com/spreadsheets/d/146yuHYjs3RF3wtCK3Qj9NXH94DrStwhieTGqPeLQRfA/gviz/tq?tqx=out:csv&sheet=Accounts';
+const TRACKER_URL  = 'https://script.google.com/macros/s/AKfycbxOyZbt18JXuPTvkkJrZ3jJgM_xOMQ035CmQWJDolIuEqVKHFP1hNZfbmlcp6dY32Zprw/exec';
+const SESSION_KEY  = 'fae_user';
+const SESSION_HRS  = 720;
 (function migrateLegacySession() {
   try {
     if (localStorage.getItem(SESSION_KEY)) return;
-    var keys = ['fae_portal_user', 'fae_scada_user'];
-    for (var i = 0; i < keys.length; i++) {
-      var v = localStorage.getItem(keys[i]);
-      if (v) { localStorage.setItem(SESSION_KEY, v); localStorage.removeItem(keys[i]); return; }
+    for (const k of ['fae_portal_user', 'fae_scada_user']) {
+      const v = localStorage.getItem(k);
+      if (v) { localStorage.setItem(SESSION_KEY, v); localStorage.removeItem(k); return; }
     }
   } catch(e) {}
 })();
 
 function parseAccountsCSV(text) {
-  var lines = text.trim().split('\n');
-  return lines.slice(1).map(function(line) {
-    var cols = line.match(/("(?:[^"]|"")*"|[^,]*)/g).map(function(c) { return c.replace(/^"|"$/g,'').trim(); });
-    return { email: cols[0], displayName: cols[1], pbi_name: cols[2], role: cols[3] };
+  const lines = text.trim().split('\n');
+  return lines.slice(1).map(line => {
+    const cols = line.match(/("(?:[^"]|"")*"|[^,]*)/g).map(c => c.replace(/^"|"$/g,'').trim());
+    return { email: cols[0], displayName: cols[1], pbiName: cols[2], role: cols[3] };
   });
 }
 
 async function handleCredentialResponse(response) {
-  var payload = JSON.parse(atob(response.credential.split('.')[1]));
-  var email = payload.email.toLowerCase();
-  var picture = payload.picture;
-  var errorEl = document.getElementById('login-error');
+  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  const email   = payload.email.toLowerCase();
+  const errorEl = document.getElementById('login-error');
   errorEl.style.cssText = 'display:block;color:#90bc90';
-  errorEl.textContent = 'Checking access...';
+  errorEl.textContent   = 'Checking access…';
   try {
-    var csv = await fetch(ACCOUNTS_CSV).then(function(r) { return r.text(); });
-    var rows = parseAccountsCSV(csv);
-    var match = rows.find(function(r) { return r.email.toLowerCase() === email && r.email !== 'x'; });
-    if (!match) { errorEl.style.color = '#ff8080'; errorEl.textContent = 'Access denied for ' + email; return; }
-    var session = { email: email, displayName: match.displayName, picture: picture, role: (match.role || '').toLowerCase(), token: response.credential, tokenExp: Date.now() + 3500000, expires: Date.now() + SESSION_HRS * 3600000 };
+    const rows  = parseAccountsCSV(await fetch(ACCOUNTS_CSV).then(r => r.text()));
+    const match = rows.find(r => r.email.toLowerCase() === email && r.email !== 'x');
+    if (!match) {
+      errorEl.style.color = '#ff8080';
+      errorEl.textContent = `Access denied for ${email}. Contact Ryan Swift to request access.`;
+      return;
+    }
+    const session = { email, displayName: match.displayName, pbiName: match.pbiName,
+                      role: match.role, picture: payload.picture,
+                      expires: Date.now() + SESSION_HRS * 3600000 };
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    fetch(TRACKER_URL, { method:'POST', body: JSON.stringify({ email: email }) }).catch(function(){});
-    showPortal(session);
-  } catch(e) { errorEl.style.color = '#ff8080'; errorEl.textContent = 'Could not verify access.'; }
+    fetch(TRACKER_URL, { method:'POST', body: JSON.stringify({ email }) }).catch(() => {});
+    showApp(session);
+  } catch(e) {
+    errorEl.style.color = '#ff8080';
+    errorEl.textContent = 'Could not verify access. Check your connection and try again.';
+  }
 }
 
-function showPortal(session) {
+function showApp(session) {
   document.getElementById('login-overlay').style.display = 'none';
-  document.getElementById('user-badge').style.display = 'flex';
-  document.getElementById('user-name').textContent = 'Welcome, ' + session.displayName;
-  if (session.picture) document.getElementById('user-avatar').src = session.picture;
+  document.getElementById('user-badge').style.display    = 'flex';
+  document.getElementById('user-name').textContent       = 'Welcome, ' + session.displayName;
+  const av = document.getElementById('user-avatar');
+  av.src = session.picture || ''; av.style.display = session.picture ? '' : 'none';
+  initApp();
 }
-
 function signOut() { localStorage.removeItem(SESSION_KEY); location.reload(); }
 
-(function() {
-  var raw = localStorage.getItem(SESSION_KEY);
-  if (!raw) return;
-  try { var s = JSON.parse(raw); if (Date.now() < s.expires) showPortal(s); } catch(e) {}
-})();
-
-// Well Data — fetched from API (sf\sqldev Ops_Reporting wbd_* tables)
+// ── API base (same loader as the rest of the portal) ────────────────────────
 var API_BASE = '';
-var WELL_DATA = {};   // { short_name: { full_record_with_versions } }, populated lazily on selection
-var WELL_NAMES = [];  // ['SHORT_NAME', ...] sorted, populated on page load
-var WELLS_WITH_DATA = {}; // {short_name: bool} — has WBD versions
-
 async function loadApiBase() {
   try {
     var res = await fetch('https://raw.githubusercontent.com/faenergyus/SCADA/main/beam/data/api_config.json?t=' + Date.now());
-    var cfg = await res.json();
-    API_BASE = cfg.apiBase || '';
-    console.log('API base:', API_BASE);
-  } catch (e) {
-    console.error('Could not load apiBase:', e);
-  }
+    API_BASE = (await res.json()).apiBase || '';
+  } catch (e) { console.error('Could not load apiBase:', e); }
 }
 
-function showApiBanner(msg) {
-  var existing = document.getElementById('api-error-banner');
-  if (existing) { existing.textContent = msg; return; }
-  var b = document.createElement('div');
-  b.id = 'api-error-banner';
-  b.style.cssText = 'background:#7f1d1d;color:#fee2e2;padding:10px 14px;border-radius:6px;margin:8px 0;font-size:0.85rem;line-height:1.4';
-  b.textContent = msg;
-  var wrap = document.querySelector('.page') || document.body;
-  wrap.insertBefore(b, wrap.firstChild);
-  // Reveal the wellDisplay too so the banner doesn't get hidden by display:none
-  var wd = document.getElementById('wellDisplay');
-  if (wd) wd.style.display = 'block';
-}
+// ── Well list + picker ──────────────────────────────────────────────────────
+var WELL_NAMES = [];
+var acIdx = -1;
 
 async function loadWellList() {
-  if (!API_BASE) { showApiBanner('No API base URL configured.'); return; }
-  try {
-    var res = await fetch(API_BASE + '/wbd/wells');
-    if (!res.ok) {
-      showApiBanner('Well list API returned HTTP ' + res.status + ' from ' + API_BASE + '/wbd/wells.');
-      return;
-    }
-    var json = await res.json();
-    var wells = json.wells || [];
-    WELL_NAMES = wells.map(function(w){ return w.sn; }).sort();
-    wells.forEach(function(w){
-      WELL_DATA[w.sn] = { fn: w.fn, sn: w.sn, api: w.api, co: w.co, stat: w.stat,
-                         ty: w.ty, loc: w.loc, has_wbd: w.has_wbd, v: null };
-      WELLS_WITH_DATA[w.sn] = w.has_wbd;
-    });
-    var countEl = document.getElementById('wellCount');
-    if (countEl) countEl.textContent = WELL_NAMES.length + ' wells';
-  } catch (e) {
-    console.error('Could not load wells:', e);
-  }
-}
-
-async function loadWellDetail(name) {
-  if (!API_BASE) return null;
-  try {
-    var res = await fetch(API_BASE + '/wbd/' + encodeURIComponent(name));
-    if (!res.ok) return null;
-    var w = await res.json();
-    WELL_DATA[name] = w;  // overwrite with full record (incl. versions)
-    return w;
-  } catch (e) {
-    console.error('Could not load well detail:', e);
-    return null;
-  }
-}
-
-var CAN_EDIT = false;
-
-async function loadWhoAmI() {
   if (!API_BASE) return;
   try {
-    var token = getToken();
-    var headers = token ? { 'Authorization': 'Bearer ' + token } : {};
-    var res = await fetch(API_BASE + '/wbd/whoami', { headers: headers });
-    var d = await res.json();
-    CAN_EDIT = !!d.can_edit;
-    // Stamp role into session so isEditor() works without re-fetch
-    try {
-      var s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
-      if (d.role) { s.role = d.role; localStorage.setItem(SESSION_KEY, JSON.stringify(s)); }
-    } catch(e) {}
-    // Re-show toolbar if a well is already loaded
-    if (currentWell) {
-      var t = document.getElementById('wbdToolbar');
-      if (t) t.style.display = CAN_EDIT ? 'block' : 'none';
-    }
-  } catch (e) { console.error('whoami failed:', e); }
+    var res = await fetch(API_BASE + '/wbd/wells');
+    var data = await res.json();
+    var wells = Array.isArray(data) ? data : (data.wells || []);
+    WELL_NAMES = wells.map(function(w){ return w.sn; }).filter(Boolean).sort();
+  } catch (e) { console.error('well list failed:', e); }
 }
 
-// Bootstrap: load API config + well list on page ready.
-// Supports deep-link via ?sn=<short_name> — auto-selects that well after the
-// list loads. Used by the SCADA map popup and panel iframes.
-//   ?embed=1            — strip page chrome (header, picker, login overlay)
-//   ?tab=wbd|history|equipment  — pre-select that sub-tab
-//   ?show=wbd|history|equipment — also hide the tab strip itself (single-section view)
-(async function() {
-  // Apply embed mode early so the chrome never flashes
-  try {
-    var qs = new URLSearchParams(window.location.search);
-    if (qs.get('embed') === '1') document.body.classList.add('embed');
-    var show = qs.get('show');
-    if (show) document.body.classList.add('only-' + show);
-  } catch(e) {}
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 
+async function initApp() {
   await loadApiBase();
   await loadWellList();
-  await loadWhoAmI();
+  var input = document.getElementById('wellInput');
+  input.disabled = false;
+  document.getElementById('wellCount').textContent = WELL_NAMES.length + ' wells';
+  wireAutocomplete();
+  // Deep link: ?sn= / ?well=
   try {
-    var qs2 = new URLSearchParams(window.location.search);
-    var sn = qs2.get('sn') || qs2.get('well') || qs2.get('short');
+    var qs = new URLSearchParams(window.location.search);
+    var sn = qs.get('sn') || qs.get('well') || qs.get('short');
     if (sn) {
-      var match = WELL_DATA[sn]
-        ? sn
-        : WELL_NAMES.find(function(n){ return n.toUpperCase() === sn.toUpperCase(); });
-      if (match) await selectWell(match);
+      var match = WELL_NAMES.find(function(n){ return n.toUpperCase() === sn.toUpperCase(); });
+      if (match) { input.value = match; selectWell(match); }
     }
-    var tab = qs2.get('tab') || qs2.get('show');
-    if (tab) switchTab(tab);
-  } catch (e) { console.warn('deep-link parse failed:', e); }
-})();
+  } catch (e) {}
+}
 
-// Autocomplete
-var input = document.getElementById('wellInput');
-var list  = document.getElementById('acList');
-var countEl = document.getElementById('wellCount');
-var acIdx = -1;
-countEl.textContent = WELL_NAMES.length + ' wells';
+function wireAutocomplete() {
+  var input = document.getElementById('wellInput');
+  var list  = document.getElementById('acList');
+  var countEl = document.getElementById('wellCount');
 
-input.addEventListener('input', function() {
-  var q = this.value.toUpperCase();
-  if (!q) { list.style.display = 'none'; countEl.textContent = WELL_NAMES.length + ' wells'; return; }
-  var matches = WELL_NAMES.filter(function(w) { return w.toUpperCase().indexOf(q) >= 0; }).slice(0, 30);
-  if (!matches.length) { list.style.display = 'none'; countEl.textContent = 'No matches'; return; }
-  list.innerHTML = matches.map(function(w) {
-    var hi = w.replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi'), '<mark>$1</mark>');
-    return '<div class="ac-item" data-val="' + w.replace(/"/g,'&quot;') + '">' + hi + '</div>';
-  }).join('');
-  list.style.display = 'block';
-  acIdx = -1;
-  countEl.textContent = matches.length + ' match' + (matches.length !== 1 ? 'es' : '');
-});
+  input.addEventListener('input', function() {
+    var q = this.value.toUpperCase();
+    if (!q) { list.style.display = 'none'; countEl.textContent = WELL_NAMES.length + ' wells'; return; }
+    var matches = WELL_NAMES.filter(function(w){ return w.toUpperCase().indexOf(q) >= 0; }).slice(0, 40);
+    if (!matches.length) { list.style.display = 'none'; countEl.textContent = 'No matches'; return; }
+    list.innerHTML = matches.map(function(w) {
+      var hi = esc(w).replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')','gi'), '<mark>$1</mark>');
+      return '<div class="ac-item" data-val="' + esc(w) + '">' + hi + '</div>';
+    }).join('');
+    list.style.display = 'block';
+    acIdx = -1;
+    countEl.textContent = matches.length + ' match' + (matches.length !== 1 ? 'es' : '');
+  });
 
-input.addEventListener('keydown', function(e) {
-  var items = list.querySelectorAll('.ac-item');
-  if (!items.length) return;
-  if (e.key === 'ArrowDown') { e.preventDefault(); acIdx = Math.min(acIdx + 1, items.length - 1); }
-  else if (e.key === 'ArrowUp') { e.preventDefault(); acIdx = Math.max(acIdx - 1, 0); }
-  else if (e.key === 'Enter' && acIdx >= 0) { e.preventDefault(); selectWell(items[acIdx].dataset.val); return; }
-  else return;
-  items.forEach(function(el, i) { el.classList.toggle('active', i === acIdx); });
-  if (items[acIdx]) items[acIdx].scrollIntoView({ block: 'nearest' });
-});
+  input.addEventListener('keydown', function(e) {
+    var items = list.querySelectorAll('.ac-item');
+    if (!items.length) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); acIdx = Math.min(acIdx + 1, items.length - 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); acIdx = Math.max(acIdx - 1, 0); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (acIdx >= 0) items[acIdx].click(); return; }
+    else return;
+    items.forEach(function(it, i){ it.classList.toggle('active', i === acIdx); });
+    items[acIdx].scrollIntoView({ block: 'nearest' });
+  });
 
-list.addEventListener('click', function(e) {
-  var item = e.target.closest('.ac-item');
-  if (item) selectWell(item.dataset.val);
-});
+  list.addEventListener('click', function(e) {
+    var item = e.target.closest('.ac-item');
+    if (!item) return;
+    var val = item.dataset.val;
+    input.value = val;
+    list.style.display = 'none';
+    selectWell(val);
+  });
 
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('.autocomplete-wrap')) list.style.display = 'none';
-});
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.picker')) list.style.display = 'none';
+  });
+}
+
+// ── Load + render the 4-field table ─────────────────────────────────────────
+function num(x) {
+  if (x == null) return NaN;
+  return parseFloat(String(x).replace(/[, ']/g, ''));
+}
 
 async function selectWell(name) {
-  input.value = name;
-  list.style.display = 'none';
-  countEl.textContent = 'Loading ' + name + '...';
-  // Fetch full record from API if we don't already have versions
-  var w = WELL_DATA[name];
-  if (!w || !w.v) {
-    w = await loadWellDetail(name);
-    if (!w) { countEl.textContent = 'Failed to load ' + name; return; }
-  }
-  countEl.textContent = 'Selected: ' + name;
-  renderWellInfo(name);
-}
+  var card  = document.getElementById('wellCard');
+  var title = document.getElementById('wellCardTitle');
+  var body  = document.getElementById('wellCardBody');
+  card.style.display = 'block';
+  title.textContent  = name;
+  body.innerHTML = '<div class="state-msg"><span class="spinner"></span>Loading…</div>';
 
-// Render
-function v(val) { return val || '\u2014'; }
-function vc(val) { return val ? 'data-val' : 'data-val empty'; }
-function esc(s) { if (s == null || s === '') return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-
-function casingCard(title, arr, color) {
-  if (!arr || arr.every(function(x) { return !x; })) return '';
-  return '<div class="data-card" style="border-left-color:' + color + '"><h3>' + title + '</h3>' +
-    '<div class="data-grid four">' +
-    '<div><div class="data-label">Depth</div><div class="' + vc(arr[0]) + '">' + v(arr[0]) + '</div></div>' +
-    '<div><div class="data-label">Size</div><div class="' + vc(arr[1]) + '">' + v(arr[1]) + '</div></div>' +
-    '<div><div class="data-label">Weight</div><div class="' + vc(arr[2]) + '">' + v(arr[2]) + '</div></div>' +
-    '<div><div class="data-label">Hole Size</div><div class="' + vc(arr[3]) + '">' + v(arr[3]) + '</div></div>' +
-    '</div></div>';
-}
-
-var currentWell = null;
-var currentVersionIdx = 0;
-
-// Merged timeline: schematics + workover events sorted by date desc
-function buildTimeline(w) {
-  var items = [];
-  (w.v || []).forEach(function(s, i) {
-    items.push({kind: 'schematic', idx: i, date: s.dt || '', label: '📋 ' + (s.st || 'Version') + (s.dt ? ' (' + s.dt + ')' : ''), data: s});
-  });
-  (w.events || []).forEach(function(e, i) {
-    var causeStr = e.failure_cause || '';
-    var compStr = e.failed_component ? ' — ' + e.failed_component : '';
-    var label = '⚙ Workover ' + (e.event_date || '') + (causeStr ? ' (' + causeStr + compStr + ')' : '');
-    items.push({kind: 'workover', idx: i, date: e.event_date || '', label: label, data: e});
-  });
-  items.sort(function(a, b) { return (b.date || '0').localeCompare(a.date || '0'); });
-  return items;
-}
-
-function renderWellInfo(name) {
-  var w = WELL_DATA[name];
-  if (!w) { w = {v:[], events:[]}; }
-  currentWell = w;
-  currentWell._name = name;
-  currentWell._timeline = buildTimeline(w);
-  document.getElementById('wellDisplay').style.display = 'block';
-  document.getElementById('wellHeader').style.display = 'none';
-  document.getElementById('wellGeneral').innerHTML = '';
-  document.getElementById('dataCards').innerHTML = '';
-
-  // Version selector populates from merged timeline
-  var timeline = currentWell._timeline;
-  var sel = document.getElementById('versionSelect');
-  var vDiv = document.getElementById('versionSelector');
-  if (timeline.length > 1) {
-    vDiv.style.display = 'block';
-    sel.innerHTML = '';
-    for (var i = 0; i < timeline.length; i++) {
-      var opt = document.createElement('option');
-      opt.value = i;
-      opt.textContent = timeline[i].label;
-      sel.appendChild(opt);
-    }
-  } else if (timeline.length === 1) {
-    vDiv.style.display = 'block';
-    sel.innerHTML = '<option>' + timeline[0].label + '</option>';
-  } else {
-    vDiv.style.display = 'none';
-  }
-
-  // Default to the most recent item in the timeline (timeline is sorted desc by date).
-  // This shows the latest known state: latest workover if newer than the latest schematic,
-  // else latest schematic. resolveSources() will pair it with the correct counterpart.
-  currentVersionIdx = timeline.length > 0 ? 0 : 0;
-  if (timeline.length > 0) sel.value = currentVersionIdx;
-  renderVersion();
-  // Job History: all workovers, doesn't depend on WBD version
-  renderJobHistoryFull(w);
-  // Tables tab has its own per-version dropdown — initialize it
-  setupTablesTab(w);
-  // Action toolbar lives on the Tables tab now; setupTablesTab() handles its visibility.
-  var expBtn = document.getElementById('btnExport');
-  if (expBtn) expBtn.style.display = 'inline-block';
-  document.getElementById('wellDisplay').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function isEditor() {
-  if (CAN_EDIT) return true;
   try {
-    var s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
-    var r = (s.role || '').toLowerCase();
-    return r === 'engineer' || r === 'admin' || r === 'tech';
-  } catch(e) { return false; }
-}
-function getToken() {
-  // SCADA pages save the Google JWT under session.credential; this page
-  // historically used session.token. After SESSION_KEY unification either
-  // can be present depending on which site signed the user in last.
-  try {
-    var s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
-    return s.token || s.credential || '';
-  } catch(e) { return ''; }
-}
-
-// ── WBD Editor ─────────────────────────────────────────────────────────────
-var EDITOR_FIELDS = {
-  casing:        [['casing_type','Type','select','Surface,Intermediate,Production,Liner,Open Hole'], ['size','Size'], ['weight','Weight'], ['grade','Grade'], ['set_depth','Set @','number'], ['hole_size','Hole Size'], ['cement_sacks','Sxs'], ['toc','TOC'], ['circ_to_surface','Circ'], ['notes','Notes']],
-  perforations:  [['top_depth','Top','number'], ['bottom_depth','Bottom','number'], ['spf','SPF'], ['zone','Zone'], ['perf_date','Date'], ['is_squeezed','Sq?','bool'], ['squeeze_date','Sq Date'], ['notes','Notes']],
-  plugs:         [['plug_type','Type','select','CIBP,Cement Plug,Bridge Plug,Retainer'], ['depth','Depth','number'], ['toc','TOC'], ['cement_sacks','Sxs'], ['notes','Notes']],
-  formation_tops:[['formation_name','Formation'], ['depth','Depth','number']],
-  tubing:        [['description','Description'], ['depth','Depth','number'], ['joints','Joints'], ['notes','Notes']],
-  rods:          [['description','Description'], ['count','Count'], ['length','Length'], ['depth','Depth','number'], ['notes','Notes']],
-};
-
-function openEditor(addMode) {
-  var w = currentWell;
-  if (!w) return;
-  var picked = (w._timeline || [])[currentVersionIdx];
-  if (!picked) return;
-  if (picked.kind !== 'schematic' && !addMode) {
-    alert('Pick a schematic version to edit (workover events come from Job Detail).');
-    return;
-  }
-
-  // Clone source = picked schematic if it's one, else most recent schematic
-  var clone = picked.kind === 'schematic' ? picked.data : null;
-  if (!clone) {
-    for (var i = 0; i < w._timeline.length; i++) {
-      if (w._timeline[i].kind === 'schematic') { clone = w._timeline[i].data; break; }
-    }
-  }
-
-  var meta;
-  if (addMode) {
-    var today = new Date().toISOString().slice(0, 10);
-    meta = { wbd_date: today, status: 'CURRENT', td: clone ? clone.td : '', pbtd: clone ? clone.pb : '' };
-  } else {
-    meta = { wbd_date: clone.dt || '', status: clone.st || 'CURRENT', td: clone.td || '', pbtd: clone.pb || '' };
-  }
-
-  window._editor = {
-    addMode: addMode,
-    cloneFromId: addMode ? (clone ? clone.id : null) : null,
-    editingId: addMode ? null : clone.id,
-    short: w.sn,
-    meta: meta,
-    casing: (clone ? clone.csg || [] : []).map(function(c){ return {casing_type:c.ty, size:c.sz, weight:c.wt, grade:c.gr, set_depth:c.dp, hole_size:c.hs, cement_sacks:c.cs, toc:c.tc, circ_to_surface:'', notes:''}; }),
-    perforations: (clone ? clone.pf || [] : []).map(function(p){ return {top_depth:p.td, bottom_depth:p.bd, spf:p.spf, zone:p.zn, perf_date:p.dt, is_squeezed:p.sq, squeeze_date:'', notes:''}; }),
-    plugs: (clone ? clone.pl || [] : []).map(function(p){ return {plug_type:p.ty, depth:p.dp, toc:p.tc, cement_sacks:p.cs, notes:''}; }),
-    formation_tops: (clone ? clone.ft || [] : []).map(function(f){ return {formation_name:f.fm, depth:f.dp}; }),
-    tubing: (clone ? clone.tb || [] : []).map(function(t){ return {description:t.desc, depth:t.dp, joints:t.jts, notes:''}; }),
-    rods:   (clone ? clone.rd || [] : []).map(function(r){ return {description:r.desc, count:r.cnt, length:r.len, depth:r.dp, notes:''}; }),
-  };
-  document.getElementById('wbdViewer').style.display = 'none';
-  document.getElementById('wbdEditor').style.display = 'block';
-  (document.getElementById('wbdToolbar')||{style:{}}).style.display = 'none';
-  renderEditor();
-}
-
-function renderEditor() {
-  var e = window._editor;
-  var html = '';
-  html += '<h3>' + (e.addMode ? 'Add New WBD Version' : 'Edit WBD Version #' + e.editingId) + '</h3>';
-  html += '<div class="ed-meta">';
-  html += '<div><label>Date</label><input type="text" id="ed_dt" value="' + esc(e.meta.wbd_date || '') + '" placeholder="YYYY-MM-DD"></div>';
-  html += '<div><label>Status</label><select id="ed_st"><option>CURRENT</option><option>PROPOSED</option><option>ORIGINAL</option><option>HISTORICAL</option></select></div>';
-  html += '<div><label>TD</label><input type="text" id="ed_td" value="' + esc(e.meta.td || '') + '"></div>';
-  html += '<div><label>PBTD</label><input type="text" id="ed_pb" value="' + esc(e.meta.pbtd || '') + '"></div>';
-  html += '</div>';
-
-  ['casing','perforations','plugs','formation_tops','tubing','rods'].forEach(function(group) {
-    html += '<h3>' + group.charAt(0).toUpperCase() + group.slice(1).replace('_', ' ') + '</h3>';
-    html += renderEditorTable(group);
-  });
-
-  html += '<div style="margin-top:18px;text-align:right;">'
-       + '<button type="button" class="wbd-btn secondary" onclick="cancelEditor()">Cancel</button>'
-       + '<button type="button" class="wbd-btn" onclick="saveEditor()">' + (e.addMode ? 'Save to WBD' : 'Save Changes') + '</button>'
-       + '</div>';
-  document.getElementById('wbdEditor').innerHTML = html;
-
-  // Set status select to current value
-  var stSel = document.getElementById('ed_st');
-  if (stSel && e.meta.status) {
-    if (![].slice.call(stSel.options).some(function(o){ return o.value === e.meta.status; })) {
-      var opt = document.createElement('option'); opt.value = e.meta.status; opt.textContent = e.meta.status;
-      stSel.appendChild(opt);
-    }
-    stSel.value = e.meta.status;
-  }
-}
-
-function renderEditorTable(group) {
-  var fields = EDITOR_FIELDS[group];
-  var rows = window._editor[group] || [];
-  var html = '<table class="ed-table"><thead><tr>';
-  fields.forEach(function(f) { html += '<th>' + esc(f[1]) + '</th>'; });
-  html += '<th style="width:30px;"></th></tr></thead><tbody>';
-  rows.forEach(function(row, idx) {
-    html += '<tr data-idx="' + idx + '">';
-    fields.forEach(function(f) {
-      var val = row[f[0]] == null ? '' : row[f[0]];
-      var type = f[2] || 'text';
-      if (type === 'select') {
-        var opts = (f[3] || '').split(',').map(function(o){ return '<option' + (o===val ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('');
-        html += '<td><select data-field="' + f[0] + '"><option></option>' + opts + '</select></td>';
-      } else if (type === 'bool') {
-        html += '<td><select data-field="' + f[0] + '"><option value="">—</option><option value="true"' + (val===true ? ' selected':'') + '>Yes</option><option value="false"' + (val===false ? ' selected':'') + '>No</option></select></td>';
-      } else {
-        html += '<td><input type="text" data-field="' + f[0] + '" value="' + esc(val) + '"></td>';
-      }
-    });
-    html += '<td class="row-del" onclick="delEditorRow(\'' + group + '\',' + idx + ')">×</td>';
-    html += '</tr>';
-  });
-  html += '</tbody></table>';
-  html += '<div class="ed-add-row" onclick="addEditorRow(\'' + group + '\')">+ Add ' + group.replace('_',' ') + ' row</div>';
-  return html;
-}
-
-function addEditorRow(group) { collectEditorState(); window._editor[group].push({}); renderEditor(); }
-function delEditorRow(group, idx) { collectEditorState(); window._editor[group].splice(idx, 1); renderEditor(); }
-
-function collectEditorState() {
-  var e = window._editor;
-  e.meta.wbd_date = document.getElementById('ed_dt').value;
-  e.meta.status   = document.getElementById('ed_st').value;
-  e.meta.td       = document.getElementById('ed_td').value;
-  e.meta.pbtd     = document.getElementById('ed_pb').value;
-  ['casing','perforations','plugs','formation_tops','tubing','rods'].forEach(function(group) {
-    var rows = [];
-    document.querySelectorAll('#wbdEditor h3 + .ed-table tbody tr').forEach(function(){});
-    var tables = document.querySelectorAll('#wbdEditor table.ed-table');
-    var groupIdx = ['casing','perforations','plugs','formation_tops','tubing','rods'].indexOf(group);
-    var tbl = tables[groupIdx];
-    if (!tbl) return;
-    tbl.querySelectorAll('tbody tr').forEach(function(tr) {
-      var rec = {};
-      tr.querySelectorAll('[data-field]').forEach(function(el) {
-        var v = el.value;
-        if (el.dataset.field === 'is_squeezed') v = v === 'true' ? true : v === 'false' ? false : null;
-        if (v === '') v = null;
-        rec[el.dataset.field] = v;
-      });
-      rows.push(rec);
-    });
-    e[group] = rows;
-  });
-}
-
-function cancelEditor() {
-  document.getElementById('wbdEditor').style.display = 'none';
-  document.getElementById('wbdEditor').innerHTML = '';
-  document.getElementById('wbdViewer').style.display = 'block';
-  (document.getElementById('wbdToolbar')||{style:{}}).style.display = 'block';
-  window._editor = null;
-}
-
-async function saveEditor() {
-  collectEditorState();
-  var e = window._editor;
-  if (!API_BASE) { alert('API not configured'); return; }
-  var token = getToken();
-  if (!token) { alert('Sign in again to save (token missing)'); return; }
-  var headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
-  try {
-    var url, method, body;
-    if (e.addMode) {
-      url = API_BASE + '/wbd/version';
-      method = 'POST';
-      body = JSON.stringify({ short: e.short, clone_from_wbd_id: e.cloneFromId, meta: e.meta });
-    } else {
-      url = API_BASE + '/wbd/version/' + e.editingId;
-      method = 'PUT';
-      body = JSON.stringify({ meta: e.meta, casing: e.casing, perforations: e.perforations, plugs: e.plugs, formation_tops: e.formation_tops, tubing: e.tubing, rods: e.rods });
-    }
-    var res = await fetch(url, { method: method, headers: headers, body: body });
+    if (!API_BASE) { await loadApiBase(); }
+    var res = await fetch(API_BASE + '/wbd/' + encodeURIComponent(name));
     if (!res.ok) {
-      var msg = await res.text();
-      alert('Save failed: ' + res.status + ' ' + msg);
+      body.innerHTML = '<div class="state-msg err">Could not load well (HTTP ' + res.status + ').</div>';
       return;
     }
-    var data = await res.json();
-    alert('Saved (wbd_id=' + data.wbd_id + ')');
-    // For ADD: do a second PUT with the full child rows so they get the new content the user entered
-    if (e.addMode && data.wbd_id) {
-      var put = await fetch(API_BASE + '/wbd/version/' + data.wbd_id, {
-        method: 'PUT', headers: headers,
-        body: JSON.stringify({ meta: e.meta, casing: e.casing, perforations: e.perforations, plugs: e.plugs, formation_tops: e.formation_tops, tubing: e.tubing, rods: e.rods })
-      });
-      if (!put.ok) { alert('Saved version but child rows failed: ' + await put.text()); return; }
-    }
-    // Reload well data and re-render
-    var fresh = await loadWellDetail(e.short);
-    cancelEditor();
-    if (fresh) renderWellInfo(e.short);
-  } catch (err) {
-    alert('Save error: ' + err);
-  }
-}
-
-async function exportWbd() {
-  var w = currentWell;
-  if (!w) { alert('Pick a well first'); return; }
-  var token = getToken();
-  if (!token) { alert('Sign in again to export'); return; }
-  var btn = document.getElementById('btnExport');
-  var orig = btn ? btn.textContent : 'Export';
-  if (btn) { btn.textContent = 'Building...'; btn.disabled = true; }
-  try {
-    var url = API_BASE + '/wbd/' + encodeURIComponent(w.sn) + '/export';
-    var res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
-    if (!res.ok) {
-      var msg = await res.text();
-      alert('Export failed: ' + res.status + ' ' + msg);
-      return;
-    }
-    // Pull filename from Content-Disposition
-    var cd = res.headers.get('Content-Disposition') || '';
-    var m = cd.match(/filename="([^"]+)"/);
-    var filename = m ? m[1] : ('WBD_' + w.sn.replace(/\W+/g,'_') + '.xlsx');
-    var blob = await res.blob();
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(a.href);
-  } catch (err) {
-    alert('Export error: ' + err);
-  } finally {
-    if (btn) { btn.textContent = orig; btn.disabled = false; }
-  }
-}
-
-// ── Upload-Job-with-Claude flow ──────────────────────────────────────────
-function buildJobPrompt(wellName) {
-  return [
-'You will receive a workover or rig job report (PDF, image, .docx, or pasted text).',
-'Extract structured fields and return ONLY a single JSON object — no surrounding text,',
-'no markdown fences, no explanation.',
-'',
-'Rules:',
-'- All values are strings unless noted. Use null when unknown.',
-'- Dates: YYYY-MM-DD (ISO).',
-'- Counts (rod / tubing joint counts, AFE, SPM): keep as numeric strings if shown.',
-'- Y/N flags: \'Y\' or \'N\' (or null if not addressed in the report).',
-'- well_name: full well name as shown (e.g. \'WEST EUMONT UNIT #130\'). The current well is shown below for reference.',
-'- failure_cause / secondary_cause: e.g. \'Mechanical\', \'Chemical\', \'Elective\'',
-'- failed_component: \'Pump\', \'Tubing\', \'Rods\', \'Casing\', etc.',
-'- pump_size keeps original format (e.g. \'2-1/2" x 1-1/2" x 20\\\'\')',
-'- summary: a concise post-job summary (D1: ..., D2: ..., format if multi-day).',
-'- For tubing/rods, populate the *_count_* fields with the running totals after this job.',
-'  Use the *_replaced_* fields only for what was changed THIS job.',
-'',
-'Current well (for context, override if the report names a different well): ' + (wellName || '(unknown)'),
-'',
-'JSON schema:',
-'{',
-'  "well_name":          str|null,',
-'  "start_date":         str(YYYY-MM-DD)|null,',
-'  "end_date":           str(YYYY-MM-DD)|null,    // REQUIRED',
-'  "failure_date":       str(YYYY-MM-DD)|null,',
-'  "afe":                str|null,                 // optional, will be auto-generated if omitted',
-'  "failure_cause":      str|null,',
-'  "secondary_cause":    str|null,',
-'  "failed_component":   str|null,',
-'  "component_detail":   str|null,',
-'  "failure_analysis":   str|null,',
-'  "pumping_unit":       str|null,',
-'  "spm":                str|null,',
-'  "pump_size":          str|null,',
-'  "pump_type":          str|null,',
-'  "pump_new":           "Y"|"N"|null,',
-'  "sn_depth":           str|null,',
-'  "tac_depth":          str|null,',
-'  "rods_1":             str|null, "rods_78": str|null, "rods_34": str|null,',
-'  "rods_58":            str|null, "rods_fg": str|null, "rods_sinker": str|null,',
-'  "rod_type":           str|null, "rod_couplers_new": str|null,',
-'  "rods_replaced_1":    str|null, "rods_replaced_78": str|null, "rods_replaced_34": str|null,',
-'  "rods_replaced_58":   str|null, "rods_replaced_fg": str|null, "rods_replaced_sinker": str|null,',
-'  "tbg_count_278":      str|null, "tbg_count_278_coated": str|null,',
-'  "tbg_count_238":      str|null, "tbg_count_238_coated": str|null,',
-'  "tbg_replaced_278":   str|null, "tbg_replaced_278_coated": str|null,',
-'  "tbg_replaced_238":   str|null, "tbg_replaced_238_coated": str|null,',
-'  "tbg_coating":        str|null,',
-'  "corrosion":          "Y"|"N"|null,',
-'  "pull_tubing":        "Y"|"N"|null,',
-'  "cleanout":           "Y"|"N"|null,',
-'  "acid":               "Y"|"N"|null,',
-'  "enduralloy":         str|null,',
-'  "summary":            str|null,',
-'  "job_type":           "Workover"|"Recompletion"|"Plug-back"|"New install"|"Pull"|"Stimulation"|"P&A"|null,',
-'  "perfs_added":        [{ "top_depth": str, "bottom_depth": str, "spf": str|null, "zone": str|null, "perf_date": str|null, "notes": str|null }],',
-'  "perfs_squeezed":     [{ "top_depth": str, "bottom_depth": str, "squeeze_date": str|null, "spf": str|null, "notes": str|null }],',
-'  "plugs_set":          [{ "plug_type": "CIBP"|"RBP"|"Cement plug"|"Iron cement retainer"|"Composite cement retainer"|"Composite plug"|"Frac plug"|"Bridge plug", "depth": str, "toc": str|null, "cement_sacks": str|null, "set_date": str|null, "notes": str|null }],',
-'  "plugs_drilled":      [{ "plug_type": str, "depth": str, "drilled_date": str|null, "notes": str|null }],',
-'  "liners_installed":   [{ "size": str, "weight": str|null, "set_top": str|null, "set_bottom": str, "hole_size": str|null, "cement_sxs": str|null, "toc": str|null, "set_date": str|null, "notes": str|null }],',
-'  "liners_pulled":      [{ "size": str|null, "set_top": str|null, "set_bottom": str|null, "pulled_date": str|null, "notes": str|null }],',
-'  "stimulation":        [{ "stim_type": "Acid"|"Soap acid"|"Xylene"|"Frac"|"Scale"|"Hot oil"|"Paraffin"|"Solvent"|"Methanol", "volume": str|null, "volume_unit": "gal"|"bbl"|"sxs"|null, "top_depth": str|null, "bottom_depth": str|null, "stim_date": str|null, "notes": str|null }]',
-'}',
-'',
-'Notes on action lists (these are arrays — empty [] is OK):',
-'- perfs_added: new perforations shot during this job. List each interval as its own row.',
-'- perfs_squeezed: existing perforations that were cement-squeezed during this job.',
-'- plugs_set: every CIBP, RBP, cement plug, retainer, frac plug, etc. set during this job.',
-'- plugs_drilled: any plugs (set previously) drilled or milled out during this job.',
-'- liners_installed/pulled: rare. Use only if a liner was actually run or pulled.',
-'- stimulation: every acid job, hot oil, scale treatment, etc. List each as a separate row.',
-'',
-'Return only the JSON object.'
-  ].join('\n');
-}
-
-function openPasteJobFromClaude() {
-  var w = currentWell;
-  document.getElementById('jobPromptText').value = buildJobPrompt(w ? w.fn : '');
-  document.getElementById('jobPasteJson').value = '';
-  document.getElementById('pasteJobErr').textContent = '';
-  document.getElementById('pasteJobModal').style.display = 'flex';
-}
-function closePasteJobModal() { document.getElementById('pasteJobModal').style.display = 'none'; }
-function copyJobPrompt() {
-  var ta = document.getElementById('jobPromptText');
-  ta.select(); ta.setSelectionRange(0, ta.value.length);
-  try { document.execCommand('copy'); } catch(e) {}
-  var btn = [].slice.call(document.querySelectorAll('#pasteJobModal button')).find(function(b){return b.textContent==='Copy prompt';});
-  if (btn) { btn.textContent = 'Copied ✓'; setTimeout(function(){ btn.textContent='Copy prompt'; }, 1500); }
-  window.getSelection().removeAllRanges();
-}
-
-// Parse Claude's JSON, validate, then open the review modal pre-filled
-function reviewJobFromClaude() {
-  var w = currentWell;
-  if (!w) { alert('Pick a well first'); return; }
-  var raw = document.getElementById('jobPasteJson').value.trim();
-  var errEl = document.getElementById('pasteJobErr');
-  errEl.textContent = '';
-  if (!raw) { errEl.textContent = 'Paste the JSON from Claude.'; return; }
-  raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-  var data;
-  try { data = JSON.parse(raw); }
-  catch(e) { errEl.textContent = 'Not valid JSON: ' + e.message; return; }
-
-  if (!data.well_name) data.well_name = w.fn;
-
-  closePasteJobModal();
-  openReviewJobModal(data);
-}
-
-// Manual add — open the review modal blank (no Claude). Same fields as Claude path,
-// including all extended sections (perfs, plugs, liners, stim, job_type).
-function openManualJobAdd() {
-  var w = currentWell;
-  if (!w) { alert('Pick a well first'); return; }
-  var today = new Date().toISOString().slice(0, 10);
-  openReviewJobModal({
-    well_name: w.fn,
-    end_date:  today,
-    perfs_added: [], perfs_squeezed: [],
-    plugs_set: [], plugs_drilled: [],
-    liners_installed: [], liners_pulled: [],
-    stimulation: []
-  });
-}
-
-// Open an existing Job History row in the review modal — pre-filled with both
-// [Job Detail] fields and the /extended action lists, so engineers can fill in
-// perfs/plugs/liners/stim/job_type retroactively or correct anything mis-parsed.
-// IMPORTANT: only include keys that actually have values from the events feed —
-// empty strings would overwrite existing DB values on save (the API does
-// targeted UPDATE on every key sent).
-async function openExistingJobForEdit(eventRow) {
-  var w = currentWell;
-  if (!w || !eventRow) return;
-  var token = getToken();
-  if (!token) { alert('Sign in again to edit'); return; }
-  var xkey = eventRow.job_xkey;
-  var data = { well_name: w.fn };
-  // Map event_date → end_date (xKey is built from end_date; this drives upsert match)
-  if (eventRow.event_date) data.end_date = eventRow.event_date;
-  // Copy only non-null/non-empty scalar fields so we don't blank existing values.
-  // Stash xkey/has_report as `_`-prefixed so the modal can show a 'View Report'
-  // link without including them in the save payload (saveReviewedJob filters those).
-  if (eventRow.job_xkey)  data._job_xkey  = eventRow.job_xkey;
-  if (eventRow.has_report) data._has_report = true;
-  Object.keys(eventRow).forEach(function(k) {
-    if (k === 'event_date' || k === 'job_xkey' || k === 'well_name_raw' || k === 'sn'
-        || k === 'has_report') return;
-    var v = eventRow[k];
-    if (v === null || v === undefined || v === '') return;
-    data[k] = v;
-  });
-  // Default empty extended arrays so the section renders even before fetch resolves
-  data.perfs_added = []; data.perfs_squeezed = [];
-  data.plugs_set = []; data.plugs_drilled = [];
-  data.liners_installed = []; data.liners_pulled = [];
-  data.stimulation = [];
-  // Fetch extended (perfs/plugs/liners/stim/job_type) and merge in
-  if (xkey) {
-    try {
-      var res = await fetch(API_BASE + '/wbd/workover/' + encodeURIComponent(xkey) + '/extended', {
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
-      if (res.ok) {
-        var ext = await res.json();
-        if (ext.job_type) data.job_type = ext.job_type;
-        data.perfs_added     = ext.perfs_added     || [];
-        data.perfs_squeezed  = ext.perfs_squeezed  || [];
-        data.plugs_set       = ext.plugs_set       || [];
-        data.plugs_drilled   = ext.plugs_drilled   || [];
-        data.liners_installed= ext.liners_installed|| [];
-        data.liners_pulled   = ext.liners_pulled   || [];
-        data.stimulation     = ext.stimulation     || [];
-      }
-    } catch (e) { /* fall through with empty extended arrays */ }
-  }
-  openReviewJobModal(data);
-}
-
-// Field schema for the review modal — groups + labels
-var REVIEW_GROUPS = [
-  { title: 'Job', fields: [
-    ['well_name',       'Well Name',     'text',     56],
-    ['start_date',      'Start',         'date',     18],
-    ['end_date',        'End *',         'date',     18],
-    ['failure_date',    'Failure Date',  'date',     18],
-    ['afe',             'AFE',           'text',     14],
-    ['job_type',        'Job Type',      'select',   16, ['','Workover','Recompletion','Plug-back','New install','Pull','Stimulation','P&A']],
-  ]},
-  { title: 'Failure', fields: [
-    ['failure_cause',     'Failure Cause',     'text', 22],
-    ['secondary_cause',   'Secondary Cause',   'text', 22],
-    ['failed_component',  'Failed Component',  'text', 22],
-    ['component_detail',  'Component Detail',  'text', 30],
-    ['failure_analysis',  'Analysis / Changes','text', 30],
-  ]},
-  { title: 'Pump', fields: [
-    ['pump_size',     'Pump Size',     'text', 22],
-    ['pump_type',     'Pump Type',     'text', 14],
-    ['pump_new',      'Pump New?',     'yn',   8],
-    ['pumping_unit',  'Pumping Unit',  'text', 22],
-    ['spm',           'SPM',           'text', 8],
-  ]},
-  { title: 'Tubing', fields: [
-    ['tbg_count_278',           '2-7/8" jts',           'text', 10],
-    ['tbg_count_278_coated',    '2-7/8" coated',        'text', 10],
-    ['tbg_count_238',           '2-3/8" jts',           'text', 10],
-    ['tbg_count_238_coated',    '2-3/8" coated',        'text', 10],
-    ['tbg_coating',             'Coating',              'text', 14],
-    ['sn_depth',                'SN depth',             'text', 10],
-    ['tac_depth',               'TAC depth',            'text', 10],
-    ['tbg_replaced_278',        'Repl 2-7/8"',          'text', 10],
-    ['tbg_replaced_278_coated', 'Repl 2-7/8" coated',   'text', 10],
-    ['tbg_replaced_238',        'Repl 2-3/8"',          'text', 10],
-    ['tbg_replaced_238_coated', 'Repl 2-3/8" coated',   'text', 10],
-  ]},
-  { title: 'Rods', fields: [
-    ['rods_1',              '1"',                'text', 8],
-    ['rods_78',             '7/8"',              'text', 8],
-    ['rods_34',             '3/4"',              'text', 8],
-    ['rods_58',             '5/8"',              'text', 8],
-    ['rods_fg',             'FG',                'text', 8],
-    ['rods_sinker',         'Sinker',            'text', 8],
-    ['rod_type',            'Type',              'text', 12],
-    ['rod_couplers_new',    'New couplers',      'text', 10],
-    ['rods_replaced_1',     'Repl 1"',           'text', 8],
-    ['rods_replaced_78',    'Repl 7/8"',         'text', 8],
-    ['rods_replaced_34',    'Repl 3/4"',         'text', 8],
-    ['rods_replaced_58',    'Repl 5/8"',         'text', 8],
-    ['rods_replaced_fg',    'Repl FG',           'text', 8],
-    ['rods_replaced_sinker','Repl sinker',       'text', 8],
-  ]},
-  { title: 'Flags', fields: [
-    ['corrosion',     'Corrosion',    'yn',   8],
-    ['pull_tubing',   'Pull tubing',  'yn',   8],
-    ['cleanout',      'Cleanout',     'yn',   8],
-    ['acid',          'Acid',         'yn',   8],
-    ['enduralloy',    'Enduralloy',   'text', 8],
-  ]},
-];
-var REVIEW_BUFFER = {};
-
-function openReviewJobModal(data) {
-  REVIEW_BUFFER = Object.assign({}, data);
-  var div = document.getElementById('reviewJobForm');
-  var html = '';
-  // Top banner: well name + (if known) a clickable link to the original
-  // workover-report XLSX. Link calls downloadReport() which streams from the
-  // backend with the auth bearer token.
-  if (data._has_report && data._job_xkey) {
-    html += '<div style="margin:0 0 12px;padding:8px 12px;background:#eef6ee;'
-         +  'border-left:4px solid #3a8a3a;border-radius:3px;display:flex;'
-         +  'justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">'
-         +  '<div style="font-weight:700;color:#1c4a1c;font-size:1rem;">' + esc(data.well_name || '') + '</div>'
-         +  '<button type="button" onclick="downloadReport(event,\''
-         +  encodeURIComponent(data._job_xkey) + '\')" '
-         +  'style="background:#1c4a1c;color:#fff;border:none;border-radius:3px;'
-         +  'padding:6px 14px;font-size:0.85rem;cursor:pointer;">📎 View Job Report</button>'
-         +  '</div>';
-  } else if (data.well_name) {
-    html += '<div style="margin:0 0 12px;font-weight:700;color:#1c4a1c;font-size:1rem;">'
-         +  esc(data.well_name) + '</div>';
-  }
-  REVIEW_GROUPS.forEach(function(g) {
-    html += '<h3 style="margin:14px 0 6px;color:#1c4a1c;font-size:0.95rem;">' + esc(g.title) + '</h3>';
-    html += '<div style="display:flex;flex-wrap:wrap;gap:10px;">';
-    g.fields.forEach(function(f) {
-      var key = f[0], label = f[1], kind = f[2], width = f[3];
-      var val = data[key];
-      if (val == null) val = '';
-      html += '<div style="flex:0 0 auto;">'
-            + '<label style="font-size:0.72rem;color:#555;font-weight:600;display:block;">' + esc(label) + '</label>';
-      if (kind === 'yn') {
-        html += '<select data-key="' + key + '" oninput="reviewOnChange(event)" style="padding:4px 6px;border:1px solid #c0c0c0;border-radius:3px;font-size:0.85rem;">'
-              + '<option value=""'  + (val===''  ? ' selected':'') + '>—</option>'
-              + '<option value="Y"' + (val==='Y' ? ' selected':'') + '>Y</option>'
-              + '<option value="N"' + (val==='N' ? ' selected':'') + '>N</option>'
-              + '</select>';
-      } else if (kind === 'select') {
-        var opts = f[4] || [];
-        html += '<select data-key="' + key + '" oninput="reviewOnChange(event)" style="padding:4px 6px;border:1px solid #c0c0c0;border-radius:3px;font-size:0.85rem;width:' + (width * 9) + 'px;">';
-        opts.forEach(function(o) {
-          html += '<option value="' + esc(o) + '"' + (val === o ? ' selected' : '') + '>' + (o === '' ? '—' : esc(o)) + '</option>';
-        });
-        html += '</select>';
-      } else {
-        html += '<input type="' + (kind === 'date' ? 'date' : 'text') + '" data-key="' + key + '" value="' + esc(val) + '" oninput="reviewOnChange(event)" style="padding:4px 6px;border:1px solid #c0c0c0;border-radius:3px;font-size:0.85rem;width:' + (width * 8) + 'px;">';
-      }
-      html += '</div>';
-    });
-    html += '</div>';
-  });
-
-  // Action-list mini-tables (perfs added/squeezed, plugs set/drilled, liners installed/pulled, stim)
-  html += renderActionListSection('perfs_added', 'Perfs added', [
-    ['top_depth','Top'], ['bottom_depth','Bottom'], ['spf','SPF'], ['zone','Zone'],
-    ['perf_date','Date'], ['notes','Notes']
-  ], data.perfs_added || []);
-  html += renderActionListSection('perfs_squeezed', 'Perfs squeezed', [
-    ['top_depth','Top'], ['bottom_depth','Bottom'], ['squeeze_date','Date'],
-    ['spf','SPF'], ['notes','Notes']
-  ], data.perfs_squeezed || []);
-  html += renderActionListSection('plugs_set', 'Plugs set', [
-    ['plug_type','Type','plug_select'], ['depth','Depth'], ['toc','TOC'],
-    ['cement_sacks','Sxs'], ['set_date','Date'], ['notes','Notes']
-  ], data.plugs_set || []);
-  html += renderActionListSection('plugs_drilled', 'Plugs drilled out', [
-    ['plug_type','Type','plug_select'], ['depth','Depth'], ['drilled_date','Date'], ['notes','Notes']
-  ], data.plugs_drilled || []);
-  html += renderActionListSection('liners_installed', 'Liners installed', [
-    ['size','Size'], ['weight','Wt'], ['set_top','Top'], ['set_bottom','Bottom'],
-    ['hole_size','Hole'], ['cement_sxs','Sxs'], ['toc','TOC'], ['set_date','Date'], ['notes','Notes']
-  ], data.liners_installed || []);
-  html += renderActionListSection('liners_pulled', 'Liners pulled', [
-    ['size','Size'], ['set_top','Top'], ['set_bottom','Bottom'], ['pulled_date','Date'], ['notes','Notes']
-  ], data.liners_pulled || []);
-  html += renderActionListSection('stimulation', 'Stimulation', [
-    ['stim_type','Type','stim_select'], ['volume','Vol'], ['volume_unit','Unit','vol_unit_select'],
-    ['top_depth','Top'], ['bottom_depth','Bot'], ['stim_date','Date'], ['notes','Notes']
-  ], data.stimulation || []);
-
-  // Summary as full-width textarea
-  html += '<h3 style="margin:14px 0 6px;color:#1c4a1c;font-size:0.95rem;">Summary</h3>'
-        + '<textarea data-key="summary" oninput="reviewOnChange(event)" style="width:100%;min-height:120px;font-family:Consolas,monospace;font-size:0.82rem;padding:8px;border:1px solid #c0c0c0;border-radius:3px;">'
-        + esc(data.summary || '') + '</textarea>';
-
-  div.innerHTML = html;
-  document.getElementById('reviewJobErr').textContent = '';
-  document.getElementById('reviewJobModal').style.display = 'flex';
-}
-
-var PLUG_OPTS = ['','CIBP','RBP','Cement plug','Iron cement retainer','Composite cement retainer','Composite plug','Frac plug','Bridge plug'];
-var STIM_OPTS = ['','Acid','Soap acid','Xylene','Frac','Scale','Hot oil','Paraffin','Solvent','Methanol'];
-var VOL_UNIT_OPTS = ['','gal','bbl','sxs','qts','drums'];
-
-function renderActionListSection(arrayKey, title, columns, rows) {
-  var html = '<h3 style="margin:14px 0 6px;color:#1c4a1c;font-size:0.95rem;">' + esc(title)
-           + ' <span style="font-size:0.75rem;color:#888;font-weight:normal;">(' + rows.length + ')</span>'
-           + ' <button type="button" class="wbd-btn secondary" style="padding:2px 8px;font-size:0.75rem;" onclick="reviewAddRow(\'' + arrayKey + '\')">+ Add row</button></h3>'
-           + '<div style="overflow-x:auto;border:1px solid #e0e0e0;background:#fff;margin-bottom:8px;">'
-           + '<table class="ed-table" style="margin:0;"><thead><tr>';
-  columns.forEach(function(c){ html += '<th>' + esc(c[1]) + '</th>'; });
-  html += '<th style="width:30px;"></th></tr></thead><tbody>';
-  if (rows.length === 0) {
-    html += '<tr><td colspan="' + (columns.length+1) + '" style="text-align:center;color:#aaa;font-style:italic;padding:6px;">— no rows —</td></tr>';
-  }
-  rows.forEach(function(r, idx){
-    html += '<tr>';
-    columns.forEach(function(c){
-      var fkey = c[0], kind = c[2] || 'text';
-      var v = r[fkey] == null ? '' : r[fkey];
-      if (kind === 'plug_select' || kind === 'stim_select' || kind === 'vol_unit_select') {
-        var opts = kind === 'plug_select' ? PLUG_OPTS : kind === 'stim_select' ? STIM_OPTS : VOL_UNIT_OPTS;
-        html += '<td><select onchange="reviewActionChange(\'' + arrayKey + '\',' + idx + ',\'' + fkey + '\',event)">';
-        opts.forEach(function(o) {
-          html += '<option value="' + esc(o) + '"' + (v === o ? ' selected' : '') + '>' + (o === '' ? '—' : esc(o)) + '</option>';
-        });
-        html += '</select></td>';
-      } else {
-        html += '<td><input type="text" value="' + esc(v) + '" oninput="reviewActionChange(\'' + arrayKey + '\',' + idx + ',\'' + fkey + '\',event)"></td>';
-      }
-    });
-    html += '<td class="row-del" onclick="reviewDeleteRow(\'' + arrayKey + '\',' + idx + ')">×</td>';
-    html += '</tr>';
-  });
-  html += '</tbody></table></div>';
-  return html;
-}
-
-function reviewActionChange(arrayKey, idx, field, ev) {
-  if (!REVIEW_BUFFER[arrayKey]) REVIEW_BUFFER[arrayKey] = [];
-  if (!REVIEW_BUFFER[arrayKey][idx]) REVIEW_BUFFER[arrayKey][idx] = {};
-  REVIEW_BUFFER[arrayKey][idx][field] = ev.target.value;
-}
-function reviewAddRow(arrayKey) {
-  if (!REVIEW_BUFFER[arrayKey]) REVIEW_BUFFER[arrayKey] = [];
-  REVIEW_BUFFER[arrayKey].push({});
-  openReviewJobModal(REVIEW_BUFFER);  // re-render with the new row visible
-}
-function reviewDeleteRow(arrayKey, idx) {
-  if (!REVIEW_BUFFER[arrayKey]) return;
-  REVIEW_BUFFER[arrayKey].splice(idx, 1);
-  openReviewJobModal(REVIEW_BUFFER);
-}
-
-function reviewOnChange(ev) {
-  var key = ev.target.dataset.key;
-  if (!key) return;
-  REVIEW_BUFFER[key] = ev.target.value;
-}
-
-function closeReviewJobModal() {
-  document.getElementById('reviewJobModal').style.display = 'none';
-  REVIEW_BUFFER = {};
-}
-
-async function saveReviewedJob() {
-  var w = currentWell;
-  if (!w) return;
-  // Strip `_`-prefixed UI-only keys (e.g. _job_xkey, _has_report) — the backend
-  // doesn't know about these and including them would either be ignored or
-  // mis-interpreted.
-  var data = {};
-  Object.keys(REVIEW_BUFFER).forEach(function(k) {
-    if (!k.startsWith('_')) data[k] = REVIEW_BUFFER[k];
-  });
-  var errEl = document.getElementById('reviewJobErr');
-  errEl.textContent = '';
-  if (!data.end_date) { errEl.textContent = 'End date is required (YYYY-MM-DD).'; return; }
-  if (!data.well_name) data.well_name = w.fn;
-  data.short = w.sn;
-
-  var token = getToken();
-  if (!token) { alert('Sign in again to save'); return; }
-
-  try {
-    var res = await fetch(API_BASE + '/wbd/workover', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify(data)
-    });
-    if (!res.ok) {
-      errEl.textContent = 'Save failed: ' + res.status + ' ' + (await res.text());
-      return;
-    }
-    var resp = await res.json();
-    closeReviewJobModal();
-    var fresh = await loadWellDetail(w.sn);
-    if (fresh) renderWellInfo(w.sn);
-    alert('Job ' + resp.action + ' (AFE ' + (resp.afe || 'n/a') + ')');
-  } catch (err) {
-    errEl.textContent = 'Error: ' + err;
-  }
-}
-
-// ── Paste-from-Claude flow ────────────────────────────────────────────────
-// Users with their own Claude (claude.ai / Desktop) drop a WBD or rig-report PDF
-// into Claude, paste the prompt below, and Claude returns JSON. They paste that
-// JSON here and the editor opens pre-filled — same path as the server upload.
-function buildClaudePrompt(wellName) {
-  return [
-'You will receive a wellbore diagram (WBD) or rig job report. Extract structured data',
-'and return ONLY a single JSON object matching the schema below — no surrounding text,',
-'no markdown fences, no explanation.',
-'',
-'Conventions:',
-'- All values are STRINGS (preserve original formatting like \'8-5/8"\', \'24#\', \'4,250\').',
-'  Use null when unknown. Numbers and booleans only where noted.',
-'- meta.status: \'CURRENT\' for the active diagram. Use the document\'s stated status if shown.',
-'- meta.wbd_date: YYYY-MM-DD if available; else YYYY-MM; else null. Often noted at the bottom of the WBD.',
-'- meta.td / meta.pbtd: total depth / plug-back total depth as shown.',
-'- casing.casing_type: one of \'Surface\', \'Intermediate\', \'Production\', \'Liner\' based on size + depth.',
-'  (largest size + shallowest set = Surface; smallest = Liner)',
-'- perforations: ONE row per discrete depth interval. If the WBD lists multiple single-shot',
-'  depths at one SPF (e.g. \'4003\', \'4007\', \'4063\', 1 JSPF), output each as its own row',
-'  with top_depth = bottom_depth = that depth.',
-'- tubing: one row per component (jts, SN, TAC, MA, perf\'d sub, KB, wellhead) in run order.',
-'  depth = cumulative running depth shown.',
-'- rods: only populate if rod string detail is shown (count + size + length).',
-'- formation_tops, plugs: only if shown.',
-'- is_squeezed: boolean; null if unknown.',
-'',
-'Well name (for context): ' + (wellName || '(unknown)'),
-'',
-'JSON schema:',
-'{',
-'  "meta":           { "wbd_date": str|null, "status": str|null, "td": str|null, "pbtd": str|null },',
-'  "casing":         [{ "casing_type", "size", "weight", "grade", "set_depth", "hole_size", "cement_sacks", "toc", "circ_to_surface", "notes" }],',
-'  "perforations":   [{ "top_depth", "bottom_depth", "spf", "zone", "perf_date", "is_squeezed" (bool|null), "squeeze_date", "notes" }],',
-'  "plugs":          [{ "plug_type", "depth", "toc", "cement_sacks", "notes" }],',
-'  "formation_tops": [{ "formation_name", "depth" }],',
-'  "tubing":         [{ "description", "depth", "joints", "notes" }],',
-'  "rods":           [{ "description", "count", "length", "depth", "notes" }]',
-'}',
-'',
-'Return only the JSON object.'
-  ].join('\n');
-}
-
-function openPasteFromClaude() {
-  var w = currentWell;
-  document.getElementById('claudePromptText').value = buildClaudePrompt(w ? w.fn : '');
-  document.getElementById('claudePasteJson').value = '';
-  document.getElementById('pasteFromClaudeErr').textContent = '';
-  document.getElementById('pasteFromClaudeModal').style.display = 'flex';
-}
-function closePasteFromClaude() {
-  document.getElementById('pasteFromClaudeModal').style.display = 'none';
-}
-function copyClaudePrompt() {
-  var ta = document.getElementById('claudePromptText');
-  ta.select();
-  ta.setSelectionRange(0, ta.value.length);
-  try {
-    document.execCommand('copy');
-    var btns = document.querySelectorAll('#pasteFromClaudeModal .wbd-btn.secondary');
-    if (btns.length) {
-      var orig = btns[0].textContent;
-      // Find specifically the copy button by text
-    }
-    var copyBtn = [].slice.call(document.querySelectorAll('#pasteFromClaudeModal button')).find(function(b){return b.textContent === 'Copy prompt';});
-    if (copyBtn) {
-      copyBtn.textContent = 'Copied ✓';
-      setTimeout(function(){ copyBtn.textContent = 'Copy prompt'; }, 1500);
-    }
-  } catch(e) {}
-  window.getSelection().removeAllRanges();
-}
-
-function parseFromClaude() {
-  var w = currentWell;
-  if (!w) { alert('Pick a well first'); return; }
-  var raw = document.getElementById('claudePasteJson').value.trim();
-  var errEl = document.getElementById('pasteFromClaudeErr');
-  errEl.textContent = '';
-  if (!raw) { errEl.textContent = 'Paste the JSON output from Claude.'; return; }
-  // Strip ``` fences if user copied them
-  raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-  var data;
-  try { data = JSON.parse(raw); }
-  catch(e) { errEl.textContent = 'Not valid JSON: ' + e.message; return; }
-  // Validate top-level shape
-  var required = ['meta','casing','perforations','plugs','formation_tops','tubing','rods'];
-  for (var i = 0; i < required.length; i++) {
-    if (!(required[i] in data)) { errEl.textContent = 'Missing key: ' + required[i]; return; }
-  }
-  if (typeof data.meta !== 'object' || data.meta === null) { errEl.textContent = 'meta must be an object'; return; }
-
-  // Find latest schematic to clone-from (so we can carry forward existing tubing/rod arrays
-  // not touched by the upload)
-  var clone = null;
-  for (var j = 0; j < (w._timeline || []).length; j++) {
-    if (w._timeline[j].kind === 'schematic') { clone = w._timeline[j].data; break; }
-  }
-  // Open editor in add-mode pre-filled with parsed data
-  var today = new Date().toISOString().slice(0, 10);
-  window._editor = {
-    addMode: true,
-    cloneFromId: clone ? clone.id : null,
-    editingId: null,
-    short: w.sn,
-    meta: {
-      wbd_date: data.meta.wbd_date || today,
-      status:   data.meta.status   || 'CURRENT',
-      td:       data.meta.td       || (clone ? clone.td : ''),
-      pbtd:     data.meta.pbtd     || (clone ? clone.pb : ''),
-    },
-    casing:         (data.casing         || []),
-    perforations:   (data.perforations   || []),
-    plugs:          (data.plugs          || []),
-    formation_tops: (data.formation_tops || []),
-    tubing:         (data.tubing         || []),
-    rods:           (data.rods           || []),
-  };
-  closePasteFromClaude();
-  // Switch to WBD tab so the editor surfaces (existing wbdEditor div lives there)
-  switchTab('wbd');
-  document.getElementById('wbdViewer').style.display = 'none';
-  document.getElementById('wbdEditor').style.display = 'block';
-  (document.getElementById('wbdToolbar')||{style:{}}).style.display = 'none';
-  renderEditor();
-  var banner = document.createElement('div');
-  banner.style.cssText = 'background:#fff8d8;border:1px solid #d8c060;padding:8px 12px;border-radius:4px;margin-bottom:12px;font-size:0.85rem;';
-  banner.textContent = 'Pasted from Claude — review and adjust below, then click "Save to WBD" to commit, or "Cancel" to discard.';
-  var ed = document.getElementById('wbdEditor');
-  if (ed.firstChild) ed.insertBefore(banner, ed.firstChild);
-  else ed.appendChild(banner);
-}
-
-async function uploadWbdFile(inputEl) {
-  var file = inputEl.files[0];
-  if (!file) return;
-  var w = currentWell;
-  if (!w) { alert('Pick a well first'); return; }
-  var token = getToken();
-  if (!token) { alert('Sign in again to upload'); inputEl.value = ''; return; }
-
-  var btn = document.getElementById('btnUpload');
-  var original = btn ? btn.textContent : 'Upload';
-  if (btn) { btn.textContent = 'Parsing...'; btn.disabled = true; }
-  try {
-    var fd = new FormData();
-    fd.append('file', file);
-    fd.append('short', w.sn);
-    var res;
-    async function doFetch() {
-      return await fetch(API_BASE + '/wbd/parse', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token },
-        body: fd
-      });
-    }
-    try {
-      res = await doFetch();
-    } catch (netErr) {
-      // Network/CORS failure — apiBase may be stale (tunnel rotated). Refresh and retry once.
-      console.warn('First fetch failed, refreshing apiBase:', netErr);
-      await loadApiBase();
-      // FormData is single-use after a failed POST; rebuild
-      fd = new FormData();
-      fd.append('file', file);
-      fd.append('short', w.sn);
-      res = await doFetch();
-    }
-    if (!res.ok) {
-      var msg = await res.text();
-      alert('Parse failed: ' + res.status + ' ' + msg);
-      return;
-    }
-    var data = await res.json();
-    if (data.version_count_in_file > 1) {
-      var ok = confirm('File contained ' + data.version_count_in_file + ' WBD versions. Showing the most recent. Continue?');
-      if (!ok) return;
-    }
-    // Find latest schematic for clone_from id (so existing tubing/rod data is retained
-    // unless overwritten by the upload)
-    var clone = null;
-    for (var i = 0; i < (w._timeline || []).length; i++) {
-      if (w._timeline[i].kind === 'schematic') { clone = w._timeline[i].data; break; }
-    }
-    // Open editor in add-mode pre-filled with parsed data
-    window._editor = {
-      addMode: true,
-      cloneFromId: clone ? clone.id : null,
-      editingId: null,
-      short: w.sn,
-      meta: {
-        wbd_date: data.meta.wbd_date || new Date().toISOString().slice(0, 10),
-        status:   data.meta.status   || 'CURRENT',
-        td:       data.meta.td       || (clone ? clone.td : ''),
-        pbtd:     data.meta.pbtd     || (clone ? clone.pb : ''),
-      },
-      casing:         (data.casing         || []).map(function(c){ return c; }),
-      perforations:   (data.perforations   || []).map(function(p){ return p; }),
-      plugs:          (data.plugs          || []).map(function(p){ return p; }),
-      formation_tops: (data.formation_tops || []).map(function(f){ return f; }),
-      tubing:         (data.tubing         || []).map(function(t){ return t; }),
-      rods:           (data.rods           || []).map(function(r){ return r; }),
-    };
-    document.getElementById('wbdViewer').style.display = 'none';
-    document.getElementById('wbdEditor').style.display = 'block';
-    (document.getElementById('wbdToolbar')||{style:{}}).style.display = 'none';
-    renderEditor();
-    // Banner above the form so user knows it's parsed-pending-save
-    var banner = document.createElement('div');
-    banner.style.cssText = 'background:#fff8d8;border:1px solid #d8c060;padding:8px 12px;border-radius:4px;margin-bottom:12px;font-size:0.85rem;';
-    banner.textContent = 'Parsed from ' + (data.filename || 'uploaded file') + ' — review below and click "Create Version" to save, or "Cancel" to discard.';
-    document.getElementById('wbdEditor').insertBefore(banner, document.getElementById('wbdEditor').firstChild);
-  } catch (err) {
-    alert('Upload error: ' + err);
-  } finally {
-    if (btn) { btn.textContent = original; btn.disabled = false; }
-    inputEl.value = '';   // reset so same file can be re-picked
-  }
-}
-
-async function deleteVersion() {
-  var w = currentWell;
-  if (!w) return;
-  var picked = (w._timeline || [])[currentVersionIdx];
-  if (!picked || picked.kind !== 'schematic') { alert('Pick a schematic version to delete.'); return; }
-  if (!confirm('Soft-delete WBD version ' + (picked.data.st || '') + ' ' + (picked.data.dt || '') + '? It can be restored from SQL.')) return;
-  var token = getToken();
-  if (!token) { alert('Sign in again to delete'); return; }
-  try {
-    var res = await fetch(API_BASE + '/wbd/version/' + picked.data.id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
-    if (!res.ok) { alert('Delete failed: ' + await res.text()); return; }
-    var fresh = await loadWellDetail(w.sn);
-    if (fresh) renderWellInfo(w.sn);
-  } catch (err) {
-    alert('Delete error: ' + err);
-  }
-}
-
-function onVersionChange() {
-  currentVersionIdx = parseInt(document.getElementById('versionSelect').value) || 0;
-  renderVersion();
-}
-
-// Workover has any equipment counts? (vs just a failure note with no rod/tbg/pump data)
-function workoverHasEquipment(w) {
-  if (!w) return false;
-  var keys = ['pump_size','pump_type','pumping_unit','spm','sn_depth','tac_depth',
-              'rods_1','rods_78','rods_34','rods_58','rods_fg','rods_sinker','rod_type',
-              'tbg_count_278','tbg_count_238','tbg_count_278_coated','tbg_count_238_coated','tbg_coating'];
-  for (var i = 0; i < keys.length; i++) {
-    var v = w[keys[i]];
-    if (v !== null && v !== undefined && v !== '' && v !== 0 && v !== '0') return true;
-  }
-  return false;
-}
-
-// Build merged equipment by walking the timeline (most recent first) and taking the most recent
-// non-null value per field across ALL workovers ≤ asOfDate. This handles the realistic case where
-// e.g. one job updated tubing counts but not rod counts — older rod totals carry forward.
-var EQUIP_FIELDS = ['pump_size','pump_type','pump_new','pumping_unit','spm',
-                    'sn_depth','tac_depth',
-                    'rods_1','rods_78','rods_34','rods_58','rods_fg','rods_sinker','rod_type','rod_couplers_new',
-                    'tbg_count_278','tbg_count_278_coated','tbg_count_238','tbg_count_238_coated','tbg_coating'];
-function mergeEquipment(events, asOfDate) {
-  var merged = {};
-  var sourceDates = {};   // {field: date_provided}
-  var anchor = null;      // first workover (newest) ≤ asOfDate
-  events.forEach(function(e) {
-    if (asOfDate && (e.event_date || '0') > asOfDate) return;
-    if (!anchor) anchor = e;
-    EQUIP_FIELDS.forEach(function(f) {
-      if (merged[f] !== undefined) return;
-      var v = e[f];
-      if (v === null || v === undefined || v === '' || v === 0 || v === '0') return;
-      merged[f] = v;
-      sourceDates[f] = e.event_date;
-    });
-  });
-  if (!anchor) return null;
-  merged.event_date = anchor.event_date;
-  merged.failure_cause = anchor.failure_cause;
-  merged.failed_component = anchor.failed_component;
-  merged.job_xkey = anchor.job_xkey;
-  merged._sourceDates = sourceDates;
-  return merged;
-}
-
-// For a given timeline pick, find the corresponding schematic and equipment sources.
-// Workover picked w/ data: equipment = picked event; schematic = most recent <= picked.date
-// Workover picked w/o data: equipment = most recent prior workover WITH data (carried forward)
-// Schematic picked: schematic = picked; equipment = LATEST workover overall WITH data
-function resolveSources(timeline, idx) {
-  var picked = timeline[idx];
-  if (!picked) return { schematic: null, workover: null };
-  var schematic = null, workover = null, equipmentCarriedFrom = null;
-
-  function findSchematic(maxDate) {
-    for (var i = 0; i < timeline.length; i++) {
-      var t = timeline[i];
-      if (t.kind !== 'schematic') continue;
-      if (maxDate && (t.date || '9999') > maxDate) continue;
-      var s = t.data;
-      var hasData = (s.csg && s.csg.length) || (s.pf && s.pf.length) || s.td || s.pb;
-      if (hasData) return s;
-    }
-    return null;
-  }
-  // Walk back from index `fromIdx` (inclusive) through timeline to find a workover with equipment data
-  function findEquipmentWorkover(fromIdx) {
-    for (var i = fromIdx; i < timeline.length; i++) {
-      var t = timeline[i];
-      if (t.kind !== 'workover') continue;
-      if (workoverHasEquipment(t.data)) return t.data;
-    }
-    return null;
-  }
-
-  // Build a merged equipment record by walking back per-field (most realistic well state)
-  var asOfDate = picked.kind === 'workover' ? picked.date : null;  // null = use all (most recent of each field)
-  var allEvents = (currentWell && currentWell.events) || [];
-  var sortedEvents = allEvents.slice().sort(function(a, b) { return (b.event_date || '0').localeCompare(a.event_date || '0'); });
-  workover = mergeEquipment(sortedEvents, asOfDate);
-
-  if (picked.kind === 'workover') {
-    schematic = findSchematic(picked.date) || findSchematic(null);
-  } else {
-    schematic = picked.data;
-  }
-  return { schematic: schematic, workover: workover, picked: picked, equipmentCarriedFrom: equipmentCarriedFrom };
-}
-
-function renderVersion() {
-  var w = currentWell;
-  if (!w) return;
-  var sources = resolveSources(w._timeline, currentVersionIdx);
-  var sch = sources.schematic || {};
-  var wo = sources.workover;
-  // Build wbd object: header info from w + casings/perfs/plugs/formation/tubing/rods from schematic + (override) equipment from workover if available
-  var wbd = Object.assign({}, w, sch);
-  wbd._workover = wo;
-  wbd._picked = sources.picked;
-  drawWBD(wbd);
-}
-
-function switchTab(name) {
-  var btns = document.querySelectorAll('.tab-btn');
-  for (var i = 0; i < btns.length; i++) {
-    btns[i].classList.toggle('active', btns[i].dataset.tab === name);
-  }
-  var panels = document.querySelectorAll('.tab-panel');
-  for (var j = 0; j < panels.length; j++) {
-    panels[j].classList.toggle('active', panels[j].id === 'tab-' + name);
-  }
-}
-
-// Tables tab — in-place editing state ---------------------------------------
-var TABLES_EDIT_MODE = false;
-// Per-version buffer of full schematic data, edited in place.
-// Shape: { [wbd_id]: { meta:{...}, casing:[...], perforations:[...], plugs:[...], formation_tops:[...], tubing:[...], rods:[...] } }
-var TABLES_BUFFER = {};
-var TABLES_DIRTY = {};        // {wbd_id: true} for schematic versions touched
-var WORKOVER_BUFFER = {};     // {xkey: {field: value, ...}}
-var WORKOVER_DIRTY  = {};     // {xkey: true}
-
-// Field maps: short JSON keys (page) → SQL/PUT-payload field names
-var TBL_FIELDS = {
-  casing: [
-    {key:'casing_type', label:'Type', map:'ty'},
-    {key:'size',         label:'Size',     map:'sz'},
-    {key:'weight',       label:'Weight',   map:'wt'},
-    {key:'grade',        label:'Grade',    map:'gr'},
-    {key:'set_depth',    label:'Set @',    map:'dp'},
-    {key:'hole_size',    label:'Hole Size',map:'hs'},
-    {key:'cement_sacks', label:'Sxs',      map:'cs'},
-    {key:'toc',          label:'TOC',      map:'tc'},
-    {key:'circ_to_surface', label:'Circ',  map:null},
-    {key:'notes',        label:'Notes',    map:'notes'},
-  ],
-  perforations: [
-    {key:'top_depth',    label:'Top',      map:'td'},
-    {key:'bottom_depth', label:'Bottom',   map:'bd'},
-    {key:'spf',          label:'SPF',      map:'spf'},
-    {key:'zone',         label:'Zone',     map:'zn'},
-    {key:'perf_date',    label:'Date',     map:'dt'},
-    {key:'is_squeezed',  label:'Squeezed', map:'sq', kind:'bool'},
-    {key:'squeeze_date', label:'Sq Date',  map:'sqd'},
-    {key:'notes',        label:'Notes',    map:'notes'},
-  ],
-  plugs: [
-    {key:'plug_type',    label:'Type',     map:'ty'},
-    {key:'depth',        label:'Depth',    map:'dp'},
-    {key:'toc',          label:'TOC',      map:'tc'},
-    {key:'cement_sacks', label:'Sxs',      map:'cs'},
-    {key:'notes',        label:'Notes',    map:'notes'},
-  ],
-  formation_tops: [
-    {key:'formation_name', label:'Formation', map:'fm'},
-    {key:'depth',          label:'Depth',     map:'dp'},
-  ],
-  tubing: [
-    {key:'description', label:'Description', map:'desc'},
-    {key:'depth',       label:'Depth',       map:'dp'},
-    {key:'joints',      label:'Joints',      map:'jts'},
-    {key:'notes',       label:'Notes',       map:'notes'},
-  ],
-  rods: [
-    {key:'description', label:'Description', map:'desc'},
-    {key:'count',       label:'Count',       map:'cnt'},
-    {key:'length',      label:'Length',      map:'len'},
-    {key:'depth',       label:'Depth',       map:'dp'},
-    {key:'notes',       label:'Notes',       map:'notes'},
-  ],
-};
-var TBL_GROUPS = ['casing','perforations','plugs','formation_tops','tubing','rods'];
-
-function initTablesBuffer() {
-  TABLES_BUFFER = {};
-  TABLES_DIRTY = {};
-  ((currentWell && currentWell._timeline) || []).forEach(function(t) {
-    if (t.kind !== 'schematic') return;
-    var s = t.data;
-    var entry = { meta: { wbd_date: s.dt || '', status: s.st || 'CURRENT', td: s.td || '', pbtd: s.pb || '' }, _label: (s.dt || '—') + ' ' + (s.st || '') };
-    TBL_GROUPS.forEach(function(g) {
-      var arr = (g === 'casing'        ? s.csg :
-                 g === 'perforations'  ? s.pf  :
-                 g === 'plugs'         ? s.pl  :
-                 g === 'formation_tops'? s.ft  :
-                 g === 'tubing'        ? s.tb  :
-                 g === 'rods'          ? s.rd  : []) || [];
-      entry[g] = arr.map(function(r) {
-        var rec = {};
-        TBL_FIELDS[g].forEach(function(f) {
-          if (f.map) rec[f.key] = r[f.map];
-          else rec[f.key] = '';
-        });
-        return rec;
-      });
-    });
-    TABLES_BUFFER[s.id] = entry;
-  });
-}
-
-function initWorkoverBuffer() {
-  WORKOVER_BUFFER = {};
-  WORKOVER_DIRTY = {};
-  ((currentWell && currentWell.events) || []).forEach(function(e){
-    if (!e.job_xkey) return;
-    var snap = {};
-    Object.keys(e).forEach(function(k){ snap[k] = e[k]; });
-    WORKOVER_BUFFER[e.job_xkey] = snap;
-  });
-}
-
-function woOnChange(xkey, field, ev) {
-  if (!WORKOVER_BUFFER[xkey]) return;
-  var v = ev.target.value;
-  WORKOVER_BUFFER[xkey][field] = v;
-  WORKOVER_DIRTY[xkey] = true;
-}
-
-function enterTablesEditMode() {
-  if (!currentWell) return;
-  initTablesBuffer();
-  initWorkoverBuffer();
-  TABLES_EDIT_MODE = true;
-  document.getElementById('btnTablesEdit').style.display   = 'none';
-  document.getElementById('btnTablesAdd').style.display    = 'none';
-  document.getElementById('btnTablesSave').style.display   = 'inline-block';
-  document.getElementById('btnTablesCancel').style.display = 'inline-block';
-  renderAllTables(currentWell);
-}
-
-function cancelTablesEdits() {
-  TABLES_EDIT_MODE = false;
-  TABLES_BUFFER = {};
-  TABLES_DIRTY = {};
-  WORKOVER_BUFFER = {};
-  WORKOVER_DIRTY = {};
-  document.getElementById('btnTablesEdit').style.display   = 'inline-block';
-  document.getElementById('btnTablesAdd').style.display    = 'inline-block';
-  document.getElementById('btnTablesSave').style.display   = 'none';
-  document.getElementById('btnTablesCancel').style.display = 'none';
-  renderAllTables(currentWell);
-}
-
-async function saveTablesEdits() {
-  var dirtySch = Object.keys(TABLES_DIRTY).filter(function(k){ return TABLES_DIRTY[k]; });
-  var dirtyWo  = Object.keys(WORKOVER_DIRTY).filter(function(k){ return WORKOVER_DIRTY[k]; });
-  if (!dirtySch.length && !dirtyWo.length) { cancelTablesEdits(); return; }
-  var token = getToken();
-  if (!token) { alert('Sign in again to save'); return; }
-  var btn = document.getElementById('btnTablesSave');
-  if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
-  try {
-    // 1) Schematic versions — full PUT
-    for (var i = 0; i < dirtySch.length; i++) {
-      var wbd_id = dirtySch[i];
-      var ent = TABLES_BUFFER[wbd_id];
-      var body = {
-        meta: ent.meta,
-        casing:         ent.casing.map(stripEmpty),
-        perforations:   ent.perforations.map(stripEmpty),
-        plugs:          ent.plugs.map(stripEmpty),
-        formation_tops: ent.formation_tops.map(stripEmpty),
-        tubing:         ent.tubing.map(stripEmpty),
-        rods:           ent.rods.map(stripEmpty),
-      };
-      var res = await fetch(API_BASE + '/wbd/version/' + wbd_id, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify(body)
-      });
-      if (!res.ok) {
-        var msg = await res.text();
-        alert('Save failed for version ' + wbd_id + ': ' + res.status + ' ' + msg);
-        return;
-      }
-    }
-    // 2) Workover events — partial PUT to Job Detail
-    var EDITABLE_WO_FIELDS = ['pump_size','pump_type','pump_new','pumping_unit','spm','sn_depth','tac_depth','rods_1','rods_78','rods_34','rods_58','rods_fg','rods_sinker','rod_type','rod_couplers_new','rods_replaced_1','rods_replaced_78','rods_replaced_34','rods_replaced_58','rods_replaced_fg','rods_replaced_sinker','tbg_count_278','tbg_count_278_coated','tbg_count_238','tbg_count_238_coated','tbg_replaced_278','tbg_replaced_278_coated','tbg_replaced_238','tbg_replaced_238_coated','tbg_coating','failure_cause','failed_component','corrosion','pull_tubing','cleanout','acid','enduralloy','summary'];
-    for (var i = 0; i < dirtyWo.length; i++) {
-      var xkey = dirtyWo[i];
-      var snap = WORKOVER_BUFFER[xkey];
-      var body = {};
-      EDITABLE_WO_FIELDS.forEach(function(f){
-        if (snap[f] !== undefined) body[f] = (snap[f] === '' ? null : snap[f]);
-      });
-      var res = await fetch(API_BASE + '/wbd/workover/' + encodeURIComponent(xkey), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify(body)
-      });
-      if (!res.ok) {
-        var msg = await res.text();
-        alert('Save failed for workover ' + xkey + ': ' + res.status + ' ' + msg);
-        return;
-      }
-    }
-    var fresh = await loadWellDetail(currentWell.sn);
-    if (fresh) renderWellInfo(currentWell.sn);
-  } catch (err) {
-    alert('Save error: ' + err);
-  } finally {
-    if (btn) { btn.textContent = 'Save'; btn.disabled = false; }
-  }
-}
-
-function stripEmpty(rec) {
-  // Convert empty strings to null so SQL gets clean values; keep booleans
-  var out = {};
-  Object.keys(rec).forEach(function(k){
-    var v = rec[k];
-    if (v === '' || v === undefined) out[k] = null;
-    else out[k] = v;
-  });
-  return out;
-}
-
-// Called from inputs onchange
-function tblOnChange(wbd_id, group, rowIdx, field, ev) {
-  if (!TABLES_BUFFER[wbd_id]) return;
-  var v = ev.target.value;
-  if (ev.target.type === 'checkbox') v = ev.target.checked ? true : false;
-  TABLES_BUFFER[wbd_id][group][rowIdx][field] = v;
-  TABLES_DIRTY[wbd_id] = true;
-}
-
-function tblAddRow(wbd_id, group) {
-  if (!TABLES_BUFFER[wbd_id]) return;
-  var rec = {};
-  TBL_FIELDS[group].forEach(function(f){ rec[f.key] = (f.kind === 'bool') ? null : ''; });
-  TABLES_BUFFER[wbd_id][group].push(rec);
-  TABLES_DIRTY[wbd_id] = true;
-  renderAllTables(currentWell);
-}
-
-function tblDeleteRow(wbd_id, group, rowIdx) {
-  if (!TABLES_BUFFER[wbd_id]) return;
-  TABLES_BUFFER[wbd_id][group].splice(rowIdx, 1);
-  TABLES_DIRTY[wbd_id] = true;
-  renderAllTables(currentWell);
-}
-
-function tblOnMetaChange(wbd_id, field, ev) {
-  if (!TABLES_BUFFER[wbd_id]) return;
-  TABLES_BUFFER[wbd_id].meta[field] = ev.target.value;
-  TABLES_DIRTY[wbd_id] = true;
-}
-
-// Tables tab — one unified table per group; first column = version label;
-// rows = every component row from every version stacked together.
-function setupTablesTab(w) {
-  // No version dropdown anymore — show all versions as rows
-  var verDiv = document.getElementById('tablesVersionSelector');
-  if (verDiv) verDiv.style.display = 'none';
-  document.getElementById('tablesToolbar').style.display = isEditor() ? 'block' : 'none';
-  var hToolbar = document.getElementById('historyToolbar');
-  if (hToolbar) hToolbar.style.display = isEditor() ? 'block' : 'none';
-  renderAllTables(w);
-}
-
-// Stub kept so onchange handlers don't break
-function renderTablesVersion() { renderAllTables(currentWell); }
-
-function renderAllTables(w) {
-  var div = document.getElementById('equipmentContent');
-  if (!w) { div.innerHTML = ''; return; }
-  var schems   = (w._timeline || []).filter(function(t){ return t.kind === 'schematic'; });
-  var workovers = (w._timeline || []).filter(function(t){ return t.kind === 'workover'; });
-
-  function vlabel(t) {
-    if (t.kind === 'schematic') return (t.data.dt || '—') + ' ' + (t.data.st || '');
-    return (t.data.event_date || '—') + ' workover';
-  }
-
-  function fmt(v) {
-    if (v === null || v === undefined || v === '' || v === 0 || v === '0' || v === '<Empty>') return '<span style="color:#bbb">·</span>';
-    if (v === true) return 'Yes';
-    if (v === false) return 'No';
-    return esc(v);
-  }
-
-  function tableHTML(title, headers, rows) {
-    if (!rows.length) return '';   // hide the section entirely if no rows
-    var html = '<h3>' + esc(title) + '</h3>';
-    html += '<div style="overflow-x:auto;border:1px solid #c0c0c0;background:#fff;margin-bottom:14px;">'
-         + '<table class="eq-table" style="margin:0;border:none;"><thead><tr>';
-    headers.forEach(function(h, i){
-      html += '<th' + (i===0 ? ' style="position:sticky;left:0;background:#f0f4f0;z-index:2;"' : '') + '>' + esc(h) + '</th>';
-    });
-    html += '</tr></thead><tbody>';
-    rows.forEach(function(r){
-      html += '<tr>';
-      r.forEach(function(c, i){
-        html += '<td' + (i===0 ? ' class="eq-label" style="position:sticky;left:0;background:#fff;white-space:nowrap;"' : '') + '>' + (i===0 ? esc(c) : fmt(c)) + '</td>';
-      });
-      html += '</tr>';
-    });
-    html += '</tbody></table></div>';
-    return html;
-  }
-
-  // ── Editable schematic-group table (used in edit mode) ──
-  function editableTableHTML(title, group) {
-    var fields = TBL_FIELDS[group];
-    // Has any rows in any wbd_id?
-    var anyRows = Object.keys(TABLES_BUFFER).some(function(wid){ return (TABLES_BUFFER[wid][group] || []).length > 0; });
-    if (!anyRows && Object.keys(TABLES_BUFFER).length === 0) return '';
-
-    var html = '<h3>' + esc(title) + '</h3>'
-             + '<div style="overflow-x:auto;border:1px solid #c0c0c0;background:#fff;margin-bottom:14px;">'
-             + '<table class="eq-table" style="margin:0;border:none;"><thead><tr>'
-             + '<th style="position:sticky;left:0;background:#f0f4f0;z-index:2;">Version</th>';
-    fields.forEach(function(f){ html += '<th>' + esc(f.label) + '</th>'; });
-    html += '<th style="width:30px;"></th></tr></thead><tbody>';
-
-    Object.keys(TABLES_BUFFER).forEach(function(wid) {
-      var ent = TABLES_BUFFER[wid];
-      (ent[group] || []).forEach(function(rec, idx){
-        html += '<tr>';
-        html += '<td class="eq-label" style="position:sticky;left:0;background:#fff;white-space:nowrap;">' + esc(ent._label) + '</td>';
-        fields.forEach(function(f){
-          var v = rec[f.key];
-          if (f.kind === 'bool') {
-            html += '<td><select onchange="tblOnChange(\''+wid+'\',\''+group+'\','+idx+',\''+f.key+'\',event)">'
-                  + '<option value=""'    + (v==null  ? ' selected':'') + '>—</option>'
-                  + '<option value="true"' + (v===true ? ' selected':'') + '>Yes</option>'
-                  + '<option value="false"'+ (v===false? ' selected':'') + '>No</option>'
-                  + '</select></td>';
-          } else {
-            html += '<td><input type="text" value="' + esc(v == null ? '' : v) + '" oninput="tblOnChange(\''+wid+'\',\''+group+'\','+idx+',\''+f.key+'\',event)"></td>';
-          }
-        });
-        html += '<td class="row-del" onclick="tblDeleteRow(\''+wid+'\',\''+group+'\','+idx+')">×</td>';
-        html += '</tr>';
-      });
-      // "+ Add row" link tied to this version, only if buffer has this wid
-      html += '<tr><td colspan="'+(fields.length+2)+'" style="padding:4px 8px;">'
-            + '<span class="ed-add-row" onclick="tblAddRow(\''+wid+'\',\''+group+'\')">+ Add ' + esc(group.replace('_',' ')) + ' row to ' + esc(ent._label) + '</span>'
-            + '</td></tr>';
-    });
-    html += '</tbody></table></div>';
-    return html;
-  }
-
-  function isEmpty(v) { return v === null || v === undefined || v === '' || v === 0 || v === '0' || v === '<Empty>'; }
-  function anyNonEmpty(obj, keys) {
-    for (var i = 0; i < keys.length; i++) if (!isEmpty(obj[keys[i]])) return true;
-    return false;
-  }
-
-  var html = '';
-
-  // Edit mode: editable metadata + each schematic-group editable table
-  if (TABLES_EDIT_MODE) {
-    html += '<h3>Version metadata</h3>'
-         + '<div style="overflow-x:auto;border:1px solid #c0c0c0;background:#fff;margin-bottom:14px;">'
-         + '<table class="eq-table" style="margin:0;border:none;"><thead><tr>'
-         + '<th style="position:sticky;left:0;background:#f0f4f0;z-index:2;">Version (wbd_id)</th>'
-         + '<th>Date</th><th>Status</th><th>TD</th><th>PBTD</th>'
-         + '</tr></thead><tbody>';
-    Object.keys(TABLES_BUFFER).forEach(function(wid) {
-      var ent = TABLES_BUFFER[wid];
-      html += '<tr><td class="eq-label" style="position:sticky;left:0;background:#fff;white-space:nowrap;">' + esc(wid) + ' — ' + esc(ent._label) + '</td>';
-      ['wbd_date','status','td','pbtd'].forEach(function(field){
-        html += '<td><input type="text" value="' + esc(ent.meta[field] || '') + '" oninput="tblOnMetaChange(\''+wid+'\',\''+field+'\',event)"></td>';
-      });
-      html += '</tr>';
-    });
-    html += '</tbody></table></div>';
-
-    TBL_GROUPS.forEach(function(g) {
-      var label = g === 'formation_tops' ? 'Formation Tops'
-                : g === 'perforations'  ? 'Perforations'
-                : g.charAt(0).toUpperCase() + g.slice(1);
-      html += editableTableHTML(label, g);
-    });
-    div.innerHTML = html;
-    return;
-  }
-
-  // ── Read-only mode (default) ────────────────────────────────────────────────
-
-  // ── Casing (schematics only)
-  var csgRows = [];
-  schems.forEach(function(t){
-    (t.data.csg || []).forEach(function(c){
-      csgRows.push([vlabel(t), c.ty, c.sz, c.wt, c.gr, c.dp, c.hs, c.cs, c.tc, c.notes]);
-    });
-  });
-  html += tableHTML('Casing', ['Version','Type','Size','Weight','Grade','Set @','Hole Size','Sxs','TOC','Notes'], csgRows);
-
-  // ── Perforations
-  var pfRows = [];
-  schems.forEach(function(t){
-    (t.data.pf || []).forEach(function(p){
-      pfRows.push([vlabel(t), p.td, p.bd, p.spf, p.zn, p.dt, (p.sq===true?'Yes':p.sq===false?'No':''), p.sqd, p.notes]);
-    });
-  });
-  html += tableHTML('Perforations', ['Version','Top','Bottom','SPF','Zone','Date','Squeezed','Sq Date','Notes'], pfRows);
-
-  // ── Plugs
-  var plRows = [];
-  schems.forEach(function(t){ (t.data.pl || []).forEach(function(p){ plRows.push([vlabel(t), p.ty, p.dp, p.tc, p.cs, p.notes]); }); });
-  html += tableHTML('Plugs', ['Version','Type','Depth','TOC','Sxs','Notes'], plRows);
-
-  // ── Formation Tops
-  var ftRows = [];
-  schems.forEach(function(t){ (t.data.ft || []).forEach(function(f){ ftRows.push([vlabel(t), f.fm, f.dp]); }); });
-  html += tableHTML('Formation Tops', ['Version','Formation','Depth'], ftRows);
-
-  // ── Tubing — schematic component-by-component rows
-  var tbRows = [];
-  schems.forEach(function(t){ (t.data.tb || []).forEach(function(x){ tbRows.push([vlabel(t), x.desc, x.dp, x.jts, x.notes]); }); });
-  html += tableHTML('Tubing (schematic detail)', ['Version','Description','Depth','Joints','Notes'], tbRows);
-
-  // ── Tubing — workover counts (skip workovers with no tubing data; editable in edit mode)
-  // Workover tables are always read-only on this page. The data comes from dbo.[Job Detail],
-  // populated by the workover-report sync (update_job_detail.py → SharePoint → SQL).
-  // Edits to those values must happen in the workover report itself, not here.
-  var WO_READONLY_TIP = 'Read-only — workover data is sourced from the SharePoint workover report. Edit there.';
-  function workoverTableHTML(title, fields, headers, filterKeys) {
-    var rows = [];
-    workovers.forEach(function(t){
-      var wo = t.data;
-      if (!anyNonEmpty(wo, filterKeys)) return;
-      var row = [vlabel(t)];
-      fields.forEach(function(f){ row.push(wo[f]); });
-      rows.push(row);
-    });
-    if (!rows.length) return '';
-    var displayHeaders = ['Version'].concat(headers);
-    // Annotate H3 + each row with the read-only tooltip
-    var html = '<h3 title="' + esc(WO_READONLY_TIP) + '" style="cursor:help;">' + esc(title) + ' <span style="font-size:0.7rem;color:#888;font-weight:normal;">🔒 read-only</span></h3>'
-             + '<div style="overflow-x:auto;border:1px solid #c0c0c0;background:#fff;margin-bottom:14px;" title="' + esc(WO_READONLY_TIP) + '">'
-             + '<table class="eq-table" style="margin:0;border:none;"><thead><tr>';
-    displayHeaders.forEach(function(h, i){
-      html += '<th' + (i===0 ? ' style="position:sticky;left:0;background:#f0f4f0;z-index:2;"' : '') + '>' + esc(h) + '</th>';
-    });
-    html += '</tr></thead><tbody>';
-    rows.forEach(function(r){
-      html += '<tr title="' + esc(WO_READONLY_TIP) + '">';
-      r.forEach(function(c, i){
-        html += '<td' + (i===0 ? ' class="eq-label" style="position:sticky;left:0;background:#fff;white-space:nowrap;"' : '') + '>' + (i===0 ? esc(c) : fmt(c)) + '</td>';
-      });
-      html += '</tr>';
-    });
-    html += '</tbody></table></div>';
-    return html;
-  }
-
-  html += workoverTableHTML('Tubing (workover counts)',
-    ['tbg_count_278','tbg_count_278_coated','tbg_count_238','tbg_count_238_coated','tbg_coating','sn_depth','tac_depth','tbg_replaced_278','tbg_replaced_278_coated','tbg_replaced_238','tbg_replaced_238_coated'],
-    ['2-7/8"','2-7/8" coated','2-3/8"','2-3/8" coated','Coating','SN depth','TAC depth','Repl 2-7/8"','Repl 2-7/8" coated','Repl 2-3/8"','Repl 2-3/8" coated'],
-    ['tbg_count_278','tbg_count_278_coated','tbg_count_238','tbg_count_238_coated','tbg_coating','sn_depth','tac_depth','tbg_replaced_278','tbg_replaced_278_coated','tbg_replaced_238','tbg_replaced_238_coated']);
-  // ── Rods — schematic component-by-component rows
-  var rdRows = [];
-  schems.forEach(function(t){ (t.data.rd || []).forEach(function(r){ rdRows.push([vlabel(t), r.desc, r.cnt, r.len, r.dp, r.notes]); }); });
-  html += tableHTML('Rods (schematic detail)', ['Version','Description','Count','Length','Depth','Notes'], rdRows);
-
-  // ── Rods — workover counts
-  html += workoverTableHTML('Rods (workover counts)',
-    ['rods_1','rods_78','rods_34','rods_58','rods_fg','rods_sinker','rod_type','rod_couplers_new','rods_replaced_1','rods_replaced_78','rods_replaced_34','rods_replaced_58','rods_replaced_fg','rods_replaced_sinker'],
-    ['1"','7/8"','3/4"','5/8"','FG','Sinker','Type','New couplers','Repl 1"','Repl 7/8"','Repl 3/4"','Repl 5/8"','Repl FG','Repl sinker'],
-    ['rods_1','rods_78','rods_34','rods_58','rods_fg','rods_sinker','rod_type','rod_couplers_new','rods_replaced_1','rods_replaced_78','rods_replaced_34','rods_replaced_58','rods_replaced_fg','rods_replaced_sinker']);
-
-  // ── Pump
-  html += workoverTableHTML('Pump',
-    ['pump_size','pump_type','pump_new','pumping_unit','spm'],
-    ['Size','Type','New?','Pumping Unit','SPM'],
-    ['pump_size','pump_type','pump_new','pumping_unit','spm']);
-
-  // ── Job flags
-  html += workoverTableHTML('Job flags',
-    ['failure_cause','failed_component','corrosion','pull_tubing','cleanout','acid','enduralloy','summary'],
-    ['Cause','Component','Corrosion','Pull tubing','Cleanout','Acid','Enduralloy','Summary'],
-    ['failure_cause','failed_component','corrosion','pull_tubing','cleanout','acid','enduralloy','summary']);
-
-  div.innerHTML = html;
-}
-
-// Add Version from Tables tab — opens the editor inline on the WBD tab (it lives there)
-function openEditorFromTables(addMode) {
-  switchTab('wbd');
-  openEditor(addMode);
-}
-
-function deleteVersionFromTables() {
-  switchTab('wbd');
-  deleteVersion();
-}
-
-// Old time-series renderer kept for reference but no longer called
-function renderEquipmentOverTime_OLD(w) {
-  var div = document.getElementById('equipmentContent');
-  if (!div) return;
-  var events = (w.events || []).slice().sort(function(a, b) {
-    return (b.event_date || '0').localeCompare(a.event_date || '0');
-  });
-
-  if (!events.length) {
-    div.innerHTML = '<div class="eq-empty">No workover history on file.</div>'
-      + renderSchematicEquipmentTables(currentSchematicForFallback(w));
-    return;
-  }
-
-  // Field groups for the time-series table
-  var groups = [
-    { title: 'Pump', fields: [
-      ['Size',           'pump_size'],
-      ['Type',           'pump_type'],
-      ['New?',           'pump_new'],
-      ['Pumping Unit',   'pumping_unit'],
-      ['SPM',            'spm'],
-    ]},
-    { title: 'Tubing', fields: [
-      ['2-7/8" jts',           'tbg_count_278'],
-      ['2-7/8" coated',         'tbg_count_278_coated'],
-      ['2-3/8" jts',           'tbg_count_238'],
-      ['2-3/8" coated',         'tbg_count_238_coated'],
-      ['Coating',               'tbg_coating'],
-      ['SN depth',              'sn_depth'],
-      ['TAC depth',             'tac_depth'],
-    ]},
-    { title: 'Rods', fields: [
-      ['1"',         'rods_1', 'rod_len_steel'],
-      ['7/8"',       'rods_78', 'rod_len_steel'],
-      ['3/4"',       'rods_34', 'rod_len_steel'],
-      ['5/8"',       'rods_58', 'rod_len_steel'],
-      ['Fiberglass', 'rods_fg', 'rod_len_fg'],
-      ['Sinker',     'rods_sinker', 'rod_len_steel'],
-      ['Total length', '_rod_total', 'compute_total'],
-      ['Type',       'rod_type'],
-      ['New couplers', 'rod_couplers_new'],
-    ]},
-    { title: 'Job', fields: [
-      ['Failure cause',     'failure_cause'],
-      ['Failed component',  'failed_component'],
-      ['Corrosion',         'corrosion'],
-      ['Pull tubing',       'pull_tubing'],
-      ['Cleanout',          'cleanout'],
-      ['Acid',              'acid'],
-      ['Enduralloy',        'enduralloy'],
-    ]},
-  ];
-
-  function fmtVal(v) {
-    if (v === null || v === undefined || v === '') return '<span style="color:#bbb">·</span>';
-    if (v === '<Empty>') return '<span style="color:#bbb">·</span>';
-    return esc(v);
-  }
-
-  var thead = '<tr><th style="position:sticky;left:0;background:#f0f4f0;z-index:2;">Field</th>';
-  events.forEach(function(e) {
-    thead += '<th style="white-space:nowrap;text-align:center;">' + esc(e.event_date || '') + '</th>';
-  });
-  thead += '</tr>';
-
-  // ft per joint: steel rods 25', fiberglass 37.5'
-  var ROD_LEN_PER = { rods_1: 25, rods_78: 25, rods_34: 25, rods_58: 25, rods_sinker: 25, rods_fg: 37.5 };
-  function rodTotal(e) {
-    var t = 0, any = false;
-    Object.keys(ROD_LEN_PER).forEach(function(k){
-      var v = parseFloat(e[k]);
-      if (!isNaN(v) && v > 0) { t += v * ROD_LEN_PER[k]; any = true; }
-    });
-    return any ? t : null;
-  }
-
-  var bodyHtml = '';
-  groups.forEach(function(g) {
-    bodyHtml += '<tr><td colspan="' + (events.length + 1) + '" style="background:#e8f0e8;font-weight:700;color:#1c4a1c;padding:6px 10px;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em;">' + esc(g.title) + '</td></tr>';
-    g.fields.forEach(function(f) {
-      var label = f[0], key = f[1], render = f[2] || 'plain';
-      // Compute display per event
-      var displays = events.map(function(e) {
-        if (render === 'compute_total') {
-          var t = rodTotal(e);
-          return t ? Math.round(t).toLocaleString() + "'" : null;
-        }
-        var v = e[key];
-        if (v === null || v === undefined || v === '' || v === '<Empty>') return null;
-        if (render === 'rod_len_steel' || render === 'rod_len_fg') {
-          var n = parseFloat(v);
-          var per = render === 'rod_len_fg' ? 37.5 : 25;
-          if (!isNaN(n) && n > 0) return v + ' (' + Math.round(n * per).toLocaleString() + "')";
-        }
-        return v;
-      });
-      var anyValue = displays.some(function(d){ return d !== null; });
-      if (!anyValue) return;
-      bodyHtml += '<tr><td class="eq-label" style="position:sticky;left:0;background:#fff;">' + esc(label) + '</td>';
-      displays.forEach(function(d) {
-        bodyHtml += '<td style="text-align:center;">' + (d === null ? '<span style="color:#bbb">·</span>' : esc(d)) + '</td>';
-      });
-      bodyHtml += '</tr>';
-    });
-  });
-
-  div.innerHTML = '<div class="eq-source">All ' + events.length + ' workover' + (events.length !== 1 ? 's' : '') + ' on file. Newest on the left.</div>'
-    + '<div style="overflow-x:auto;border:1px solid #c0c0c0;background:#fff;">'
-    + '<table class="eq-table" style="margin:0;border:none;">'
-    + '<thead>' + thead + '</thead>'
-    + '<tbody>' + bodyHtml + '</tbody>'
-    + '</table></div>';
-}
-
-function currentSchematicForFallback(w) {
-  for (var i = 0; i < (w._timeline || []).length; i++) {
-    var t = w._timeline[i];
-    if (t.kind === 'schematic') {
-      var s = t.data;
-      if ((s.tb && s.tb.length) || (s.rd && s.rd.length)) return s;
-    }
-  }
-  return {};
-}
-
-// Old per-version equipment renderer kept for reference but no longer called
-function renderEquipment_OLD(w, sources) {
-  var div = document.getElementById('equipmentContent');
-  if (!div) return;
-  var wo = sources.workover;
-  var sch = sources.schematic || {};
-
-  if (!wo) {
-    // No workover data — fall back to schematic-embedded tb/rd arrays
-    div.innerHTML = '<div class="eq-empty">No workover history on file. Showing schematic-embedded equipment.</div>'
-      + renderSchematicEquipmentTables(sch);
-    return;
-  }
-
-  var pickedDate = sources.picked && sources.picked.kind === 'workover' ? sources.picked.date : null;
-  var carried = pickedDate && wo.event_date !== pickedDate;
-  var srcLabel = carried
-    ? 'Equipment carried forward from workover ' + (wo.event_date || '') + ' (the picked workover ' + pickedDate + ' has no equipment counts)'
-    : 'From workover ' + (wo.event_date || '') + (wo.failure_cause ? ' — ' + wo.failure_cause + (wo.failed_component ? ' / ' + wo.failed_component : '') : '');
-
-  function row(label, val) {
-    if (val === null || val === undefined || val === '' || val === 0 || val === '0') return '';
-    return '<tr><td class="eq-label">' + esc(label) + '</td><td>' + esc(val) + '</td></tr>';
-  }
-
-  // Tubing block
-  var tbgRows = '';
-  tbgRows += row('2-7/8" jts',       wo.tbg_count_278);
-  tbgRows += row('2-7/8" jts coated', wo.tbg_count_278_coated);
-  tbgRows += row('2-3/8" jts',       wo.tbg_count_238);
-  tbgRows += row('2-3/8" jts coated', wo.tbg_count_238_coated);
-  tbgRows += row('Coating',          wo.tbg_coating);
-  tbgRows += row('SN depth',         wo.sn_depth ? Number(wo.sn_depth).toLocaleString() + "'" : null);
-  tbgRows += row('TAC depth',        wo.tac_depth ? Number(wo.tac_depth).toLocaleString() + "'" : null);
-  // Replaced this job (only show if picked = this workover)
-  if (sources.picked && sources.picked.kind === 'workover' && wo.event_date === pickedDate) {
-    tbgRows += row('Replaced 2-7/8" (this job)',        wo.tbg_replaced_278);
-    tbgRows += row('Replaced 2-7/8" coated (this job)', wo.tbg_replaced_278_coated);
-    tbgRows += row('Replaced 2-3/8" (this job)',        wo.tbg_replaced_238);
-    tbgRows += row('Replaced 2-3/8" coated (this job)', wo.tbg_replaced_238_coated);
-  }
-
-  // Rods block
-  var rodRows = '';
-  rodRows += row('1" rods',     wo.rods_1);
-  rodRows += row('7/8" rods',   wo.rods_78);
-  rodRows += row('3/4" rods',   wo.rods_34);
-  rodRows += row('5/8" rods',   wo.rods_58);
-  rodRows += row('Fiberglass',  wo.rods_fg);
-  rodRows += row('Sinker bars', wo.rods_sinker);
-  rodRows += row('Rod type',    wo.rod_type);
-  rodRows += row('New couplers', wo.rod_couplers_new);
-  if (sources.picked && sources.picked.kind === 'workover' && wo.event_date === pickedDate) {
-    rodRows += row('Replaced 1" (this job)',     wo.rods_replaced_1);
-    rodRows += row('Replaced 7/8" (this job)',   wo.rods_replaced_78);
-    rodRows += row('Replaced 3/4" (this job)',   wo.rods_replaced_34);
-    rodRows += row('Replaced 5/8" (this job)',   wo.rods_replaced_58);
-    rodRows += row('Replaced FG (this job)',     wo.rods_replaced_fg);
-    rodRows += row('Replaced sinker (this job)', wo.rods_replaced_sinker);
-  }
-
-  // Pump block
-  var pumpRows = '';
-  pumpRows += row('Pump size',    wo.pump_size);
-  pumpRows += row('Pump type',    wo.pump_type);
-  pumpRows += row('Pump new?',    wo.pump_new);
-  pumpRows += row('Pumping unit', wo.pumping_unit);
-  pumpRows += row('SPM',          wo.spm);
-
-  // Misc job flags
-  var miscRows = '';
-  miscRows += row('Corrosion',    wo.corrosion);
-  miscRows += row('Pull tubing',  wo.pull_tubing);
-  miscRows += row('Cleanout',     wo.cleanout);
-  miscRows += row('Acid',         wo.acid);
-  miscRows += row('Enduralloy',   wo.enduralloy);
-
-  function block(title, rows) {
-    return '<h3>' + esc(title) + '</h3>'
-      + (rows ? '<table class="eq-table">' + rows + '</table>' : '<div class="eq-empty">No data.</div>');
-  }
-
-  div.innerHTML = '<div class="eq-source">' + esc(srcLabel) + '</div>'
-    + block('Tubing', tbgRows)
-    + block('Rods',   rodRows)
-    + block('Pump',   pumpRows)
-    + block('Job flags', miscRows);
-}
-
-// Fallback equipment view from schematic-embedded tb/rd arrays
-function renderSchematicEquipmentTables(sch) {
-  var html = '';
-  var tb = sch.tb || [], rd = sch.rd || [];
-  if (tb.length) {
-    html += '<h3>Tubing (from schematic)</h3><table class="eq-table">'
-      + '<thead><tr><th>Description</th><th>Depth</th><th>Joints</th></tr></thead><tbody>';
-    tb.forEach(function(t) {
-      html += '<tr><td>' + esc(t.desc || '') + '</td><td>' + esc(t.dp || '') + '</td><td>' + esc(t.jts || '') + '</td></tr>';
-    });
-    html += '</tbody></table>';
-  }
-  if (rd.length) {
-    html += '<h3>Rods (from schematic)</h3><table class="eq-table">'
-      + '<thead><tr><th>Description</th><th>Count</th><th>Length</th><th>Depth</th></tr></thead><tbody>';
-    rd.forEach(function(r) {
-      html += '<tr><td>' + esc(r.desc || '') + '</td><td>' + esc(r.cnt || '') + '</td><td>' + esc(r.len || '') + '</td><td>' + esc(r.dp || '') + '</td></tr>';
-    });
-    html += '</tbody></table>';
-  }
-  if (!tb.length && !rd.length) html = '<div class="eq-empty">No tubing/rod data on file for this schematic.</div>';
-  return html;
-}
-
-// Full job history — shows all workovers, doesn't depend on WBD version pick
-function renderJobHistoryFull(w) {
-  var div = document.getElementById('jobHistory');
-  if (!div) return;
-  var allEvents = w.events || [];
-  if (!allEvents.length) {
-    div.innerHTML = '<h3>Job History</h3><div class="job-empty">No workover history on file.</div>';
-    return;
-  }
-  var visible = allEvents.slice().sort(function(a, b) {
-    return (b.event_date || '0').localeCompare(a.event_date || '0');
-  });
-  var pickedJobKey = null;
-  // Stash visible rows on the well so the click handler can retrieve them by index
-  w._historyVisible = visible;
-  var rows = '';
-  visible.forEach(function(e, idx) {
-    var isCurrent = e.job_xkey === pickedJobKey;
-    var cause = (e.failure_cause || '') + (e.failed_component ? ' / ' + e.failed_component : '');
-    var pump = (e.pump_size || '') + (e.pump_type ? ' (' + e.pump_type + ')' : '');
-    var rodChanges = [];
-    if (e.rods_replaced_1)      rodChanges.push(e.rods_replaced_1 + ' × 1"');
-    if (e.rods_replaced_78)     rodChanges.push(e.rods_replaced_78 + ' × 7/8"');
-    if (e.rods_replaced_34)     rodChanges.push(e.rods_replaced_34 + ' × 3/4"');
-    if (e.rods_replaced_58)     rodChanges.push(e.rods_replaced_58 + ' × 5/8"');
-    if (e.rods_replaced_fg)     rodChanges.push(e.rods_replaced_fg + ' × FG');
-    if (e.rods_replaced_sinker) rodChanges.push(e.rods_replaced_sinker + ' × sinker');
-    var tbgChanges = [];
-    if (e.tbg_replaced_278) tbgChanges.push(e.tbg_replaced_278 + ' × 2-7/8"');
-    if (e.tbg_replaced_238) tbgChanges.push(e.tbg_replaced_238 + ' × 2-3/8"');
-    var changes = [];
-    if (rodChanges.length) changes.push('Rods: ' + rodChanges.join(', '));
-    if (tbgChanges.length) changes.push('Tbg: ' + tbgChanges.join(', '));
-    if (e.pump_new === 'NEW' || e.pump_new === 'Y') changes.push('New pump');
-    if (e.cleanout === 'Y') changes.push('Cleanout');
-    if (e.acid === 'Y') changes.push('Acid');
-    if (e.enduralloy && e.enduralloy !== '0') changes.push('Enduralloy ' + e.enduralloy);
-
-    var summary = e.summary ? esc(e.summary) : '';
-    if (summary.length > 200) summary = summary.substring(0, 200) + '...';
-
-    var clickable = (typeof isEditor === 'function' && isEditor());
-    // "View Report" button: backend streams the original XLSX from Dropbox.
-    // Use a <button> (not <a href>) so a JS error or empty API_BASE can never
-    // accidentally navigate the browser to a relative URL → GitHub 404 page.
-    var reportCell = '—';
-    if (e.has_report && e.job_xkey) {
-      reportCell = '<button type="button" onclick="downloadReport(event,\''
-                 + encodeURIComponent(e.job_xkey) + '\')" '
-                 + 'title="Download original workover report" '
-                 + 'style="background:none;border:none;color:#1c4a1c;text-decoration:underline;'
-                 + 'font-size:0.78rem;cursor:pointer;padding:0;">📎 View</button>';
-    }
-    rows += '<tr' + (isCurrent ? ' class="current"' : '') + (clickable ? ' style="cursor:pointer;" title="Click to edit job (including perfs / plugs / liners / stim / job type)" onclick="openExistingJobForEdit(currentWell._historyVisible[' + idx + '])"' : '') + '>'
-         + '<td class="job-date">'
-         +   esc(e.event_date || '') + (isCurrent ? ' ★' : '')
-         +   (e.afe ? '<div class="job-afe">AFE ' + esc(e.afe) + '</div>' : '')
-         + '</td>'
-         + '<td>' + (cause ? '<div class="job-cause">' + esc(cause) + '</div>' : '') + '</td>'
-         + '<td>' + esc(pump) + '</td>'
-         + '<td style="font-size:0.7rem;">' + (changes.length ? changes.join('<br>') : '—') + '</td>'
-         + '<td class="job-summary">' + summary + '</td>'
-         + '<td style="text-align:center;white-space:nowrap;" onclick="event.stopPropagation()">' + reportCell + '</td>'
-         + '</tr>';
-  });
-
-  div.innerHTML = '<h3>Job History — ' + visible.length + ' workover' + (visible.length !== 1 ? 's' : '') + '</h3>'
-    + '<table class="job-table">'
-    + '<thead><tr><th>Date / AFE</th><th>Cause</th><th>Pump</th><th>Changes</th><th>Summary</th><th>Report</th></tr></thead>'
-    + '<tbody>' + rows + '</tbody></table>';
-}
-
-// Workover-report download: backend requires Bearer auth, so we fetch with the
-// token and trigger a blob download. Auto-refresh API_BASE if the tunnel URL
-// has rotated (cloudflared restarts assign a new subdomain).
-async function downloadReport(ev, encodedXkey) {
-  if (ev) { ev.preventDefault(); ev.stopPropagation(); }
-  var token = getToken();
-  if (!token) { alert('Sign in again to download'); return; }
-  if (!API_BASE) { await loadApiBase(); }
-  if (!API_BASE) { alert('Workover report unavailable — API base URL not loaded.'); return; }
-
-  // Preferred: ask the api for a 4-hour Dropbox temp URL, wrap it with the
-  // Microsoft Office Online viewer, and pop a new tab. The viewer renders
-  // the XLSX as a live spreadsheet in the browser (no download → open).
-  try {
-    var linkRes = await fetch(API_BASE + '/wbd/workover/' + encodedXkey + '/report-link', {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    if (linkRes.ok) {
-      var data = await linkRes.json();
-      if (data && data.link) {
-        var viewerUrl = 'https://view.officeapps.live.com/op/view.aspx?src='
-                      + encodeURIComponent(data.link);
-        window.open(viewerUrl, '_blank');
-        return;
-      }
-    }
-    if (linkRes.status === 404 && !linkRes._fallthrough) {
-      // Older api server without the new endpoint → fall through to streaming
-    } else if (!linkRes.ok && linkRes.status !== 404) {
-      var lt = ''; try { lt = (await linkRes.text()).slice(0, 200); } catch(e) {}
-      alert('Could not get direct Dropbox link (HTTP ' + linkRes.status + ').' + (lt ? '\n\n' + lt : ''));
-      return;
-    }
+    var well = await res.json();
+    title.textContent = well.fn || name;
+    renderTable(body, well);
   } catch (e) {
-    console.warn('temp-link path failed, trying stream fallback:', e);
-  }
-
-  // Fallback: legacy streaming endpoint
-  var url = API_BASE + '/wbd/workover/' + encodedXkey + '/report';
-  try {
-    var res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
-    if (!res.ok && (res.status === 502 || res.status === 0)) {
-      await loadApiBase();
-      url = API_BASE + '/wbd/workover/' + encodedXkey + '/report';
-      res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
-    }
-    if (!res.ok) {
-      var bodyTxt = '';
-      try { bodyTxt = (await res.text()).slice(0, 200); } catch(e) {}
-      var hint;
-      if (res.status === 500) hint = 'The api_server is throwing a server-side error on /wbd/workover/.../report — most likely the Ops_Reporting (sf\\\\sqldev) connection is down. Not a GitHub Pages issue.';
-      else if (res.status === 404) hint = 'The api_server says no workover report exists for this xkey.';
-      else if (res.status === 401 || res.status === 403) hint = 'Your sign-in expired — refresh the page and sign in again.';
-      else hint = '';
-      alert('Workover report download failed (HTTP ' + res.status + ').' + (hint ? '\n\n' + hint : '') + (bodyTxt ? '\n\nResponse: ' + bodyTxt : ''));
-      return;
-    }
-    var blob = await res.blob();
-    var disp = res.headers.get('Content-Disposition') || '';
-    var m = disp.match(/filename="?([^"]+)"?/);
-    var fname = m ? m[1] : 'workover_report.xlsx';
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = fname;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 0);
-  } catch (e) {
-    alert('Download error: ' + e);
+    body.innerHTML = '<div class="state-msg err">Error loading well: ' + esc(e.message || e) + '</div>';
   }
 }
 
-// ── WBD Renderer ──
-function parseDepth(s) {
-  if (s == null) return null;
-  var n = parseFloat(String(s).replace(/[',\s]/g, ''));
-  return isNaN(n) || n < 10 ? null : n;
-}
-
-function parseSize(s) {
-  if (s == null) return null;
-  s = String(s).replace(/"/g, '').replace(/#/g, '').trim();
-  // Handle fractions: "4-1/2" or "4 1/2" or "9 5/8"
-  var m = s.match(/^(\d+)\s*[-\s]\s*(\d+)\/(\d+)$/);
-  if (m) return parseFloat(m[1]) + parseFloat(m[2]) / parseFloat(m[3]);
-  m = s.match(/^(\d+)\/(\d+)$/);
-  if (m) return parseFloat(m[1]) / parseFloat(m[2]);
-  var n = parseFloat(s);
-  return isNaN(n) ? null : n;
-}
-
-function parsePerfs(s) {
-  if (!s) return [];
-  var perfs = [];
-  var lines = s.split(/[\n,;]+/);
-  for (var i = 0; i < lines.length; i++) {
-    var m = lines[i].match(/(\d[\d,]*)\s*[-–—to]+\s*(\d[\d,]*)/);
-    if (m) perfs.push({ top: parseInt(m[1].replace(/,/g,'')), bot: parseInt(m[2].replace(/,/g,'')) });
-  }
-  return perfs;
-}
-
-function drawWBD(w) {
-  var container = document.getElementById('wbdContainer');
-  document.getElementById('dataCards').innerHTML = '';
-
-  // Parse casings
-  var strs = [];
-  var csgList = w.csg || [];
-  for (var i = 0; i < csgList.length; i++) {
-    var c = csgList[i];
-    var ctype = (c.ty || '').split(' ')[0];
-    var depth = parseDepth(c.dp);
-    if (depth || c.sz) strs.push({type: ctype, depth: depth, raw: c});
-  }
-  strs.sort(function(a, b){return (a.depth || 99999) - (b.depth || 99999);});
-
-  // Parse perfs (dedupe by top-bot interval; prefer record with spf)
-  var perfsMap = {};
-  var pfList = w.pf || [];
-  for (var i = 0; i < pfList.length; i++) {
-    var t = parseDepth(pfList[i].td), b = parseDepth(pfList[i].bd);
-    if (!t || !b) continue;
-    var key = t + '-' + b;
-    var rec = {top: t, bot: b, spf: pfList[i].spf, zone: pfList[i].zn, sq: pfList[i].sq};
-    if (!perfsMap[key] || (rec.spf && !perfsMap[key].spf)) {
-      perfsMap[key] = rec;
-    }
-  }
-  var perfs = Object.keys(perfsMap).map(function(k){ return perfsMap[k]; });
-
-  var td = parseDepth(w.td), pbtd = parseDepth(w.pb);
-
-  if (!strs.length && !td && !perfs.length) {
-    container.innerHTML = '<div style="text-align:center;color:#999;padding:40px 0;">No wellbore data available</div>';
-    return;
-  }
-
-  // ── 8.5x11 page at 100dpi ──
-  var svgW = 850, svgH = 1100;
-
-  // Layout regions
-  var hdrTop = 12, hdrH = 70;           // header block 12-82
-  var bodyTop = 90, bodyBot = 1060;     // wellbore + side panels
-  var wbTop = 110, wbBot = 1020;        // wellbore drawing area
-  var wbLeft = 280, wbRight = 570;      // wellbore horizontal extent
-  var cx = (wbLeft + wbRight) / 2;
-
-  // Determine max depth
-  var maxD = 0;
-  for (var i = 0; i < strs.length; i++) if (strs[i].depth && strs[i].depth > maxD) maxD = strs[i].depth;
-  if (td && td > maxD) maxD = td;
-  if (pbtd && pbtd > maxD) maxD = pbtd;
-  for (var i = 0; i < perfs.length; i++) if (perfs[i].bot > maxD) maxD = perfs[i].bot;
-  if (!maxD) maxD = 5000;
-  maxD *= 1.02;
-
-  function dToY(d) { return wbTop + (d / maxD) * (wbBot - wbTop); }
-
-  var s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + svgW + ' ' + svgH + '" style="font-family:Arial,sans-serif;background:#fff">';
-
-  // ── Page border ──
-  s += '<rect x="1" y="1" width="' + (svgW-2) + '" height="' + (svgH-2) + '" fill="none" stroke="#000" stroke-width="1"/>';
-
-  // ── HEADER — form-style grid ──
-  var g = w;
-  // Prefer full Well Name (fn) from Pumper_Data_Calcs; fallback to picker's Short Name
-  var wellName = g.fn || document.getElementById('wellInput').value || '';
-  var loc = g.loc || '';
-  var locParts = loc.match(/(\d+\w?)\s+(\d+\w?)\s+(\d+\w?)/);
-  var twp = locParts ? locParts[1] : '', rng = locParts ? locParts[2] : '', sec = locParts ? locParts[3] : '';
-  var apiFormatted = g.api ? g.api.replace(/(\d{2})(\d{3})(\d+)/, '$1-$2-$3') : '';
-
-  // Header grid lines
-  var r1 = hdrTop + 20, r2 = hdrTop + 40, r3 = hdrTop + 60;
-  s += '<line x1="1" y1="' + (hdrTop) + '" x2="' + (svgW-1) + '" y2="' + (hdrTop) + '" stroke="#000" stroke-width="0.8"/>';
-  s += '<line x1="1" y1="' + (r1) + '" x2="' + (svgW-1) + '" y2="' + (r1) + '" stroke="#000" stroke-width="0.5"/>';
-  s += '<line x1="1" y1="' + (r2) + '" x2="' + (svgW-1) + '" y2="' + (r2) + '" stroke="#000" stroke-width="0.5"/>';
-  s += '<line x1="1" y1="' + (r3) + '" x2="' + (svgW-1) + '" y2="' + (r3) + '" stroke="#000" stroke-width="1.2"/>';
-
-  function hdrCell(x, y, w2, label, value, bold) {
-    s += '<line x1="' + x + '" y1="' + (y-20) + '" x2="' + x + '" y2="' + y + '" stroke="#000" stroke-width="0.5"/>';
-    s += '<text x="' + (x+4) + '" y="' + (y-7) + '" font-size="9" fill="#000" font-weight="700">' + label + '</text>';
-    var vx = x + 4 + label.length * 5.5;
-    var attr = bold ? 'font-weight="700"' : '';
-    s += '<text x="' + vx + '" y="' + (y-7) + '" font-size="10" fill="#000" ' + attr + '>' + esc(value || '') + '</text>';
-  }
-
-  // Row 1: Well Name | Lease No | Lease Type
-  hdrCell(1, r1, 380, 'Well Name:', wellName, true);
-  hdrCell(380, r1, 170, 'Lease No:', '');
-  hdrCell(550, r1, 300, 'Lease Type:', g.lt || '');
-  // Row 2: Township | Range | Sec | Location
-  hdrCell(1, r2, 130, 'Township:', twp);
-  hdrCell(130, r2, 130, 'Range:', rng);
-  hdrCell(260, r2, 120, 'Sec:', sec);
-  hdrCell(380, r2, 470, 'Location:', g.loc || '');
-  // Row 3: County | State | API | Formation — county hardcoded since FAE is all Lea/NM
-  hdrCell(1, r3, 130, 'County:', 'Lea');
-  hdrCell(130, r3, 130, 'State:', 'NM');
-  hdrCell(260, r3, 120, 'API:', apiFormatted);
-  hdrCell(550, r3, 300, 'Formation:', g.pool || g.fm || '');
-
-  // CURRENT label
-  s += '<text x="' + (cx) + '" y="' + (hdrTop + 78) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#000">CURRENT</text>';
-
-  // ── Casings: filter, parse, sort, assign radii, compute TOC ──
-  // Parse size string ("4-1/2\"", "8 5/8", "7") → numeric inches
-  function parseSize(sz) {
-    if (!sz) return null;
-    var s2 = String(sz).replace(/"/g,'').replace(/in\b/i,'').trim();
-    var m = s2.match(/^(\d+(?:\.\d+)?)\s*[-\s]?\s*(\d+)\s*\/\s*(\d+)/);
-    if (m) return parseFloat(m[1]) + parseFloat(m[2])/parseFloat(m[3]);
-    m = s2.match(/^(\d+)\s*\/\s*(\d+)/);
-    if (m) return parseFloat(m[1])/parseFloat(m[2]);
-    m = s2.match(/^(\d+(?:\.\d+)?)/);
-    return m ? parseFloat(m[1]) : null;
-  }
-
-  var csgTypes = [];
-  for (var i = 0; i < strs.length; i++) {
-    if (strs[i].type === 'Surface' || strs[i].type === 'Intermediate' ||
-        strs[i].type === 'Production' || strs[i].type === 'Liner') {
-      csgTypes.push(strs[i]);
-    }
-  }
-
-  // Sort outermost→innermost by parsed size DESC; tie-break by type rank
-  var typeRank = {'Surface': 4, 'Intermediate': 3, 'Production': 2, 'Liner': 1};
-  var sorted = csgTypes.slice().sort(function(a,b){
-    var as = parseSize(a.raw.sz), bs = parseSize(b.raw.sz);
-    if (as != null && bs != null && as !== bs) return bs - as;
-    return (typeRank[b.type]||0) - (typeRank[a.type]||0);
+function renderTable(body, well) {
+  // Pick the version carrying the most completion detail
+  var vers = (well.v || []).slice().sort(function(a, b) {
+    var sa = (a.csg||[]).length + (a.pf||[]).length + (a.tb||[]).length;
+    var sb = (b.csg||[]).length + (b.pf||[]).length + (b.tb||[]).length;
+    return sb - sa;
   });
-  // Assign nested radii by rank position (outer→inner)
-  var radSlots = [{or:45,ir:38},{or:35,ir:29},{or:25,ir:20},{or:18,ir:14},{or:13,ir:10}];
-  var OR = {}, IR = {};
-  for (var si = 0; si < sorted.length; si++) {
-    var slot = radSlots[Math.min(si, radSlots.length-1)];
-    OR[sorted[si].type + '#' + si] = slot.or;
-    IR[sorted[si].type + '#' + si] = slot.ir;
-    sorted[si]._slot = si;
-  }
-  function csgIR(s2) { return IR[s2.type + '#' + s2._slot]; }
-  function csgOR(s2) { return OR[s2.type + '#' + s2._slot]; }
+  var v = vers[0] || {};
 
-  // Compute cement TOC for each casing — assumption-based when missing
-  // Annular cement: vol/ft cuft = (pi/4)(Dh^2 - Doc^2)/144; Class C/H ~1.18 cuft/sk
-  function computeCement(cs, idx) {
-    var tcStr = cs.raw.tc;
-    // 1. Try parsing existing TOC string
-    if (tcStr) {
-      var lower = String(tcStr).toLowerCase();
-      if (lower.indexOf('surf') >= 0 || lower.trim() === '0')
-        return {d: 0, str: 'Surface', circ: 'Yes', src: 'data'};
-      var m = String(tcStr).match(/(\d[\d,]*)/);
-      if (m) {
-        var d = parseFloat(m[1].replace(/,/g,''));
-        if (d >= 0) return {d: d, str: tcStr, circ: 'No', src: 'data'};
-      }
-    }
-    // 2. Surface casing (or outermost) — assume circulated to surface
-    if (idx === 0 || cs.type === 'Surface')
-      return {d: 0, str: 'Surface (calc)', circ: 'Yes', src: 'calc'};
-    // 3. Liner — TOL @ previous casing shoe
-    if (cs.type === 'Liner' && idx > 0 && sorted[idx-1].depth) {
-      var tol = sorted[idx-1].depth;
-      return {d: tol, str: "TOL @ " + tol.toLocaleString() + "' (calc)", circ: 'No', src: 'calc'};
-    }
-    // 4. Calc from sacks + hole size + casing OD
-    var sxsM = String(cs.raw.cs || '').match(/(\d+)/);
-    var sxs = sxsM ? parseFloat(sxsM[1]) : null;
-    var Dh = parseSize(cs.raw.hs);
-    var Doc = parseSize(cs.raw.sz);
-    if (sxs && Dh && Doc && Dh > Doc && cs.depth) {
-      var annPerFt = Math.PI/4 * (Dh*Dh - Doc*Doc) / 144; // cuft/ft
-      var height = (sxs * 1.18) / annPerFt;
-      var toc = Math.max(0, cs.depth - height);
-      return {d: toc, str: Math.round(toc).toLocaleString() + "' (calc)", circ: toc <= 0 ? 'Yes' : 'No', src: 'calc'};
-    }
-    // 5. Fallback — assume cement covers previous casing shoe
-    if (idx > 0 && sorted[idx-1].depth) {
-      var prev = sorted[idx-1].depth;
-      return {d: prev, str: prev.toLocaleString() + "' (calc)", circ: 'No', src: 'calc'};
-    }
-    return {d: null, str: tcStr || '', circ: '', src: 'unknown'};
-  }
-  for (var si = 0; si < sorted.length; si++) {
-    sorted[si]._cmt = computeCement(sorted[si], si);
+  // 1. Production casing size
+  var prodSize = null;
+  (v.csg || []).forEach(function(c) {
+    if (c.ty && /production/i.test(c.ty) && c.sz) prodSize = c.sz;
+  });
+
+  // 2. Tubing size — distinct pipe sizes named in the tubing string
+  var tbSizes = [];
+  (v.tb || []).forEach(function(t) {
+    var m = (t.desc || '').match(/^\s*(\d+(?:\s*\d+\/\d+)?\s*")/);
+    if (m) { var s = m[1].replace(/\s+/g,' ').trim(); if (tbSizes.indexOf(s) < 0) tbSizes.push(s); }
+  });
+
+  // 3. Top perf — shallowest perforation top depth
+  var perfTops = (v.pf || []).map(function(p){ return num(p.td); })
+                              .filter(function(n){ return !isNaN(n) && n > 0; });
+  var topPerf = perfTops.length ? Math.min.apply(null, perfTops) : null;
+
+  // 4. Top of pump / packer — deepest tubing-string component with a depth.
+  //    Label depends on whether a packer is present (otherwise it's a pump).
+  var isPacker = (v.tb || []).some(function(t){ return /packer/i.test(t.desc || ''); });
+  var tbDepths = (v.tb || []).map(function(t){ return num(t.dp); })
+                              .filter(function(n){ return !isNaN(n) && n > 0; });
+  var ppDepth = tbDepths.length ? Math.max.apply(null, tbDepths) : null;
+  var ppLabel = isPacker ? 'Top of Packer Depth' : 'Top of Pump Depth';
+
+  function row(label, value, suffix) {
+    var has = value != null && value !== '';
+    var disp = has ? (esc(value) + (suffix || '')) : '—';
+    return '<tr><td class="lbl">' + esc(label) + '</td>'
+         + '<td class="val' + (has ? '' : ' none') + '">' + disp + '</td></tr>';
   }
 
-  // ── LEFT: Casing spec boxes ──
-  // Classic layout: Size / Wt&Thd / Grade / Set @ / Sxs cnt / Circ / TOC / Hole Size
-  var boxX = 20, boxW = 210, boxRowH = 14;
-  var boxY = bodyTop + 20;
-
-  // Render in size-sorted order so visual matches WBD
-  for (var i = 0; i < sorted.length; i++) {
-    var cs = sorted[i];
-    var cmt = cs._cmt || {};
-    // Box title (italic underlined)
-    s += '<text x="' + boxX + '" y="' + boxY + '" font-size="10" font-weight="700" fill="#000" font-style="italic" text-decoration="underline">' + esc(cs.type) + ' Csg</text>';
-    boxY += boxRowH;
-    // Field rows
-    var fields = [
-      ['Size:', cs.raw.sz],
-      ['Wt.&Thd:', cs.raw.wt],
-      ['Grade:', cs.raw.gr],
-      ['Set @:', cs.depth ? cs.depth.toLocaleString() : ''],
-      ['Sxs cnt:', cs.raw.cs],
-      ['Circ:', cmt.circ || ''],
-      ['TOC:', cmt.str || ''],
-      ['Hole Size:', cs.raw.hs],
-    ];
-    for (var k = 0; k < fields.length; k++) {
-      s += '<text x="' + boxX + '" y="' + boxY + '" font-size="9" fill="#000" font-weight="700">' + fields[k][0] + '</text>';
-      // Value underlined
-      var vx = boxX + 70;
-      var vv = fields[k][1] || '';
-      s += '<text x="' + vx + '" y="' + boxY + '" font-size="9" fill="#000">' + esc(vv) + '</text>';
-      s += '<line x1="' + vx + '" y1="' + (boxY+2) + '" x2="' + (boxX + 170) + '" y2="' + (boxY+2) + '" stroke="#000" stroke-width="0.4"/>';
-      boxY += boxRowH;
-    }
-    boxY += 8; // gap between boxes
-  }
-
-  // ── RIGHT: KB/DF/GL/dates ──
-  var rX = 600, rY = bodyTop + 20;
-  function rightCell(label, value, bold) {
-    s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000" font-weight="700">' + label + '</text>';
-    var vx = rX + 90;
-    s += '<text x="' + vx + '" y="' + rY + '" font-size="10" fill="#000" ' + (bold ? 'font-weight="700"' : '') + '>' + esc(value || '') + '</text>';
-    s += '<line x1="' + vx + '" y1="' + (rY+2) + '" x2="' + (rX + 220) + '" y2="' + (rY+2) + '" stroke="#000" stroke-width="0.4"/>';
-    rY += 15;
-  }
-  rightCell('KB:', g.kb || '');
-  rightCell('DF:', g.df || '');
-  rightCell('GL:', g.gl || '', true);
-  rightCell('Spud Date:', g.sd || '', true);
-  rightCell('Compl. Date:', g.cd || '', true);
-
-  // ── Parse tubing/rods/pump from arrays ──
-  var tbList = w.tb || [], rdList = w.rd || [];
-
-  function parseDepthLoose(d) {
-    if (d == null) return null;
-    var x = String(d).replace(/,/g,'').replace(/[^\d.]/g,'');
-    var n = parseFloat(x);
-    return (isNaN(n) || n <= 0) ? null : n;
-  }
-
-  // Tubing: find EOT, tubing OD label, SN/MA depths
-  var eotDepth = null, tubingDesc = '', snDepth = null, maDepth = null;
-  for (var i = 0; i < tbList.length; i++) {
-    var t = tbList[i], d = (t.desc || '').trim(), du = d.toUpperCase();
-    var dp = parseDepthLoose(t.dp);
-    if (du === 'EOT' || du === 'END OF TUBING') eotDepth = dp || eotDepth;
-    if (du === 'SN' || du.indexOf('SEATING') >= 0) snDepth = dp;
-    if (du === 'MA' || du.indexOf('MUD ANCHOR') >= 0) maDepth = dp;
-    // Tubing OD label = first item matching pipe-size pattern
-    if (!tubingDesc && /\d+\s*[\/-]\s*\d+\s*"/.test(d) && du.indexOf('PUMP') < 0) {
-      tubingDesc = d;
-    }
-  }
-  // If no explicit EOT, sum lengths from notes (length=N joints * 31.5 ft) — fallback
-  // Otherwise fall back to deepest depth in tbList (already cumulative in some sheets)
-  if (!eotDepth) {
-    var mx = 0;
-    for (var i = 0; i < tbList.length; i++) {
-      var dp = parseDepthLoose(tbList[i].dp);
-      if (dp && dp > mx) mx = dp;
-    }
-    if (mx > 100) eotDepth = mx;
-  }
-
-  // Rods: collect sections (have count + length), pump info
-  var rodSections = [], pumpDepth = null, pumpModel = '';
-  for (var i = 0; i < rdList.length; i++) {
-    var r = rdList[i], d = (r.desc || '').trim(), du = d.toUpperCase();
-    var cnt = parseDepthLoose(r.cnt), len = parseDepthLoose(r.len), dp = parseDepthLoose(r.dp);
-    if (cnt && len && dp && du.indexOf('ROD') >= 0 && du.indexOf('PONY') < 0) {
-      rodSections.push({size: d.match(/\d+\/\d+"|\d+\.\d+"/) ? (d.match(/\d+\/\d+"|\d+\.\d+"/)[0]) : '', cnt: cnt, len: len, dp: dp});
-    }
-    if (du === 'PUMP' || du.indexOf('PUMP:') === 0) {
-      if (dp) pumpDepth = dp;
-      if (!pumpModel && (du.indexOf('PUMP:') === 0 || du.indexOf('X ') > 0)) pumpModel = d.replace(/^PUMP:\s*/i, '');
-    }
-    // "Pump Description" header → next row often has model
-    if (du === 'PUMP DESCRIPTION' && i+1 < rdList.length) {
-      var nd = (rdList[i+1].desc || '').trim();
-      if (nd && nd.toUpperCase() !== 'FORMATION TOPS') pumpModel = nd;
-    }
-  }
-  // Default pump depth = bottom of rod string
-  if (!pumpDepth && rodSections.length) {
-    pumpDepth = rodSections[rodSections.length - 1].dp;
-  }
-
-  // ── Equipment block on right ──
-  // Prefer workover data (from Job Detail) when available — that's the authoritative
-  // post-job state. Else fall back to inferred-from-arrays data above.
-  var wo = w._workover;
-  if (wo) {
-    // Override snDepth from workover for diagram tick mark
-    var woSn = parseDepthLoose(wo.sn_depth);
-    if (woSn) snDepth = woSn;
-    // Pump depth: use SN depth as proxy (pump sits just below SN)
-    if (woSn) pumpDepth = woSn + 8;
-  }
-  rY += 6;
-  s += '<line x1="' + rX + '" y1="' + rY + '" x2="' + (rX + 220) + '" y2="' + rY + '" stroke="#000" stroke-width="0.6"/>';
-  rY += 12;
-  // Source banner
-  if (wo) {
-    var pickedDate = w._picked && w._picked.kind === 'workover' ? w._picked.date : null;
-    var carried = pickedDate && wo.event_date !== pickedDate;
-    var bannerTxt = carried
-      ? 'Equipment carried forward from ' + (wo.event_date || '')
-      : 'From workover ' + (wo.event_date || '');
-    s += '<text x="' + rX + '" y="' + rY + '" font-size="8" font-style="italic" fill="#666">' + esc(bannerTxt) + '</text>';
-    rY += 11;
-  }
-
-  if (wo) {
-    // Tubing block from workover counts
-    s += '<text x="' + rX + '" y="' + rY + '" font-size="10" font-weight="700" fill="#000" font-style="italic" text-decoration="underline">Tubing</text>';
-    rY += 13;
-    var tbgLines = [];
-    if (wo.tbg_count_278) tbgLines.push('2-7/8" : ' + wo.tbg_count_278 + ' jts' + (wo.tbg_count_278_coated ? ' (' + wo.tbg_count_278_coated + ' coated)' : ''));
-    if (wo.tbg_count_238) tbgLines.push('2-3/8" : ' + wo.tbg_count_238 + ' jts' + (wo.tbg_count_238_coated ? ' (' + wo.tbg_count_238_coated + ' coated)' : ''));
-    if (wo.tbg_coating) tbgLines.push('Coating: ' + wo.tbg_coating);
-    if (wo.sn_depth) tbgLines.push('SN: ' + Math.round(parseFloat(wo.sn_depth)).toLocaleString() + "'");
-    if (wo.tac_depth) tbgLines.push('TAC: ' + Math.round(parseFloat(wo.tac_depth)).toLocaleString() + "'");
-    if (!tbgLines.length) tbgLines.push('—');
-    tbgLines.forEach(function(t) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">' + esc(t) + '</text>'; rY += 11; });
-    rY += 4;
-    // Rods block from workover counts
-    s += '<text x="' + rX + '" y="' + rY + '" font-size="10" font-weight="700" fill="#000" font-style="italic" text-decoration="underline">Rods</text>';
-    rY += 13;
-    var rodLines = [];
-    // ft per joint — steel rods 25', fiberglass 37.5'
-    var ROD_LEN = { steel: 25, fg: 37.5 };
-    function rodLine(label, count, lenPer) {
-      var n = parseFloat(count);
-      var lenTxt = (!isNaN(n) && n > 0) ? '  (' + Math.round(n * lenPer).toLocaleString() + "')" : '';
-      return label + ': ' + count + ' ea' + lenTxt;
-    }
-    var totalLen = 0;
-    if (wo.rods_1)      { rodLines.push(rodLine('1"    ', wo.rods_1, ROD_LEN.steel));    totalLen += parseFloat(wo.rods_1) * ROD_LEN.steel; }
-    if (wo.rods_78)     { rodLines.push(rodLine('7/8"  ', wo.rods_78, ROD_LEN.steel));   totalLen += parseFloat(wo.rods_78) * ROD_LEN.steel; }
-    if (wo.rods_34)     { rodLines.push(rodLine('3/4"  ', wo.rods_34, ROD_LEN.steel));   totalLen += parseFloat(wo.rods_34) * ROD_LEN.steel; }
-    if (wo.rods_58)     { rodLines.push(rodLine('5/8"  ', wo.rods_58, ROD_LEN.steel));   totalLen += parseFloat(wo.rods_58) * ROD_LEN.steel; }
-    if (wo.rods_fg)     { rodLines.push(rodLine('FG    ', wo.rods_fg, ROD_LEN.fg));      totalLen += parseFloat(wo.rods_fg) * ROD_LEN.fg; }
-    if (wo.rods_sinker) { rodLines.push(rodLine('Sinker', wo.rods_sinker, ROD_LEN.steel)); totalLen += parseFloat(wo.rods_sinker) * ROD_LEN.steel; }
-    if (totalLen > 0)   rodLines.push("Total : " + Math.round(totalLen).toLocaleString() + "'");
-    if (wo.rod_type)    rodLines.push('Type  : ' + wo.rod_type);
-    if (!rodLines.length) rodLines.push('—');
-    rodLines.forEach(function(t) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">' + esc(t) + '</text>'; rY += 11; });
-    rY += 4;
-    // Pump block from workover
-    s += '<text x="' + rX + '" y="' + rY + '" font-size="10" font-weight="700" fill="#000" font-style="italic" text-decoration="underline">Pump</text>';
-    rY += 13;
-    if (wo.pump_size) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">Size: ' + esc(wo.pump_size) + '</text>'; rY += 11; }
-    if (wo.pump_type) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">Type: ' + esc(wo.pump_type) + '</text>'; rY += 11; }
-    // Pump depth: SN depth is where the seating nipple sits; pump set just below SN (~8 ft)
-    var pumpDepthVal = parseDepthLoose(wo.sn_depth);
-    if (pumpDepthVal) {
-      var pdShown = Math.round(pumpDepthVal + 8);
-      s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">Depth: ~' + pdShown.toLocaleString() + "' (SN+8')</text>"; rY += 11;
-    }
-    if (wo.pumping_unit) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">Unit: ' + esc(wo.pumping_unit) + '</text>'; rY += 11; }
-    if (wo.spm) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">SPM:  ' + esc(wo.spm) + '</text>'; rY += 11; }
-    if (wo.failure_cause || wo.failed_component) {
-      rY += 4;
-      s += '<text x="' + rX + '" y="' + rY + '" font-size="8" font-style="italic" fill="#900">Failure: ' + esc((wo.failure_cause || '') + (wo.failed_component ? ' / ' + wo.failed_component : '')) + '</text>';
-      rY += 11;
-    }
-  } else if (tubingDesc || eotDepth || rodSections.length || pumpDepth) {
-    // Legacy: inferred from xlsx tb/rd arrays
-    s += '<text x="' + rX + '" y="' + rY + '" font-size="10" font-weight="700" fill="#000" font-style="italic" text-decoration="underline">Tubing</text>';
-    rY += 13;
-    if (tubingDesc) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">' + esc(tubingDesc) + '</text>'; rY += 11; }
-    if (eotDepth) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">EOT: ' + Math.round(eotDepth).toLocaleString() + "'</text>"; rY += 11; }
-    if (snDepth) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">SN: ' + Math.round(snDepth).toLocaleString() + "'</text>"; rY += 11; }
-    if (rodSections.length) {
-      rY += 4;
-      s += '<text x="' + rX + '" y="' + rY + '" font-size="10" font-weight="700" fill="#000" font-style="italic" text-decoration="underline">Rods</text>';
-      rY += 13;
-      for (var i = 0; i < rodSections.length; i++) {
-        var rs = rodSections[i];
-        var txt = (rs.size ? rs.size + ' ' : '') + rs.cnt + ' ea, ' + Math.round(rs.len) + "' (to " + Math.round(rs.dp).toLocaleString() + "')";
-        s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">' + esc(txt) + '</text>';
-        rY += 11;
-      }
-    }
-    if (pumpModel || pumpDepth) {
-      rY += 4;
-      s += '<text x="' + rX + '" y="' + rY + '" font-size="10" font-weight="700" fill="#000" font-style="italic" text-decoration="underline">Pump</text>';
-      rY += 13;
-      if (pumpModel) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">' + esc(pumpModel) + '</text>'; rY += 11; }
-      if (pumpDepth) { s += '<text x="' + rX + '" y="' + rY + '" font-size="9" fill="#000">@ ' + Math.round(pumpDepth).toLocaleString() + "'</text>"; rY += 11; }
-    }
-  }
-
-  // ── WELLBORE DIAGRAM ──
-  // Ground surface
-  var gy = wbTop;
-  s += '<line x1="' + (wbLeft) + '" y1="' + gy + '" x2="' + (wbRight) + '" y2="' + gy + '" stroke="#000" stroke-width="2"/>';
-  // Surface hatching
-  for (var gx = wbLeft + 3; gx < wbRight; gx += 5) {
-    s += '<line x1="' + gx + '" y1="' + gy + '" x2="' + (gx-3) + '" y2="' + (gy-4) + '" stroke="#000" stroke-width="0.6"/>';
-  }
-
-  // ── DEPTH SCALE — right next to wellbore (formation tops go further right) ──
-  var scaleX = wbRight + 8;
-  var dTick = maxD <= 1500 ? 200 : maxD <= 4000 ? 500 : maxD <= 8000 ? 1000 : 2000;
-  s += '<line x1="' + scaleX + '" y1="' + gy + '" x2="' + scaleX + '" y2="' + dToY(maxD * 0.99) + '" stroke="#999" stroke-width="0.4"/>';
-  for (var d = dTick; d < maxD; d += dTick) {
-    var ty = dToY(d);
-    s += '<line x1="' + (scaleX - 3) + '" y1="' + ty + '" x2="' + (scaleX + 1) + '" y2="' + ty + '" stroke="#999" stroke-width="0.4"/>';
-    s += '<text x="' + (scaleX + 3) + '" y="' + (ty + 2.5) + '" font-size="6" fill="#aaa">' + d.toLocaleString() + "'" + '</text>';
-  }
-
-  // Pass 1: cement fills (drawn first so casing line goes on top)
-  // Use _cmt computed earlier (data or assumed)
-  for (var i = 0; i < sorted.length; i++) {
-    var cs = sorted[i];
-    if (!cs.depth) continue;
-    var y2 = dToY(cs.depth);
-    var ir = csgIR(cs);
-    var cmt = cs._cmt || {};
-    if (cmt.d === null || cmt.d === undefined) continue;
-    var tocD = cmt.d;
-    var tocY = dToY(tocD);
-    // Outer cement boundary = next outer casing's inside line at this depth, or hole wall (~ir + 8) if outermost
-    // Use prev (larger) casing in `sorted` only where it extends to this depth, else use this casing's ir + 8
-    var outerHW = ir + 8;
-    if (i > 0) {
-      // Walk outward to find the smallest enclosing casing whose depth >= tocY zone
-      for (var k = i - 1; k >= 0; k--) {
-        if (sorted[k].depth && sorted[k].depth > tocD) { outerHW = csgIR(sorted[k]); break; }
-      }
-    }
-    // Solid gray cement fill in annulus (left + right of casing line)
-    s += '<rect x="' + (cx - outerHW) + '" y="' + tocY + '" width="' + (outerHW - ir) + '" height="' + (y2 - tocY) + '" fill="#999"/>';
-    s += '<rect x="' + (cx + ir)      + '" y="' + tocY + '" width="' + (outerHW - ir) + '" height="' + (y2 - tocY) + '" fill="#999"/>';
-  }
-
-  // Pass 2: casing inside lines + shoes
-  for (var i = 0; i < sorted.length; i++) {
-    var cs = sorted[i];
-    if (!cs.depth) continue;
-    var y1 = gy, y2 = dToY(cs.depth);
-    var ir = csgIR(cs);
-
-    // Single black line on each side (inside of casing)
-    s += '<line x1="' + (cx-ir)  + '" y1="' + y1 + '" x2="' + (cx-ir)  + '" y2="' + y2 + '" stroke="#000" stroke-width="1.5"/>';
-    s += '<line x1="' + (cx+ir)  + '" y1="' + y1 + '" x2="' + (cx+ir)  + '" y2="' + y2 + '" stroke="#000" stroke-width="1.5"/>';
-
-    // Right-triangle shoe — vertical edge along the casing line, base at casing shoe depth (y2)
-    s += '<polygon points="' + (cx-ir) + ',' + (y2-12) + ' ' + (cx-ir) + ',' + y2 + ' ' + (cx-ir-8) + ',' + y2 + '" fill="#000"/>';
-    s += '<polygon points="' + (cx+ir) + ',' + (y2-12) + ' ' + (cx+ir) + ',' + y2 + ' ' + (cx+ir+8) + ',' + y2 + '" fill="#000"/>';
-  }
-
-  // ── TUBING / RODS / PUMP visuals down the center ──
-  if (eotDepth || pumpDepth) {
-    var tubBot = eotDepth ? dToY(Math.min(eotDepth, maxD)) : (pumpDepth ? dToY(pumpDepth) : null);
-    var pumpY = pumpDepth ? dToY(Math.min(pumpDepth, maxD)) : null;
-    // Tubing — pair of thin lines at center
-    if (tubBot) {
-      s += '<line x1="' + (cx-4) + '" y1="' + gy + '" x2="' + (cx-4) + '" y2="' + tubBot + '" stroke="#000" stroke-width="0.8"/>';
-      s += '<line x1="' + (cx+4) + '" y1="' + gy + '" x2="' + (cx+4) + '" y2="' + tubBot + '" stroke="#000" stroke-width="0.8"/>';
-    }
-    // Rod string — single thin line at exact center, down to pump (or EOT if no pump)
-    var rodBot = pumpY || tubBot;
-    if (rodBot) {
-      s += '<line x1="' + cx + '" y1="' + gy + '" x2="' + cx + '" y2="' + rodBot + '" stroke="#000" stroke-width="0.5" stroke-dasharray="2,2"/>';
-    }
-    // SN tick mark (no depth label — that's in the equipment table)
-    if (snDepth) {
-      var snY = dToY(snDepth);
-      s += '<line x1="' + (cx-6) + '" y1="' + snY + '" x2="' + (cx+6) + '" y2="' + snY + '" stroke="#000" stroke-width="1.2"/>';
-    }
-    // Pump — small rectangle with X
-    if (pumpY) {
-      var pw = 8, ph = 18;
-      s += '<rect x="' + (cx-pw/2) + '" y="' + (pumpY-ph/2) + '" width="' + pw + '" height="' + ph + '" fill="#fff" stroke="#000" stroke-width="1"/>';
-      s += '<line x1="' + (cx-pw/2) + '" y1="' + (pumpY-ph/2) + '" x2="' + (cx+pw/2) + '" y2="' + (pumpY+ph/2) + '" stroke="#000" stroke-width="0.6"/>';
-      s += '<line x1="' + (cx-pw/2) + '" y1="' + (pumpY+ph/2) + '" x2="' + (cx+pw/2) + '" y2="' + (pumpY-ph/2) + '" stroke="#000" stroke-width="0.6"/>';
-      // (pump label removed)
-    } else if (eotDepth) {
-      // EOT label only
-      s += '<text x="' + (cx+6) + '" y="' + (tubBot+3) + '" font-size="7" fill="#000">EOT ' + Math.round(eotDepth) + "'</text>";
-    }
-  }
-
-  // ── PERFORATIONS — hatched brackets close to wellbore + LEFT-side depth callouts ──
-  var perfLabels = []; // {y, txt, py1, py2, hw}
-  for (var i = 0; i < perfs.length; i++) {
-    var p = perfs[i];
-    var py1 = dToY(p.top), py2 = dToY(p.bot);
-    if (py2 - py1 < 3) py2 = py1 + 3;
-    var innerHW = 20;
-    for (var j = sorted.length - 1; j >= 0; j--) {
-      if (sorted[j].depth >= p.top) { innerHW = csgIR(sorted[j]) || 20; break; }
-    }
-    // Hatched bracket — pulled in close (1px gap from inner casing wall)
-    for (var py = py1; py <= py2; py += 2.5) {
-      s += '<line x1="' + (cx - innerHW - 1) + '" y1="' + py + '" x2="' + (cx - innerHW - 8) + '" y2="' + py + '" stroke="#000" stroke-width="1"/>';
-      s += '<line x1="' + (cx + innerHW + 1) + '" y1="' + py + '" x2="' + (cx + innerHW + 8) + '" y2="' + py + '" stroke="#000" stroke-width="1"/>';
-    }
-    // Bracket end caps
-    s += '<line x1="' + (cx - innerHW - 8) + '" y1="' + py1 + '" x2="' + (cx - innerHW - 8) + '" y2="' + py2 + '" stroke="#000" stroke-width="1"/>';
-    s += '<line x1="' + (cx + innerHW + 8) + '" y1="' + py1 + '" x2="' + (cx + innerHW + 8) + '" y2="' + py2 + '" stroke="#000" stroke-width="1"/>';
-
-    var labelTxt = p.top + '-' + p.bot + (p.spf ? '  ' + p.spf + 'spf' : '');
-    perfLabels.push({y: (py1 + py2) / 2, txt: labelTxt, py1: py1, py2: py2, hw: innerHW});
-  }
-  // (Perf depth labels removed — brackets only on wellbore; depths are in left-side perf list)
-
-  // ── FORMATION TOPS — labels on RIGHT, just inside the depth scale ──
-  var ftList = (w.ft || []).filter(function(f){
-    var d = parseDepth(f.dp);
-    return d && d > 0 && d < maxD;
-  }).map(function(f){
-    return {n: f.fm, d: parseDepth(f.dp)};
-  }).sort(function(a,b){return a.d - b.d;});
-
-  // Formation tops sit OUTSIDE the depth scale (scale at wbRight + 8, scale text ends ~wbRight+40)
-  // Each label is two stacked text rows (~17px tall). Stack with overlap-avoidance.
-  var ftLabelX = wbRight + 50;
-  var ftStep = 19;  // min vertical spacing between formation labels (name + depth row)
-  // Forward stack: target y = natural depth y, push down to avoid overlap
-  var ftYs = [];
-  var lastFtY = -1000;
-  for (var i = 0; i < ftList.length; i++) {
-    var ny = Math.max(dToY(ftList[i].d), lastFtY + ftStep);
-    ftYs.push(ny);
-    lastFtY = ny;
-  }
-  // If overflow past wbBot, restack upward
-  if (ftYs.length && ftYs[ftYs.length-1] > wbBot - 12) {
-    ftYs[ftYs.length-1] = wbBot - 12;
-    for (var i = ftYs.length - 2; i >= 0; i--) {
-      ftYs[i] = Math.min(ftYs[i], ftYs[i+1] - ftStep);
-    }
-  }
-  for (var i = 0; i < ftList.length; i++) {
-    var ft = ftList[i];
-    var natY = dToY(ft.d);
-    var labY = ftYs[i];
-    // Dashed leader from wellbore edge to natural depth, then jog to label if shifted
-    s += '<line x1="' + (cx + 70) + '" y1="' + natY + '" x2="' + (ftLabelX - 12) + '" y2="' + natY + '" stroke="#666" stroke-width="0.5" stroke-dasharray="2,2"/>';
-    if (Math.abs(labY - natY) > 1) {
-      s += '<line x1="' + (ftLabelX - 12) + '" y1="' + natY + '" x2="' + (ftLabelX - 2) + '" y2="' + labY + '" stroke="#666" stroke-width="0.5" stroke-dasharray="2,2"/>';
-    } else {
-      s += '<line x1="' + (ftLabelX - 12) + '" y1="' + natY + '" x2="' + (ftLabelX - 2) + '" y2="' + natY + '" stroke="#666" stroke-width="0.5" stroke-dasharray="2,2"/>';
-    }
-    s += '<text x="' + ftLabelX + '" y="' + (labY - 1) + '" font-size="8" fill="#000" font-weight="700">' + esc(ft.n) + '</text>';
-    s += '<text x="' + ftLabelX + '" y="' + (labY + 8) + '" font-size="7" fill="#555">' + ft.d.toLocaleString() + "'" + '</text>';
-  }
-
-  // ── CEMENT PLUG between PBTD and TD ──
-  if (pbtd && td && pbtd < td) {
-    var pby = dToY(pbtd), tdy = dToY(td);
-    var plugHW = sorted.length ? csgIR(sorted[sorted.length-1]) || 20 : 20;
-    s += '<rect x="' + (cx - plugHW) + '" y="' + pby + '" width="' + (plugHW*2) + '" height="' + (tdy - pby) + '" fill="#999"/>';
-  }
-
-  // ── PLUGS (CIBP, Cement Plug, Bridge Plug, Retainer) ──
-  var plList = (w.pl || []).filter(function(p){ return parseDepth(p.dp); });
-  for (var i = 0; i < plList.length; i++) {
-    var pl = plList[i];
-    var pd = parseDepth(pl.dp);
-    var plY = dToY(pd);
-    var ptype = (pl.ty || '').toUpperCase();
-    // Find inner casing half-width at this depth
-    var plHw = 20;
-    for (var j = sorted.length - 1; j >= 0; j--) {
-      if (sorted[j].depth >= pd) { plHw = csgIR(sorted[j]) || 20; break; }
-    }
-    if (ptype.indexOf('CIBP') >= 0 || ptype.indexOf('BRIDGE') >= 0) {
-      // Bridge plug — solid black bar with X pattern (typical CIBP symbol)
-      s += '<rect x="' + (cx - plHw) + '" y="' + (plY - 3) + '" width="' + (plHw * 2) + '" height="6" fill="#000"/>';
-      s += '<line x1="' + (cx - plHw) + '" y1="' + (plY - 3) + '" x2="' + (cx + plHw) + '" y2="' + (plY + 3) + '" stroke="#fff" stroke-width="1"/>';
-      s += '<line x1="' + (cx - plHw) + '" y1="' + (plY + 3) + '" x2="' + (cx + plHw) + '" y2="' + (plY - 3) + '" stroke="#fff" stroke-width="1"/>';
-    } else if (ptype.indexOf('RETAINER') >= 0) {
-      // Cement retainer — bowtie symbol
-      s += '<polygon points="' + (cx - plHw) + ',' + (plY - 4) + ' ' + (cx + plHw) + ',' + (plY - 4) + ' ' + (cx - plHw) + ',' + (plY + 4) + ' ' + (cx + plHw) + ',' + (plY + 4) + '" fill="#000"/>';
-    } else {
-      // Cement plug or generic — solid gray fill block (~30 ft thick visually)
-      var plugThick = 8;
-      s += '<rect x="' + (cx - plHw) + '" y="' + (plY - plugThick/2) + '" width="' + (plHw * 2) + '" height="' + plugThick + '" fill="#999" stroke="#000" stroke-width="0.5"/>';
-    }
-    // Label on right side of wellbore
-    var labelTxt = (pl.ty || 'Plug') + ' @ ' + pd.toLocaleString() + "'";
-    s += '<text x="' + (cx + plHw + 14) + '" y="' + (plY + 3) + '" font-size="8" fill="#000">' + esc(labelTxt) + '</text>';
-  }
-
-  // PBTD dashed line + label (placed above PBTD line if too close to TD)
-  if (pbtd) {
-    var pby = dToY(pbtd);
-    s += '<line x1="' + (wbLeft - 20) + '" y1="' + pby + '" x2="' + (wbRight + 20) + '" y2="' + pby + '" stroke="#000" stroke-width="1" stroke-dasharray="4,3"/>';
-    var pbtdLabelY = pby - 4;
-    if (td && Math.abs(dToY(td) - pby) > 14) pbtdLabelY = pby + 12;
-    s += '<text x="' + (wbLeft - 22) + '" y="' + pbtdLabelY + '" text-anchor="end" font-size="10" fill="#000" font-weight="700">PBTD ' + pbtd.toLocaleString() + "'" + '</text>';
-  }
-
-  // TD
-  if (td) {
-    var tdy = dToY(td);
-    s += '<line x1="' + (wbLeft - 20) + '" y1="' + tdy + '" x2="' + (wbRight + 20) + '" y2="' + tdy + '" stroke="#000" stroke-width="2"/>';
-    // TD label past formation tops on the far right
-    s += '<text x="' + (ftLabelX + 90) + '" y="' + (tdy + 4) + '" font-size="10" fill="#000" font-weight="700">TD ' + td.toLocaleString() + "'" + '</text>';
-  }
-
-  // ── PERFORATIONS LIST (left, below casing boxes) ──
-  var perfLX = 20, perfLY = boxY + 5;
-  if (perfs.length) {
-    // Group by zone, but ORDER zones by their shallowest perf (top → bottom)
-    var by_zone = {};
-    for (var i = 0; i < perfs.length; i++) {
-      var z = (perfs[i].zone || g.pool || g.fm || 'PERFORATIONS').toUpperCase();
-      if (!by_zone[z]) by_zone[z] = [];
-      by_zone[z].push(perfs[i]);
-    }
-    var zoneKeys = Object.keys(by_zone).sort(function(a, b) {
-      var ma = Math.min.apply(null, by_zone[a].map(function(p){return p.top;}));
-      var mb = Math.min.apply(null, by_zone[b].map(function(p){return p.top;}));
-      return ma - mb;
-    });
-    for (var zi = 0; zi < zoneKeys.length; zi++) {
-      var zoneName = zoneKeys[zi];
-      // Zone header
-      s += '<text x="' + perfLX + '" y="' + perfLY + '" font-size="10" font-weight="700" fill="#000">' + esc(zoneName) + '</text>';
-      perfLY += 13;
-      // Group within zone by SPF; order spf groups by shallowest perf within
-      var by_spf = {};
-      for (var i = 0; i < by_zone[zoneName].length; i++) {
-        var spfk = by_zone[zoneName][i].spf || '';
-        if (!by_spf[spfk]) by_spf[spfk] = [];
-        by_spf[spfk].push(by_zone[zoneName][i]);
-      }
-      var spfKeys = Object.keys(by_spf).sort(function(a, b) {
-        var ma = Math.min.apply(null, by_spf[a].map(function(p){return p.top;}));
-        var mb = Math.min.apply(null, by_spf[b].map(function(p){return p.top;}));
-        return ma - mb;
-      });
-      for (var k = 0; k < spfKeys.length; k++) {
-        var label = spfKeys[k] ? 'Perfs @' + spfKeys[k] + 'spf -' : 'Perfs -';
-        s += '<text x="' + perfLX + '" y="' + perfLY + '" font-size="9" font-style="italic" fill="#333">' + label + '</text>';
-        perfLY += 10;
-        // Sort perfs within group by top depth ascending
-        var plist = by_spf[spfKeys[k]].slice().sort(function(a, b){ return a.top - b.top; });
-        var lineItems = [];
-        for (var j = 0; j < plist.length; j++) {
-          lineItems.push(plist[j].top + '-' + plist[j].bot);
-        }
-        var lines = [];
-        var line = '';
-        for (var j = 0; j < lineItems.length; j++) {
-          var part = lineItems[j] + (j < lineItems.length - 1 ? ', ' : '');
-          if ((line + part).length > 35) { lines.push(line); line = part; }
-          else line += part;
-        }
-        if (line) lines.push(line);
-        for (var j = 0; j < lines.length; j++) {
-          s += '<text x="' + (perfLX + 8) + '" y="' + perfLY + '" font-size="9" fill="#000">' + esc(lines[j]) + '</text>';
-          perfLY += 11;
-        }
-      }
-      perfLY += 5;
-    }
-  }
-
-  // ── Footer ──
-  s += '<line x1="1" y1="' + (svgH - 40) + '" x2="' + (svgW-1) + '" y2="' + (svgH - 40) + '" stroke="#000" stroke-width="0.8"/>';
-  s += '<text x="20" y="' + (svgH - 25) + '" font-size="9" fill="#000" font-weight="700">Other:</text>';
-  s += '<line x1="1" y1="' + (svgH - 10) + '" x2="' + (svgW-1) + '" y2="' + (svgH - 10) + '" stroke="#000" stroke-width="0.8"/>';
-
-  // Version/date footer
-  var verLabel = '';
-  var ver = (w.v || [])[currentVersionIdx || 0];
-  if (ver) verLabel = 'WBD ' + (document.getElementById('wellInput').value || '') + ' ' + (ver.dt || '');
-  s += '<text x="' + (cx) + '" y="' + (svgH - 5) + '" text-anchor="middle" font-size="8" fill="#000">' + esc(verLabel) + '</text>';
-  s += '<text x="' + (svgW - 20) + '" y="' + (svgH - 5) + '" text-anchor="end" font-size="8" fill="#000">Page 1</text>';
-
-  s += '</svg>';
-  container.innerHTML = s;
+  body.innerHTML =
+    '<table class="info-table"><tbody>'
+    + row('Production Casing Size', prodSize)
+    + row('Tubing Size', tbSizes.length ? tbSizes.join('  /  ') : null)
+    + row('Top Perf', topPerf != null ? topPerf.toLocaleString() : null, " ft")
+    + row(ppLabel, ppDepth != null ? ppDepth.toLocaleString() : null, " ft")
+    + '</tbody></table>';
 }
+
+// ── Session resume ──────────────────────────────────────────────────────────
+(function () {
+  try {
+    var saved = localStorage.getItem(SESSION_KEY);
+    if (saved) {
+      var session = JSON.parse(saved);
+      if (session.expires > Date.now()) { showApp(session); return; }
+      localStorage.removeItem(SESSION_KEY);
+    }
+  } catch(e) { localStorage.removeItem(SESSION_KEY); }
+})();
 </script>
+
 </body>
 </html>
