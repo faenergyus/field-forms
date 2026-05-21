@@ -1204,7 +1204,6 @@ function showPortal(session) {
 }
 
 function showPrices() {
-  if (!PRICES) return;
   function fmt(price) {
     return price < 0 ? '-$' + Math.abs(price).toFixed(3) : '$' + price.toFixed(2);
   }
@@ -1214,16 +1213,24 @@ function showPrices() {
     const arrow = chg >= 0 ? '▲' : '▼';
     return `<span class="price-chg ${cls}">${arrow} ${Math.abs(chg).toFixed(2)}</span>`;
   }
-  if (PRICES.wti) {
-    document.getElementById('wti-val').textContent = fmt(PRICES.wti.price);
-    document.getElementById('wti-chg').outerHTML = chgHtml(PRICES.wti.chg);
-    document.getElementById('wti-date').textContent = PRICES.wti.date || '';
+  function render(p) {
+    if (!p) return;
+    if (p.wti) {
+      document.getElementById('wti-val').textContent = fmt(p.wti.price);
+      document.getElementById('wti-chg').outerHTML = chgHtml(p.wti.chg);
+      document.getElementById('wti-date').textContent = p.wti.date || '';
+    }
+    if (p.waha) {
+      document.getElementById('waha-val').textContent = fmt(p.waha.price);
+      document.getElementById('waha-chg').outerHTML = chgHtml(p.waha.chg);
+      document.getElementById('waha-date').textContent = p.waha.date || '';
+    }
   }
-  if (PRICES.waha) {
-    document.getElementById('waha-val').textContent = fmt(PRICES.waha.price);
-    document.getElementById('waha-chg').outerHTML = chgHtml(PRICES.waha.chg);
-    document.getElementById('waha-date').textContent = PRICES.waha.date || '';
-  }
+  // Shared price source for all three 40ac.us landing pages.
+  fetch('prices.json', {cache: 'no-cache'})
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(render)
+    .catch(() => render(typeof PRICES !== 'undefined' ? PRICES : null));
 }
 showPrices();
 
