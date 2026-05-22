@@ -659,10 +659,29 @@ var EDITOR_FIELDS = {
   plugs:         [['plug_type','Type','select','CIBP,Cement Plug,Bridge Plug,Retainer'], ['depth','Depth','number'], ['toc','TOC'], ['cement_sacks','Sxs'], ['notes','Notes']],
   formation_tops:[['formation_name','Formation'], ['depth','Depth','number']],
   tubing:        [['description','Description'], ['depth','Depth','number'], ['joints','Joints'], ['notes','Notes']],
-  rods:          [['description','Description'], ['count','Count'], ['length','Length'], ['depth','Depth','number'], ['notes','Notes']],
+  rods:          [['description','Description'], ['size','Size'], ['grade','Grade','gradeselect'], ['count','Count'], ['length','Length'], ['depth','Depth','number'], ['notes','Notes']],
 };
 
-function openEditor(addMode) {
+// Rod grade catalog (Ops_Reporting.dbo.scada_rod_grade_catalog) — loaded once, used
+// to populate the grade dropdown on rod editor rows.
+var ROD_GRADE_CATALOG = null;
+async function loadRodGradeCatalog() {
+  if (ROD_GRADE_CATALOG) return ROD_GRADE_CATALOG;
+  try {
+    if (!API_BASE) await loadApiBase();
+    var res = await fetch(API_BASE + '/scada/rod-catalog', {
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    });
+    if (res.ok) {
+      var d = await res.json();
+      ROD_GRADE_CATALOG = (d && d.grades) ? d.grades : [];
+    } else { ROD_GRADE_CATALOG = []; }
+  } catch (e) { ROD_GRADE_CATALOG = []; }
+  return ROD_GRADE_CATALOG;
+}
+
+async function openEditor(addMode) {
+  await loadRodGradeCatalog();
   var w = currentWell;
   if (!w) return;
   var picked = (w._timeline || [])[currentVersionIdx];
@@ -699,7 +718,7 @@ function openEditor(addMode) {
     plugs: (clone ? clone.pl || [] : []).map(function(p){ return {plug_type:p.ty, depth:p.dp, toc:p.tc, cement_sacks:p.cs, notes:''}; }),
     formation_tops: (clone ? clone.ft || [] : []).map(function(f){ return {formation_name:f.fm, depth:f.dp}; }),
     tubing: (clone ? clone.tb || [] : []).map(function(t){ return {description:t.desc, depth:t.dp, joints:t.jts, notes:''}; }),
-    rods:   (clone ? clone.rd || [] : []).map(function(r){ return {description:r.desc, count:r.cnt, length:r.len, depth:r.dp, notes:''}; }),
+    rods:   (clone ? clone.rd || [] : []).map(function(r){ return {description:r.desc, size:r.sz, grade:r.gr, count:r.cnt, length:r.len, depth:r.dp, notes:''}; }),
   };
   document.getElementById('wbdViewer').style.display = 'none';
   document.getElementById('wbdEditor').style.display = 'block';
@@ -754,6 +773,16 @@ function renderEditorTable(group) {
       if (type === 'select') {
         var opts = (f[3] || '').split(',').map(function(o){ return '<option' + (o===val ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('');
         html += '<td><select data-field="' + f[0] + '"><option></option>' + opts + '</select></td>';
+      } else if (type === 'gradeselect') {
+        var cat = ROD_GRADE_CATALOG || [];
+        var matched = false;
+        var gopts = cat.map(function(g){
+          var sel = (String(g.name) === String(val)); if (sel) matched = true;
+          return '<option value="' + esc(g.name) + '"' + (sel ? ' selected' : '') + '>' + esc(g.name) + '</option>';
+        }).join('');
+        // If the stored grade isn't in the catalog, keep it as a custom option
+        if (val && !matched) gopts = '<option value="' + esc(val) + '" selected>' + esc(val) + ' (custom)</option>' + gopts;
+        html += '<td><select data-field="' + f[0] + '"><option value="">—</option>' + gopts + '</select></td>';
       } else if (type === 'bool') {
         html += '<td><select data-field="' + f[0] + '"><option value="">—</option><option value="true"' + (val===true ? ' selected':'') + '>Yes</option><option value="false"' + (val===false ? ' selected':'') + '>No</option></select></td>';
       } else {
@@ -1348,7 +1377,9 @@ function buildClaudePrompt(wellName) {
 '  with top_depth = bottom_depth = that depth.',
 '- tubing: one row per component (jts, SN, TAC, MA, perf\'d sub, KB, wellhead) in run order.',
 '  depth = cumulative running depth shown.',
-'- rods: only populate if rod string detail is shown (count + size + length).',
+'- rods: only populate if rod string detail is shown. For each section give:',
+'  size = rod diameter (e.g. \'7/8"\', \'3/4"\', \'1"\'); grade = rod grade/material',
+'  (e.g. \'D\', \'KD\', \'API D\', \'Grade D\', \'Fiberglass\', \'EL\'); plus count, length, depth.',
 '- formation_tops, plugs: only if shown.',
 '- is_squeezed: boolean; null if unknown.',
 '',
@@ -1362,7 +1393,7 @@ function buildClaudePrompt(wellName) {
 '  "plugs":          [{ "plug_type", "depth", "toc", "cement_sacks", "notes" }],',
 '  "formation_tops": [{ "formation_name", "depth" }],',
 '  "tubing":         [{ "description", "depth", "joints", "notes" }],',
-'  "rods":           [{ "description", "count", "length", "depth", "notes" }]',
+'  "rods":           [{ "description", "size", "grade", "count", "length", "depth", "notes" }]',
 '}',
 '',
 'Return only the JSON object.'
@@ -1399,7 +1430,8 @@ function copyClaudePrompt() {
   window.getSelection().removeAllRanges();
 }
 
-function parseFromClaude() {
+async function parseFromClaude() {
+  await loadRodGradeCatalog();
   var w = currentWell;
   if (!w) { alert('Pick a well first'); return; }
   var raw = document.getElementById('claudePasteJson').value.trim();
@@ -1470,6 +1502,7 @@ async function uploadWbdFile(inputEl) {
   var btn = document.getElementById('btnUpload');
   var original = btn ? btn.textContent : 'Upload';
   if (btn) { btn.textContent = 'Parsing...'; btn.disabled = true; }
+  await loadRodGradeCatalog();
   try {
     var fd = new FormData();
     fd.append('file', file);
@@ -1733,6 +1766,8 @@ var TBL_FIELDS = {
   ],
   rods: [
     {key:'description', label:'Description', map:'desc'},
+    {key:'size',        label:'Size',        map:'sz'},
+    {key:'grade',       label:'Grade',       map:'gr'},
     {key:'count',       label:'Count',       map:'cnt'},
     {key:'length',      label:'Length',      map:'len'},
     {key:'depth',       label:'Depth',       map:'dp'},
@@ -2123,8 +2158,8 @@ function renderAllTables(w) {
     ['tbg_count_278','tbg_count_278_coated','tbg_count_238','tbg_count_238_coated','tbg_coating','sn_depth','tac_depth','tbg_replaced_278','tbg_replaced_278_coated','tbg_replaced_238','tbg_replaced_238_coated']);
   // ── Rods — schematic component-by-component rows
   var rdRows = [];
-  schems.forEach(function(t){ (t.data.rd || []).forEach(function(r){ rdRows.push([vlabel(t), r.desc, r.cnt, r.len, r.dp, r.notes]); }); });
-  html += tableHTML('Rods (schematic detail)', ['Version','Description','Count','Length','Depth','Notes'], rdRows);
+  schems.forEach(function(t){ (t.data.rd || []).forEach(function(r){ rdRows.push([vlabel(t), r.desc, r.sz, r.gr, r.cnt, r.len, r.dp, r.notes]); }); });
+  html += tableHTML('Rods (schematic detail)', ['Version','Description','Size','Grade','Count','Length','Depth','Notes'], rdRows);
 
   // ── Rods — workover counts
   html += workoverTableHTML('Rods (workover counts)',

@@ -1,7 +1,10 @@
 """Migrate well_file_summary.xlsx 9 sheets to SQL Server (sf\\sqldev Ops_Reporting).
 
 All tables prefixed wbd_ so they group together in SSMS object explorer.
-Drops + recreates on each run.
+
+NON-DESTRUCTIVE: tables are created only if absent, and rows are MERGEd on the
+primary key. A re-run preserves any columns added out-of-band (e.g. wbd_rods.grade,
+wbd_rods.rod_grade_id, wbd_rods.size) and any data edited via the WBD/SCADA pipeline.
 """
 import openpyxl
 import pyodbc
@@ -144,6 +147,7 @@ TABLES = [
     {
         "sheet": "rods",
         "table": "wbd_rods",
+        "pk": "rod_id",
         "ddl": """CREATE TABLE dbo.wbd_rods (
             rod_id INT NOT NULL PRIMARY KEY,
             well_id INT NULL,
@@ -152,10 +156,19 @@ TABLES = [
             count NVARCHAR(50) NULL,
             length NVARCHAR(50) NULL,
             depth NVARCHAR(50) NULL,
-            notes NVARCHAR(500) NULL
+            notes NVARCHAR(500) NULL,
+            grade NVARCHAR(80) NULL,
+            rod_grade_id INT NULL,
+            size NVARCHAR(40) NULL
         )""",
     },
 ]
+
+# Primary-key column per table (for MERGE). Default = first column of the DDL.
+for _cfg in TABLES:
+    if "pk" not in _cfg:
+        _first = _cfg["ddl"].split("(", 1)[1].strip().split()[0]
+        _cfg["pk"] = _first
 
 print("Connecting to sf\\sqldev Ops_Reporting...")
 conn = pyodbc.connect(CONN_STR, autocommit=False)
@@ -168,20 +181,18 @@ wb = openpyxl.load_workbook(XLSX, read_only=True, data_only=True)
 for cfg in TABLES:
     sheet = cfg["sheet"]
     table = cfg["table"]
+    pk = cfg["pk"]
     print(f"\n=== {sheet} -> dbo.{table} ===")
 
-    # Drop + recreate
-    cur.execute(f"IF OBJECT_ID('dbo.{table}', 'U') IS NOT NULL DROP TABLE dbo.{table}")
-    cur.execute(cfg["ddl"])
+    # Create only if absent — never drop (preserves added columns + edited data)
+    cur.execute(f"IF OBJECT_ID('dbo.{table}', 'U') IS NULL EXEC('{cfg['ddl'].strip()}')")
     conn.commit()
 
     # Load rows
     ws = wb[sheet]
     rows_iter = ws.iter_rows(values_only=True)
     headers = list(next(rows_iter))
-    cols = ", ".join(f"[{h}]" for h in headers)
-    placeholders = ", ".join(["?"] * len(headers))
-    insert_sql = f"INSERT INTO dbo.{table} ({cols}) VALUES ({placeholders})"
+    api_idx = headers.index("api") if "api" in headers else None
 
     batch = []
     for r in rows_iter:
@@ -194,12 +205,32 @@ for cfg in TABLES:
                 rec.append(1 if v else 0)
             else:
                 rec.append(v)
+        # API must be digits-only — strip spaces/dashes/junk on import
+        if api_idx is not None and isinstance(rec[api_idx], str):
+            rec[api_idx] = "".join(c for c in rec[api_idx] if c.isdigit()) or None
         batch.append(tuple(rec))
 
     if batch:
-        cur.executemany(insert_sql, batch)
+        # MERGE upsert on the PK so a re-run preserves out-of-band columns/data:
+        # only the columns present in the xlsx are written; extra columns (grade,
+        # rod_grade_id, size, ...) are left untouched.
+        update_cols = [h for h in headers if h != pk]
+        src_cols = ", ".join(f"[{h}]" for h in headers)
+        on_clause = f"t.[{pk}] = s.[{pk}]"
+        set_clause = ", ".join(f"t.[{h}] = s.[{h}]" for h in update_cols) or f"t.[{pk}] = s.[{pk}]"
+        ins_cols = ", ".join(f"[{h}]" for h in headers)
+        ins_vals = ", ".join(f"s.[{h}]" for h in headers)
+        placeholders = ", ".join(["?"] * len(headers))
+        merge_sql = (
+            f"MERGE dbo.{table} AS t "
+            f"USING (SELECT {', '.join(f'? AS [{h}]' for h in headers)}) AS s "
+            f"ON {on_clause} "
+            f"WHEN MATCHED THEN UPDATE SET {set_clause} "
+            f"WHEN NOT MATCHED THEN INSERT ({ins_cols}) VALUES ({ins_vals});"
+        )
+        cur.executemany(merge_sql, batch)
         conn.commit()
-    print(f"  Inserted {len(batch)} rows")
+    print(f"  Upserted {len(batch)} rows")
 
 # Add helpful indexes for join performance
 print("\nCreating indexes...")
