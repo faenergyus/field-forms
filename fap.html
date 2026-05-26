@@ -63,11 +63,33 @@
     .photo-col { flex: 1; min-width: 0; }
     .photo-col .photo-grid { grid-template-columns: repeat(2, 1fr); }
   </style>
+  <link rel="stylesheet" href="chrome.css">
 </head>
 <body>
-  <div class="header">
+  <header class="appchrome">
+    <a href="index.html"><img class="logo" src="40ACFAEII.png?v=6" alt="Forty Acres Energy" onerror="this.style.display='none'"></a>
+    <nav class="appnav">
+      <a href="https://analyst.40ac.us">Analyst</a>
+      <a href="https://scada.40ac.us">SCADA</a>
+      <a class="cur" href="index.html">Forms</a>
+    </nav>
+    <div class="price" id="price-ticker">
+      <div class="pi"><span class="pl">WTI Crude</span>
+        <span><span id="wti-val" class="pv">&mdash;</span><span id="wti-chg" class="price-chg"></span></span>
+        <span id="wti-date" class="price-date"></span></div>
+      <div class="pi"><span class="pl">Waha Hub</span>
+        <span><span id="waha-val" class="pv">&mdash;</span><span id="waha-chg" class="price-chg"></span></span>
+        <span id="waha-date" class="price-date"></span></div>
+    </div>
+    <div class="user-badge" id="user-badge" style="display:none">
+      <img class="user-avatar" id="user-avatar" src="" alt="">
+      <span class="user-name" id="user-name"></span>
+      <button class="user-signout" onclick="faeSignOut()">sign out</button>
+    </div>
+  </header>
+  <div class="appchrome-title">
     <h1>Fluid Levels (FAP)</h1>
-    <button onclick="window.close()" style="background:none;border:none;color:#3a3a3a;font-size:1.3rem;cursor:pointer;padding:4px 8px;line-height:1;" title="Close">&#x2715;</button>
+    <button class="close-x" onclick="window.close()" title="Close">&#x2715;</button>
   </div>
 
   <div class="container">
@@ -387,5 +409,6 @@ function resetForm() {
   window.scrollTo(0, 0);
 }
 </script>
+<script src="chrome.js"></script>
 </body>
 </html>

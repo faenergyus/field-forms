@@ -147,6 +147,7 @@
       .report-table td:nth-child(5) { display: none; }
     }
   </style>
+  <link rel="stylesheet" href="chrome.css">
 </head>
 <body>
 
@@ -175,9 +176,20 @@
   <div class="login-error" id="login-error"></div>
 </div>
 
-<header>
-  <div>
-    <img class="logo-img" src="40ACFAEII.png?v=5" alt="Forty Acres Energy — FAE II">
+<header class="appchrome">
+  <a href="index.html"><img class="logo" src="40ACFAEII.png?v=6" alt="Forty Acres Energy" onerror="this.style.display='none'"></a>
+  <nav class="appnav">
+    <a href="https://analyst.40ac.us">Analyst</a>
+    <a href="https://scada.40ac.us">SCADA</a>
+    <a class="cur" href="index.html">Forms</a>
+  </nav>
+  <div class="price" id="price-ticker">
+    <div class="pi"><span class="pl">WTI Crude</span>
+      <span><span id="wti-val" class="pv">&mdash;</span><span id="wti-chg" class="price-chg"></span></span>
+      <span id="wti-date" class="price-date"></span></div>
+    <div class="pi"><span class="pl">Waha Hub</span>
+      <span><span id="waha-val" class="pv">&mdash;</span><span id="waha-chg" class="price-chg"></span></span>
+      <span id="waha-date" class="price-date"></span></div>
   </div>
   <div class="user-badge" id="user-badge" style="display:none">
     <img class="user-avatar" id="user-avatar" src="" alt="">
@@ -393,6 +405,7 @@ function toggleUsed(rowNum, checked, el) {
   } catch(e) { localStorage.removeItem(SESSION_KEY); }
 })();
 </script>
+<script src="chrome.js"></script>
 
 </body>
 </html>

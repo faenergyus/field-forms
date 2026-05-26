@@ -1,0 +1,152 @@
+/* Shared cross-app chrome for FAE Field Forms pages.
+   Pairs with chrome.js. Matches portal index.html and SCADA/Analyst styling. */
+
+:root {
+  --chrome-hdr-h: 54px;
+  --chrome-bar: #d9d9d9;
+  --chrome-ink: #1a1a1a;
+  --chrome-green: #3a8a3a;
+  --chrome-green-d: #1c4a1c;
+  --chrome-muted: #6a8a6a;
+  --chrome-line: #d0e0d0;
+}
+
+.appchrome {
+  background: var(--chrome-bar);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--chrome-hdr-h);
+  padding: 0 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.18);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.appchrome .logo {
+  height: 38px;
+  display: block;
+  cursor: pointer;
+}
+.appchrome .appnav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-left: 18px;
+}
+.appchrome .appnav a {
+  font-size: .82rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.appchrome .appnav a:hover { color: #c0392b; }
+.appchrome .appnav .cur {
+  font-weight: 800;
+  color: #1a1a1a;
+  cursor: default;
+}
+.appchrome .appnav .cur:hover { color: #1a1a1a; }
+
+.appchrome .price {
+  margin-left: auto;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+.appchrome .pi {
+  text-align: center;
+  line-height: 1.2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.appchrome .pl {
+  font-size: .56rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  color: #2e2e2e;
+  text-transform: uppercase;
+  display: block;
+}
+.appchrome .pv {
+  font-size: .92rem;
+  font-weight: 700;
+  color: #111;
+}
+.appchrome .pd, .appchrome .price-date {
+  font-size: .54rem;
+  color: #555;
+  display: block;
+}
+.appchrome .price-chg {
+  font-size: .62rem;
+  font-weight: 600;
+  margin-left: 4px;
+}
+.appchrome .price-up { color: #155f15; }
+.appchrome .price-down { color: #a32020; }
+
+.appchrome .user-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 16px;
+  border-left: 1px solid #bcbcbc;
+  margin-left: 6px;
+}
+.appchrome .user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid #3a8a3a;
+}
+.appchrome .user-name {
+  font-size: .78rem;
+  color: #1f1f1f;
+  font-weight: 600;
+}
+.appchrome .user-signout {
+  background: none;
+  border: 0;
+  font-size: .7rem;
+  color: #3a3a3a;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+/* Page title strip (below chrome) — replaces the old inline form title bar */
+.appchrome-title {
+  background: #fff;
+  border-bottom: 1px solid var(--chrome-line);
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.appchrome-title h1 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--chrome-green-d);
+  margin: 0;
+}
+.appchrome-title .close-x {
+  background: none;
+  border: none;
+  color: #3a3a3a;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  line-height: 1;
+}
+.appchrome-title .close-x:hover { color: #c0392b; }
+
+@media (max-width: 760px) {
+  .appchrome .price { display: none; }
+  .appchrome .user-name { display: none; }
+  .appchrome .appnav { gap: 10px; margin-left: 8px; }
+  .appchrome { padding: 0 10px; gap: 8px; }
+}
