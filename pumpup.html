@@ -65,6 +65,35 @@
     .btn-close { background: #6c757d; color: #fff; }
   </style>
   <link rel="stylesheet" href="chrome.css">
+  <script>
+(function () {
+  var SITE = location.host.split('.')[0]; // "analyst" | "scada" | "forms"
+  function readPos() {
+    var m = document.cookie.match(/(?:^|; )fae40_pos=([^;]+)/);
+    if (!m) return {};
+    try { return JSON.parse(decodeURIComponent(m[1])); } catch (e) { return {}; }
+  }
+  function writePos(o) {
+    document.cookie = 'fae40_pos=' + encodeURIComponent(JSON.stringify(o)) +
+      '; domain=.40ac.us; path=/; max-age=2592000; Secure; SameSite=Lax';
+  }
+  var pos = readPos();
+  // 1. record our own current location
+  pos[SITE] = location.pathname + location.search;
+  writePos(pos);
+  // 2. patch cross-app links on the page
+  function patchLinks() {
+    document.querySelectorAll('a[href]').forEach(function (a) {
+      var m = a.href.match(/^https:\/\/(analyst|scada|forms)\.40ac\.us\/?(?:[?#]|$)/);
+      if (m && m[1] !== SITE && pos[m[1]]) {
+        a.href = 'https://' + m[1] + '.40ac.us' + pos[m[1]];
+      }
+    });
+  }
+  if (document.readyState !== 'loading') patchLinks();
+  else document.addEventListener('DOMContentLoaded', patchLinks);
+})();
+</script>
 </head>
 <body>
 
