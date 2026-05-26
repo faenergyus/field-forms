@@ -4,13 +4,24 @@
 :root {
   --chrome-hdr-h: 54px;
   --chrome-bar: #d9d9d9;
+  --chrome-bg: #f5f4f1;
   --chrome-ink: #1a1a1a;
   --chrome-green: #3a8a3a;
   --chrome-green-d: #1c4a1c;
+  --chrome-green-l: #4a724a;
   --chrome-muted: #6a8a6a;
   --chrome-line: #d0e0d0;
+  --chrome-tint: #eaf5ea;
 }
 
+/* Base body — unified across all form pages */
+body {
+  background: var(--chrome-bg);
+  color: var(--chrome-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ── Header ── */
 .appchrome {
   background: var(--chrome-bar);
   display: flex;
@@ -23,10 +34,27 @@
   top: 0;
   z-index: 100;
 }
+.appchrome .burger {
+  background: none;
+  border: 0;
+  font-size: 1.3rem;
+  cursor: pointer;
+  color: #33473a;
+  padding: 4px 6px;
+  line-height: 1;
+  border-radius: 5px;
+}
+.appchrome .burger:hover { background: rgba(0,0,0,.07); }
 .appchrome .logo {
   height: 38px;
   display: block;
   cursor: pointer;
+}
+.appchrome .wordmark {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: .13em;
+  color: #000;
 }
 .appchrome .appnav {
   display: flex;
@@ -144,6 +172,148 @@
 }
 .appchrome-title .close-x:hover { color: #c0392b; }
 
+/* ── Sidebar (fixed overlay; same nav on every page) ── */
+.appchrome-sidebar {
+  position: fixed;
+  top: var(--chrome-hdr-h);
+  bottom: 0;
+  left: 0;
+  width: 230px;
+  background: #fff;
+  border-right: 1px solid var(--chrome-line);
+  transform: translateX(-100%);
+  transition: transform .18s ease;
+  z-index: 60;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+body.sb-open .appchrome-sidebar { transform: translateX(0); }
+.appchrome-sidebar nav { padding: 0 0 8px; flex: 1; }
+.appchrome-sidebar .sb-cancel {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 10px 12px 6px;
+  padding: 7px 10px;
+  background: #fff;
+  border: 1px solid #c0c0c0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .78rem;
+  font-weight: 600;
+  color: #3a3a3a;
+  text-align: center;
+}
+.appchrome-sidebar .sb-cancel:hover { background: #f0eee9; color: #1a1a1a; }
+.appchrome-sidebar .nav-sec {
+  font-size: .58rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #9aab9a;
+  padding: 13px 18px 5px;
+  white-space: nowrap;
+}
+.appchrome-sidebar .nav-i {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 18px;
+  white-space: nowrap;
+  font-size: .86rem;
+  color: #33473a;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  text-decoration: none;
+}
+.appchrome-sidebar .nav-i .ic {
+  width: 18px;
+  height: 18px;
+  text-align: center;
+  font-size: .95rem;
+  opacity: .85;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.appchrome-sidebar .nav-i .ic svg { width: 18px; height: 18px; }
+.appchrome-sidebar .nav-i:hover { background: var(--chrome-tint); }
+.appchrome-sidebar .nav-i.on {
+  background: var(--chrome-tint);
+  border-left-color: var(--chrome-green);
+  color: var(--chrome-green-d);
+  font-weight: 700;
+}
+
+.appchrome-scrim {
+  position: fixed;
+  inset: var(--chrome-hdr-h) 0 0 0;
+  background: rgba(0,0,0,.38);
+  z-index: 55;
+  display: none;
+}
+body.sb-open .appchrome-scrim { display: block; }
+
+/* ── Unified form-card pattern (overrides per-page inline .section styles) ── */
+.section, .fcard {
+  background: #fff;
+  border: 1px solid var(--chrome-line);
+  border-top: 3px solid var(--chrome-green);
+  border-left: 1px solid var(--chrome-line);
+  border-radius: 9px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  box-shadow: none;
+}
+.section-title, .fcard-title {
+  color: var(--chrome-green-l);
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  margin-bottom: 12px;
+}
+
+/* Unified container width across all form pages */
+.container, .page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 18px 18px 60px;
+}
+
+/* Unified submit / primary button */
+.submit-btn, .btn-primary {
+  width: 100%;
+  padding: 13px;
+  background: var(--chrome-green);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.submit-btn:hover, .btn-primary:hover { background: #2d7a2d; }
+.submit-btn:active, .btn-primary:active { background: var(--chrome-green-d); }
+.submit-btn:disabled, .btn-primary:disabled {
+  background: #8aaa8a;
+  cursor: not-allowed;
+}
+.btn-secondary {
+  background: #fff;
+  color: var(--chrome-green-d);
+  border: 1.5px solid var(--chrome-green);
+  border-radius: 8px;
+  padding: 11px 16px;
+  font-size: .95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-secondary:hover { background: var(--chrome-tint); }
+
 /* Global mobile hardening — applies to every page that includes chrome.css.
    overflow-x: clip is used (not hidden) so sticky positioning on the header
    keeps working. clip does not create a new scrolling container. */
@@ -174,4 +344,5 @@ html, body { max-width: 100vw; overflow-x: clip; }
   .appchrome .user-badge { gap: 6px; padding-left: 10px; margin-left: 4px; }
   .appchrome .appnav { gap: 10px; margin-left: 8px; }
   .appchrome { padding: 0 10px; gap: 8px; }
+  .container, .page { padding: 14px 12px 60px; }
 }

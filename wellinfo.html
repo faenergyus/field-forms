@@ -22,18 +22,8 @@
     #login-overlay .login-tagline em { color: #5dc85d; font-style: normal; }
     #login-overlay .login-title { color: #c8dcc8; font-size: 1rem; margin-bottom: 8px; }
     #login-overlay .login-error { color: #ff8080; font-size: 0.85rem; display: none; text-align: center; max-width: 280px; }
-    /* ── Header ── */
-    header {
-      background: #d9d9d9; padding: 12px 32px; display: flex; align-items: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-    }
-    .logo-img { height: 48px; display: block; }
-    .user-badge { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-    .user-avatar { width: 32px; height: 32px; border-radius: 50%; border: 2px solid #2d7a2d; }
-    .user-name { color: #1f1f1f; font-size: 0.82rem; }
-    .user-signout { color: #3a3a3a; font-size: 0.72rem; cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; margin-left: 4px; }
     /* ── Layout ── */
-    .page { max-width: 640px; margin: 0 auto; padding: 24px 18px 60px; }
+    .page { max-width: 720px; margin: 0 auto; padding: 18px 18px 60px; }
     .back-link {
       display: inline-flex; align-items: center; gap: 6px; color: #2d7a2d;
       font-size: 0.78rem; font-weight: 600; text-decoration: none; letter-spacing: 0.04em; margin-bottom: 20px;
@@ -63,8 +53,9 @@
     .well-count { font-size: 0.72rem; color: #8aaa8a; margin-top: 4px; }
     /* ── Result table ── */
     .well-card {
-      background: #fff; border-radius: 9px; padding: 20px 22px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08); display: none;
+      background: #fff; border-radius: 9px; padding: 18px 20px;
+      border: 1px solid #d0e0d0; border-top: 3px solid #3a8a3a;
+      box-shadow: none; display: none;
     }
     .well-card h2 {
       font-size: 1.05rem; color: #1c4a1c; margin-bottom: 14px;
@@ -89,6 +80,8 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     footer { text-align: center; color: #8aaa8a; font-size: 0.72rem; margin-top: 36px; padding-top: 16px; border-top: 1px solid #d0e0d0; }
   </style>
+  <link rel="stylesheet" href="chrome.css">
+  <script src="chrome.js" defer></script>
   <script>
 (function () {
   var SITE = location.host.split('.')[0]; // "analyst" | "scada" | "forms"
@@ -138,14 +131,25 @@
   <div class="login-error" id="login-error"></div>
 </div>
 
-<header>
-  <div>
-    <img class="logo-img" src="40ACFAEII.png?v=5" alt="Forty Acres Energy — FAE II">
+<header class="appchrome">
+  <a href="index.html"><img class="logo" src="40ACFAEII.png?v=6" alt="Forty Acres Energy" onerror="this.style.display='none'"></a>
+  <nav class="appnav">
+    <a href="https://analyst.40ac.us">Analyst</a>
+    <a href="https://scada.40ac.us">SCADA</a>
+    <a class="cur" href="index.html">Forms</a>
+  </nav>
+  <div class="price" id="price-ticker">
+    <div class="pi"><span class="pl">WTI Crude</span>
+      <span><span id="wti-val" class="pv">&mdash;</span><span id="wti-chg" class="price-chg"></span></span>
+      <span id="wti-date" class="price-date"></span></div>
+    <div class="pi"><span class="pl">Waha Hub</span>
+      <span><span id="waha-val" class="pv">&mdash;</span><span id="waha-chg" class="price-chg"></span></span>
+      <span id="waha-date" class="price-date"></span></div>
   </div>
   <div class="user-badge" id="user-badge" style="display:none">
     <img class="user-avatar" id="user-avatar" src="" alt="">
     <span class="user-name" id="user-name"></span>
-    <button class="user-signout" onclick="signOut()">sign out</button>
+    <button class="user-signout" onclick="faeSignOut()">sign out</button>
   </div>
 </header>
 
