@@ -7,540 +7,367 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
+    :root{
+      --bg:#f5f4f1; --header:#d9d9d9; --panel:#fff; --ink:#1a1a1a;
+      --green:#3a8a3a; --green-d:#1c4a1c; --green-l:#4a724a; --muted:#6a8a6a;
+      --line:#d0e0d0; --tint:#eaf5ea;
+      --ok:#3a8a3a; --warn:#c98a2b; --bad:#b23b3b;
+      --hdr-h:54px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
+      background:var(--bg);color:var(--ink);height:100vh;overflow:hidden}
 
-    /* ── Login overlay ── */
-    #login-overlay {
-      position: fixed; inset: 0; z-index: 9999;
-      background: #0d260d;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 24px;
-    }
-    #login-overlay .login-logo {
-      font-size: 2.8rem; font-weight: 900; letter-spacing: -1px; color: #5dc85d;
-    }
-    #login-overlay .login-logo span { color: #fff; font-weight: 300; }
-    #login-overlay .login-tagline {
-      color: #90bc90; font-size: 0.85rem; letter-spacing: 0.12em;
-      text-transform: uppercase; margin-top: -16px;
-    }
-    #login-overlay .login-tagline em { color: #5dc85d; font-style: normal; }
-    #login-overlay .login-title {
-      color: #c8dcc8; font-size: 1rem; margin-bottom: 8px;
-    }
-    #login-overlay .login-error {
-      color: #ff8080; font-size: 0.85rem; display: none;
-      text-align: center; max-width: 280px;
-    }
+    /* Login overlay (matches SCADA/Analyst) */
+    #login-overlay{position:fixed;inset:0;z-index:9999;background:#f5f4f1;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem}
+    .login-logo-img{height:60px;display:block}
+    .login-tagline{color:#5a6a5a;font-size:.95rem}
+    .login-tagline em{color:#3a8a3a;font-style:normal;font-weight:600}
+    .login-title{color:#1c4a1c;font-size:1.1rem;margin-bottom:.5rem}
+    .login-error{display:none;margin-top:.5rem;font-size:.85rem}
 
-    /* ── User badge in header ── */
-    .user-badge {
-      display: flex; align-items: center; gap: 8px;
-      margin-left: auto;
-    }
-    .user-avatar {
-      width: 32px; height: 32px; border-radius: 50%;
-      border: 2px solid #5dc85d;
-    }
-    .user-name { color: #1f1f1f; font-size: 0.82rem; }
-    .user-signout {
-      color: #3a3a3a; font-size: 0.72rem; cursor: pointer;
-      text-decoration: underline; background: none; border: none;
-      padding: 0; margin-left: 4px;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .app{display:flex;flex-direction:column;height:100vh}
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #f5f4f1;
-      color: #1a1a1a;
-      min-height: 100vh;
-    }
+    /* Header */
+    header{background:var(--header);display:flex;align-items:center;gap:12px;
+      height:var(--hdr-h);padding:0 16px;box-shadow:0 2px 8px rgba(0,0,0,.18);z-index:30}
+    .burger{background:none;border:0;font-size:1.3rem;cursor:pointer;
+      color:#33473a;padding:4px 6px;line-height:1;border-radius:5px}
+    .burger:hover{background:rgba(0,0,0,.07)}
+    .logo{height:38px;display:block}
+    .wordmark{font-size:1.05rem;font-weight:800;letter-spacing:.13em;color:#000}
+    .appnav{display:flex;align-items:center;gap:16px;margin-left:18px}
+    .appnav a{font-size:.82rem;font-weight:600;color:#33473a;text-decoration:none;white-space:nowrap}
+    .appnav a:hover{color:#c0392b}
+    .appnav .cur{font-weight:800;color:#1a1a1a;cursor:default}
+    .appnav .cur:hover{color:#1a1a1a}
+    .price{margin-left:auto;display:flex;gap:20px;align-items:center}
+    .pi{text-align:center;line-height:1.2;display:flex;flex-direction:column;align-items:center}
+    .pl{font-size:.56rem;font-weight:700;letter-spacing:.1em;color:#2e2e2e;text-transform:uppercase;display:block}
+    .pv{font-size:.92rem;font-weight:700;color:#111}
+    .pd,.price-date{font-size:.54rem;color:#555;display:block}
+    .price-chg{font-size:.62rem;font-weight:600;margin-left:4px}
+    .price-up{color:#155f15}
+    .price-down{color:#a32020}
+    .user-badge{display:flex;align-items:center;gap:8px;padding-left:16px;border-left:1px solid #bcbcbc;margin-left:6px}
+    .user-avatar{width:30px;height:30px;border-radius:50%;border:2px solid #3a8a3a}
+    .user-name{font-size:.78rem;color:#1f1f1f;font-weight:600}
+    .user-signout{background:none;border:0;font-size:.7rem;color:#3a3a3a;cursor:pointer;text-decoration:underline;padding:0}
 
-    /* ── Header ── */
-    header {
-      background: #d9d9d9;
-      padding: 12px 32px;
-      display: flex;
-      align-items: center;
-      position: relative;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-    }
-    .logo-img { height: 48px; display: block; }
-    .price-ticker {
-      position: absolute; left: 50%; transform: translateX(-50%);
-      display: flex; align-items: center; gap: 24px;
-      pointer-events: none;
-    }
-    .price-item { text-align: center; line-height: 1.2; }
-    .price-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; color: #2e2e2e; text-transform: uppercase; display: block; }
-    .price-val { font-size: 1rem; font-weight: 700; color: #111; }
-    .price-chg { font-size: 0.65rem; font-weight: 600; margin-left: 4px; }
-    .price-up { color: #155f15; }
-    .price-down { color: #a32020; }
-    .price-dot { color: #555; font-size: 1.2rem; line-height: 1; }
-    .price-date { font-size: 0.58rem; color: #444; display: block; }
-    @media (max-width: 600px) {
-      header { flex-wrap: wrap; padding: 12px 16px 8px; }
-      .price-ticker {
-        position: static; transform: none;
-        order: 3; width: 100%;
-        justify-content: center; gap: 20px;
-        padding: 6px 0 2px;
-        border-top: 1px solid rgba(255,255,255,0.1);
-        pointer-events: none;
-      }
-      .price-val { font-size: 0.85rem; }
-      .price-label { font-size: 0.58rem; }
-      .price-chg { font-size: 0.62rem; }
-      .price-date { font-size: 0.55rem; }
-    }
-    .logo-fae { font-size: 1.9rem; font-weight: 900; letter-spacing: -1px; color: #5dc85d; line-height: 1; }
-    .logo-fae span { color: #fff; font-weight: 300; }
-    .logo-tagline { font-size: 0.75rem; color: #90bc90; letter-spacing: 0.1em; margin-top: 2px; }
-    .logo-tagline em { color: #5dc85d; font-style: normal; }
-    .header-right { margin-left: auto; color: #90bc90; font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; text-align: right; }
+    /* Body split */
+    .split{display:flex;flex:1;overflow:hidden;position:relative}
 
-    /* ── Layout ── */
-    .page { max-width: 1020px; margin: 0 auto; padding: 24px 18px 60px; }
+    /* Sidebar */
+    .sidebar{width:212px;background:var(--panel);border-right:1px solid var(--line);
+      display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;
+      transition:width .15s ease}
+    body:not(.sb-open) .sidebar{width:0;border-right-color:transparent}
+    nav.snav{padding:8px 0;flex:1;overflow:auto}
+    .nav-sec{font-size:.58rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+      color:#9aab9a;padding:13px 18px 5px;white-space:nowrap}
+    .nav-i{display:flex;align-items:center;gap:11px;padding:9px 18px;white-space:nowrap;
+      font-size:.86rem;color:#33473a;cursor:pointer;border-left:3px solid transparent;
+      text-decoration:none}
+    .nav-i .ic{width:18px;height:18px;text-align:center;font-size:.95rem;opacity:.85;flex-shrink:0;
+      display:inline-flex;align-items:center;justify-content:center}
+    .nav-i .ic svg{width:18px;height:18px}
+    .nav-i:hover{background:var(--tint)}
+    .scrim{display:none}
 
-    .section-label {
-      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.15em; color: #4a724a; margin-bottom: 12px;
-      display: flex; align-items: center; gap: 8px;
-    }
-    .section-label::after { content: ''; flex: 1; height: 1px; background: #c8ddc8; }
+    /* Content */
+    .content{flex:1;overflow:auto;padding:20px 26px}
+    .ptitle{font-size:1.3rem;font-weight:800;color:var(--green-d);line-height:1.1}
+    .psub{font-size:.78rem;color:var(--muted);margin:2px 0 0}
 
-    /* ── Period Selector ── */
-    .dash-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 14px; flex-wrap: wrap; gap: 10px;
-    }
-    .period-pills { display: flex; gap: 6px; }
-    .pill {
-      padding: 5px 14px; border-radius: 20px; border: 1.5px solid #3a8a3a;
-      background: #fff; color: #3a6a3a; font-size: 0.75rem; font-weight: 600;
-      cursor: pointer; transition: all 0.15s; letter-spacing: 0.03em;
-    }
-    .pill.active { background: #2d7a2d; color: #fff; border-color: #2d7a2d; }
-    .pill:hover:not(.active) { background: #eaf5ea; }
+    .dash-header{display:flex;align-items:center;justify-content:space-between;
+      gap:10px;flex-wrap:wrap;
+      background:var(--bg);position:sticky;top:-20px;z-index:5;padding:20px 0 12px;margin:-20px 0 0}
+    .period-pills{display:flex;gap:6px}
+    .pill{padding:5px 14px;border-radius:20px;border:1.5px solid #3a8a3a;
+      background:#fff;color:#3a6a3a;font-size:.75rem;font-weight:600;
+      cursor:pointer;transition:all .15s;letter-spacing:.03em}
+    .pill.active{background:#2d7a2d;color:#fff;border-color:#2d7a2d}
+    .pill:hover:not(.active){background:#eaf5ea}
 
-    /* ── Stat Tiles ── */
-    .stat-row {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 10px;
-      margin-bottom: 18px;
-    }
-    .stat-tile {
-      background: #fff; border-radius: 9px; padding: 12px 10px;
-      border-top: 3px solid #3a8a3a; box-shadow: 0 1px 4px rgba(0,0,0,0.07);
-      text-align: center; cursor: default;
-    }
-    .stat-num { font-size: 1.7rem; font-weight: 800; color: #1c4a1c; line-height: 1; }
-    .stat-sub { font-size: 0.6rem; color: #6a8a6a; margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.3; }
-    .stat-tile.no-pbi { border-top-color: #bbb; }
-    .stat-tile.no-pbi .stat-num { color: #999; }
-    .stat-tile.no-pbi .stat-sub { color: #aaa; }
+    /* KPI strip (SCADA .kpi pattern, 7 form tiles) */
+    .kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:16px}
+    .kpi{background:var(--panel);border:1px solid var(--line);border-radius:9px;
+      padding:13px 12px;border-top:3px solid var(--green);text-align:center}
+    .kpi .n{font-size:1.7rem;font-weight:800;line-height:1;color:#1c4a1c}
+    .kpi .l{font-size:.6rem;color:var(--muted);text-transform:uppercase;
+      letter-spacing:.06em;margin-top:6px;line-height:1.3;font-weight:600}
+    .kpi.avo{border-top-color:#9c6b3a}
+    .kpi.fap{border-top-color:#1a8a7a}
+    .kpi.pumpup{border-top-color:#c8860a}
+    .kpi.wellsite{border-top-color:#1565c0}
+    .kpi.facility{border-top-color:#b94c00}
+    .kpi.whs{border-top-color:#7a5aaa}
 
-    /* ── Collapsible Charts ── */
-    .collapse-header {
-      display: flex; align-items: center; justify-content: space-between;
-      background: #fff; border-radius: 9px; padding: 11px 16px;
-      cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.07);
-      margin-bottom: 0; user-select: none;
-      border: 1.5px solid #d8e8d8;
-    }
-    .collapse-header:hover { background: #f5faf5; }
-    .collapse-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: #3a5a3a; }
-    .collapse-chevron { font-size: 0.75rem; color: #5a8a5a; transition: transform 0.2s; }
-    .collapse-chevron.open { transform: rotate(180deg); }
+    /* Widget / panel pattern */
+    .widget{background:var(--panel);border:1px solid var(--line);border-radius:9px;
+      margin-bottom:14px;overflow:hidden}
+    .whead{padding:10px 15px;border-bottom:1px solid var(--line);
+      font-size:.82rem;font-weight:700;color:var(--green-d);
+      display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+    .whead .chev{font-size:.7rem;color:#5a8a5a;transition:transform .25s}
+    .whead.open .chev{transform:rotate(180deg)}
+    .wbody{padding:12px 15px}
+    .wbody.collapse{overflow:hidden;max-height:0;padding:0 15px;
+      transition:max-height .35s ease,padding .25s ease}
+    .wbody.collapse.open{max-height:9000px;padding:12px 15px}
 
-    .charts-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-top: 10px;
-      overflow: hidden;
-      max-height: 0;
-      transition: max-height 0.35s ease;
-    }
-    .charts-grid.open { max-height: 4000px; }
+    /* Charts grid (own collapse animation — JS toggles .open on #chartsGrid) */
+    .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;
+      overflow:hidden;max-height:0;transition:max-height .35s ease}
+    .charts-grid.open{max-height:9000px}
+    .chart-card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+    .chart-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+      color:#3a5a3a;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+    .chart-wrap{position:relative;height:300px;width:100%}
+    canvas{display:block}
+    .chart-card.span2{grid-column:span 2}
 
-    .chart-card {
-      background: #fff; border-radius: 9px; padding: 15px 16px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
-    }
-    .chart-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #3a5a3a; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
-    .chart-wrap { position: relative; height: 300px; width: 100%; }
-    canvas { display: block; }
-    /* ── External chart tooltip ── */
-    #chart-tooltip {
-      position: fixed; z-index: 9000; pointer-events: none;
-      background: rgba(0,0,0,0.82); color: #fff;
-      border-radius: 6px; padding: 7px 10px;
-      font-size: 10px; line-height: 1.5;
-      max-width: 240px; white-space: pre-wrap; word-break: break-word;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-      display: none;
-    }
-    .chart-card.span2 { grid-column: span 2; }
+    #chart-tooltip{position:fixed;z-index:9000;pointer-events:none;
+      background:rgba(0,0,0,.82);color:#fff;border-radius:6px;padding:7px 10px;
+      font-size:10px;line-height:1.5;max-width:240px;white-space:pre-wrap;word-break:break-word;
+      box-shadow:0 4px 16px rgba(0,0,0,.3);display:none}
 
-    /* ── Entries section ── */
-    .entries-body {
-      overflow: hidden; max-height: 0; transition: max-height 0.35s ease; margin-top: 10px;
-    }
-    .entries-body.open { max-height: 8000px; }
-    .entry-form-card {
-      background: #fff; border-radius: 9px; padding: 13px 16px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.07); margin-bottom: 10px;
-    }
-    .entry-form-head {
-      font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
-      color: #1c4a1c; display: flex; align-items: center; gap: 8px;
-      cursor: pointer; user-select: none;
-    }
-    .entry-form-head .efc-count {
-      background: #e3f1e3; color: #2d7a2d; border-radius: 10px;
-      font-size: 0.68rem; font-weight: 700; padding: 1px 9px; letter-spacing: 0;
-    }
-    .entry-form-head .efc-chevron { font-size: 0.7rem; color: #5a8a5a; width: 12px; }
-    .efc-body { display: none; margin-top: 8px; }
-    .efc-body.efc-open { display: block; }
-    .entry-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
-    .entry-table th {
-      text-align: left; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.07em;
-      color: #6a8a6a; font-weight: 700; border-bottom: 1.5px solid #e0ece0; padding: 6px 8px;
-    }
-    .entry-table td { padding: 7px 8px; border-bottom: 1px solid #f0f4f0; vertical-align: top; }
-    .entry-table tr:last-child td { border-bottom: none; }
-    .entry-table .et-pumper { font-weight: 600; color: #2d5a2d; white-space: nowrap; }
-    .entry-table .et-wells { color: #444; }
-    .entry-empty { color: #aaa; font-size: 0.78rem; font-style: italic; }
+    /* Entries cards */
+    .entry-form-card{background:#fff;border:1px solid var(--line);border-radius:8px;
+      padding:10px 14px;margin-bottom:8px}
+    .entry-form-head{font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+      color:#1c4a1c;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+    .entry-form-head .efc-count{background:#e3f1e3;color:#2d7a2d;border-radius:10px;
+      font-size:.66rem;font-weight:700;padding:1px 9px;letter-spacing:0}
+    .entry-form-head .efc-chevron{font-size:.7rem;color:#5a8a5a;width:12px}
+    .efc-body{display:none;margin-top:8px}
+    .efc-body.efc-open{display:block}
+    .entry-table{width:100%;border-collapse:collapse;font-size:.78rem}
+    .entry-table th{text-align:left;font-size:.6rem;text-transform:uppercase;letter-spacing:.07em;
+      color:#6a8a6a;font-weight:700;border-bottom:1.5px solid #e0ece0;padding:6px 8px}
+    .entry-table td{padding:7px 8px;border-bottom:1px solid #f0f4f0;vertical-align:top}
+    .entry-table tr:last-child td{border-bottom:none}
+    .entry-table .et-pumper{font-weight:600;color:#2d5a2d;white-space:nowrap}
+    .entry-empty{color:#aaa;font-size:.78rem;font-style:italic}
 
-    /* ── Form Cards ── */
-    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; }
-    .card {
-      background: #fff; border-radius: 9px; border-left: 4px solid #3a8a3a;
-      padding: 14px 16px; text-decoration: none; color: inherit;
-      display: flex; align-items: center; gap: 12px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
-      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
-    }
-    .card:hover { transform: translateY(-2px); box-shadow: 0 5px 14px rgba(0,0,0,0.12); border-color: #5dc85d; }
-    .card-icon { width: 40px; height: 40px; border-radius: 50%; background: #eaf5ea; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.2rem; }
-    .card-name { font-size: 0.88rem; font-weight: 600; line-height: 1.3; }
-    .card-cta { font-size: 0.7rem; color: #3a8a3a; margin-top: 2px; font-weight: 500; }
+    /* Weekly Work Assignments */
+    .tasks-week-label{font-size:.72rem;font-weight:700;text-transform:uppercase;
+      letter-spacing:.1em;color:#4a724a;margin-bottom:8px}
+    .tasks-week-label span{font-weight:400;color:#6a8a6a;text-transform:none;letter-spacing:0}
+    .tasks-columns{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+    .task-col{background:#fafdf9;border:1px solid var(--line);border-left:3px solid #2d7a2d;
+      border-radius:7px;padding:10px 12px}
+    .task-col-title{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
+      color:#3a5a3a;margin-bottom:6px}
+    .task-well{font-size:.8rem;color:#1a1a1a;padding:3px 0;border-bottom:1px solid #f0f4f0;line-height:1.4}
+    .task-well:last-child{border-bottom:none}
+    .task-empty{font-size:.78rem;color:#8aaa8a;font-style:italic}
+    .tasks-next{opacity:.85;margin-top:10px}
+    .tasks-sub-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;
+      padding:6px 10px;border-radius:6px;background:#eef4ee;user-select:none}
+    .tasks-sub-header:hover{background:#e4ede4}
+    .tasks-sub-title{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#4a724a}
+    .tasks-sub-body{overflow:hidden;max-height:0;transition:max-height .3s ease}
+    .tasks-sub-body.open{max-height:9000px}
+    .tasks-eng-row{margin-bottom:14px}
+    .tasks-eng-name{font-size:.74rem;font-weight:700;color:#2d5a2d;text-transform:uppercase;
+      letter-spacing:.08em;margin-bottom:6px;padding-left:6px;border-left:3px solid #2d7a2d}
 
-    footer { text-align: center; color: #8aaa8a; font-size: 0.72rem; margin-top: 36px; padding-top: 16px; border-top: 1px solid #d0e0d0; }
-    .data-note { font-size: 0.65rem; color: #8aaa8a; margin-top: 2px; }
+    footer{text-align:center;color:#8aaa8a;font-size:.72rem;margin-top:24px;padding:14px 0;
+      border-top:1px solid var(--line)}
+    .data-note{font-size:.65rem;color:#8aaa8a;margin-top:2px}
 
-    /* ── Reports section ── */
-    .reports-body { overflow: hidden; max-height: 0; transition: max-height 0.35s ease; margin-top: 10px; }
-    .reports-body.open { max-height: 800px; }
-    .reports-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; }
-    .report-link-card {
-      background: #fff; border-radius: 9px; border-left: 4px solid #4a7a9a;
-      padding: 14px 16px; text-decoration: none; color: inherit;
-      display: flex; align-items: center; gap: 12px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
-      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    /* Phone */
+    @media (max-width:760px){
+      .price{display:none}
+      .user-name{display:none}
+      .sidebar{position:fixed;top:var(--hdr-h);bottom:0;left:0;width:230px;
+        transform:translateX(-100%);transition:transform .2s ease;z-index:25}
+      body:not(.sb-open) .sidebar{width:230px;transform:translateX(-100%);border-right-color:var(--line)}
+      body.sb-open .sidebar{transform:translateX(0)}
+      .scrim{position:fixed;inset:var(--hdr-h) 0 0 0;background:rgba(0,0,0,.38);z-index:20}
+      body.sb-open .scrim{display:block}
+      .kpis{grid-template-columns:repeat(4,1fr)}
+      .charts-grid{grid-template-columls:1fr;grid-template-columns:1fr}
+      .chart-card.span2{grid-column:span 1}
+      .content{padding:16px 14px}
+      .tasks-columns{grid-template-columns:1fr}
     }
-    .report-link-card:hover { transform: translateY(-2px); box-shadow: 0 5px 14px rgba(0,0,0,0.12); border-color: #6a9aba; }
-    .report-link-icon { width: 40px; height: 40px; border-radius: 50%; background: #eaf2f5; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.2rem; }
-    .report-link-name { font-size: 0.88rem; font-weight: 600; line-height: 1.3; }
-    .report-link-cta { font-size: 0.7rem; color: #4a7a9a; margin-top: 2px; font-weight: 500; }
-
-    @media (max-width: 860px) {
-      .stat-row { grid-template-columns: repeat(4, 1fr); }
-      .charts-grid { grid-template-columns: 1fr; }
-      .chart-card.span2 { grid-column: span 1; }
+    @media (max-width:580px){
+      .kpis{grid-template-columns:repeat(3,1fr)}
+      .chart-wrap{height:280px}
     }
-    @media (max-width: 580px) {
-      .chart-wrap { height: 300px; }
-      .stat-row { grid-template-columns: repeat(3, 1fr); }
-      .cards { grid-template-columns: 1fr 1fr; }
-    }
-    @media (max-width: 380px) {
-      .cards { grid-template-columns: 1fr; }
-    }
-
-    /* ── My Tasks panel ── */
-    #tasks-panel { display: none; margin-bottom: 20px; }
-    .tasks-week-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #4a724a; margin-bottom: 8px; }
-    .tasks-week-label span { font-weight: 400; color: #6a8a6a; text-transform: none; letter-spacing: 0; }
-    .tasks-columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-    .task-col { background: #fff; border-radius: 9px; border-left: 4px solid #2d7a2d; padding: 12px 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
-    .task-col-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #3a5a3a; margin-bottom: 8px; }
-    .task-well { font-size: 0.82rem; color: #1a1a1a; padding: 3px 0; border-bottom: 1px solid #f0f4f0; line-height: 1.4; }
-    .task-well:last-child { border-bottom: none; }
-    .task-empty { font-size: 0.8rem; color: #8aaa8a; font-style: italic; }
-    .tasks-next { opacity: 0.6; }
-    .tasks-sub-header { display:flex; align-items:center; justify-content:space-between; cursor:pointer; padding:6px 10px; margin-top:10px; border-radius:6px; background:#eef4ee; user-select:none; }
-    .tasks-sub-header:hover { background:#e4ede4; }
-    .tasks-sub-title { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#4a724a; }
-    .tasks-sub-body { overflow:hidden; max-height:0; transition:max-height 0.3s ease; }
-    .tasks-sub-body.open { max-height:9000px; }
-    .tasks-body { overflow: hidden; max-height: 0; transition: max-height 0.35s ease; }
-    .tasks-body.open { max-height: 9000px; }
-    .tasks-eng-row { margin-bottom: 18px; }
-    .tasks-eng-name { font-size: 0.78rem; font-weight: 700; color: #2d5a2d; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; padding-left: 4px; border-left: 3px solid #2d7a2d; }
-    @media (max-width: 600px) { .tasks-columns { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
 <div id="chart-tooltip"></div>
 
-<header>
-  <div>
-    <img class="logo-img" src="40ACFAEII.png?v=5" alt="Forty Acres Energy — FAE II">
-  </div>
-  <div class="price-ticker" id="price-ticker">
-    <div class="price-item">
-      <span class="price-label">WTI Crude</span>
-      <span id="wti-val" class="price-val">—</span><span id="wti-chg" class="price-chg"></span>
-      <span id="wti-date" class="price-date"></span>
-    </div>
-    <span class="price-dot">·</span>
-    <div class="price-item">
-      <span class="price-label">Waha Hub</span>
-      <span id="waha-val" class="price-val">—</span><span id="waha-chg" class="price-chg"></span>
-      <span id="waha-date" class="price-date"></span>
-    </div>
-  </div>
+<div class="app">
 
-  <div class="user-badge" id="user-badge" style="display:none">
-    <img class="user-avatar" id="user-avatar" src="" alt="">
-    <span class="user-name" id="user-name"></span>
-    <button class="user-signout" onclick="signOut()">sign out</button>
-  </div>
-</header>
-
-<div class="page">
-
-  <!-- MY TASKS (pumper / engineer) -->
-  <div id="tasks-panel">
-    <div class="collapse-header" id="tasksToggle">
-      <span class="collapse-title" id="tasksToggleLabel">&#9650; Weekly Work Assignments</span>
-      <span class="collapse-chevron" id="tasksChevron">▲</span>
+  <header>
+    <button class="burger" onclick="toggleSidebar()" aria-label="Menu">&#9776;</button>
+    <img class="logo" src="40ACFAEII.png?v=6" alt="Forty Acres Energy"
+         onerror="this.style.display='none'">
+    <span class="wordmark">FORMS</span>
+    <nav class="appnav">
+      <a href="https://analyst.40ac.us">Analyst</a>
+      <a href="https://scada.40ac.us">SCADA</a>
+      <a class="cur" href="/">Forms</a>
+    </nav>
+    <div class="price" id="price-ticker">
+      <div class="pi"><span class="pl">WTI Crude</span>
+        <span><span id="wti-val" class="pv">&mdash;</span><span id="wti-chg" class="price-chg"></span></span>
+        <span id="wti-date" class="price-date"></span></div>
+      <div class="pi"><span class="pl">Waha Hub</span>
+        <span><span id="waha-val" class="pv">&mdash;</span><span id="waha-chg" class="price-chg"></span></span>
+        <span id="waha-date" class="price-date"></span></div>
     </div>
-    <div class="tasks-body" id="tasksBody">
-      <div style="padding-top:12px">
-        <div class="tasks-week-label" id="tasks-current-label"></div>
-        <div id="tasks-current-cols"></div>
-      </div>
-      <div id="tasks-next-block" class="tasks-next">
-        <!-- pumper: plain label; others: sub-collapsible header -->
-        <div id="tasks-last-plain" style="display:none">
-          <div class="tasks-week-label" id="tasks-next-label-plain"></div>
-          <div id="tasks-next-cols-plain"></div>
+    <div class="user-badge" id="user-badge" style="display:none">
+      <img class="user-avatar" id="user-avatar" src="" alt="">
+      <span class="user-name" id="user-name"></span>
+      <button class="user-signout" onclick="signOut()">sign out</button>
+    </div>
+  </header>
+
+  <div class="split">
+    <aside class="sidebar">
+      <nav class="snav">
+        <div class="nav-sec">Forms</div>
+        <a class="nav-i" href="gwi.html" target="_blank"><span class="ic">
+          <svg viewBox="0 0 24 24"><path d="M12 2C10 5 7 7 7 11c0 2.76 2.24 5 5 5s5-2.24 5-5c0-1.5-.6-2.8-1.5-3.8C15 8.5 14 10 12 10c1-2 1.5-5 0-8z" fill="#e67e22"/></svg>
+        </span>Gas Well Inspection</a>
+        <a class="nav-i" href="fap.html" target="_blank"><span class="ic">
+          <svg viewBox="0 0 24 24"><rect x="9" y="19" width="6" height="2" rx="0.5" fill="#555"/><rect x="11.2" y="11" width="1.6" height="8" fill="#555"/><polygon points="10,11 14,11 12,6" fill="#666"/><line x1="5" y1="9" x2="19" y2="11" stroke="#444" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </span>Fluid Levels (FAP)</a>
+        <a class="nav-i" href="pumpup.html" target="_blank"><span class="ic">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="#e8e8e8" stroke="#888" stroke-width="1.2"/><circle cx="12" cy="13" r="6" fill="#fff" stroke="#aaa" stroke-width="0.8"/><line x1="12" y1="13" x2="15" y2="9" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="13" r="1" fill="#555"/></svg>
+        </span>Pump Up Entry</a>
+        <a class="nav-i" href="wellsite.html" target="_blank"><span class="ic">&#x1F50D;</span>Well Site Inspection</a>
+        <a class="nav-i" href="facility.html" target="_blank"><span class="ic">
+          <svg viewBox="0 0 24 24"><ellipse cx="12" cy="7" rx="7" ry="3" fill="#5a8fa8"/><rect x="5" y="7" width="14" height="10" fill="#4a7f98"/><ellipse cx="12" cy="17" rx="7" ry="3" fill="#3a6f88"/></svg>
+        </span>Facility Inspection</a>
+        <a class="nav-i" href="grounding.html" target="_blank"><span class="ic">&#x26A1;</span>Wellhead Grounding</a>
+        <a class="nav-i" href="https://forms.gle/PKeZWY5mUHxjVJXZA" target="_blank"><span class="ic">
+          <svg viewBox="0 0 24 24"><rect x="2" y="8" width="16" height="8" rx="4" fill="#5a8fa8"/><ellipse cx="18" cy="12" rx="2" ry="4" fill="#4a7f98"/><circle cx="4" cy="12" r="2" fill="#c0392b" opacity="0.85"/></svg>
+        </span>Spare Vessels</a>
+
+        <div class="nav-sec">Reports</div>
+        <a class="nav-i" href="spare-vessels.html"><span class="ic">&#x1F4CB;</span>Spare Vessels View</a>
+      </nav>
+    </aside>
+    <div class="scrim" onclick="closeSidebar()"></div>
+
+    <main class="content">
+
+      <!-- Pinned period selector -->
+      <div class="dash-header">
+        <div>
+          <div class="ptitle">Activity Dashboard</div>
+          <div class="psub">Field operations submissions across all forms.</div>
         </div>
-        <div id="tasks-last-collapsible" style="display:none">
-          <div class="tasks-sub-header" id="tasksLastToggle">
-            <span class="tasks-sub-title" id="tasks-next-label-coll">▶ Last Week</span>
-            <span style="font-size:0.75rem;color:#6a8a6a" id="tasksLastChevron">▶</span>
-          </div>
-          <div class="tasks-sub-body" id="tasksLastBody">
-            <div style="padding-top:8px" id="tasks-next-cols-coll"></div>
+        <div class="period-pills">
+          <button class="pill active" data-period="pastweek">Past Week</button>
+          <button class="pill" data-period="days30">30 Days</button>
+          <button class="pill" data-period="ytd">YTD</button>
+          <button class="pill" data-period="lastyear">Last Year</button>
+        </div>
+      </div>
+
+      <!-- KPI strip -->
+      <div class="kpis">
+        <div class="kpi avo" id="tile-avo"><div class="n" id="num-avo">0</div><div class="l">AVO<br>Inspection</div></div>
+        <div class="kpi" id="tile-gwi"><div class="n" id="num-gwi">0</div><div class="l">Gas Well<br>Inspection</div></div>
+        <div class="kpi fap" id="tile-fap"><div class="n" id="num-fap">0</div><div class="l">Fluid Levels<br>(FAP)</div></div>
+        <div class="kpi pumpup" id="tile-pumpup"><div class="n" id="num-pumpup">0</div><div class="l">Pump Up<br>Entry</div></div>
+        <div class="kpi wellsite" id="tile-wellsite"><div class="n" id="num-wellsite">0</div><div class="l">Well Site<br>Inspection</div></div>
+        <div class="kpi facility" id="tile-facility"><div class="n" id="num-facility">0</div><div class="l">Facility<br>Inspection</div></div>
+        <div class="kpi whs" id="tile-whs"><div class="n" id="num-whs">0</div><div class="l">Wellhead<br>Grounding</div></div>
+      </div>
+
+      <!-- Weekly Work Assignments -->
+      <div id="tasks-panel" class="widget" style="display:none">
+        <div class="whead" id="tasksToggle">
+          <span id="tasksToggleLabel">Weekly Work Assignments</span>
+          <span class="chev" id="tasksChevron">&#9660;</span>
+        </div>
+        <div class="wbody collapse" id="tasksBody">
+          <div class="tasks-week-label" id="tasks-current-label"></div>
+          <div id="tasks-current-cols"></div>
+          <div id="tasks-next-block" class="tasks-next">
+            <div id="tasks-last-plain" style="display:none">
+              <div class="tasks-week-label" id="tasks-next-label-plain"></div>
+              <div id="tasks-next-cols-plain"></div>
+            </div>
+            <div id="tasks-last-collapsible" style="display:none">
+              <div class="tasks-sub-header" id="tasksLastToggle">
+                <span class="tasks-sub-title" id="tasks-next-label-coll">&#9654; Last Week</span>
+                <span style="font-size:.75rem;color:#6a8a6a" id="tasksLastChevron">&#9654;</span>
+              </div>
+              <div class="tasks-sub-body" id="tasksLastBody">
+                <div style="padding-top:8px" id="tasks-next-cols-coll"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- DASHBOARD -->
-  <div class="dash-header">
-    <div class="section-label" style="margin-bottom:0;flex:1">Activity Dashboard</div>
-    <div class="period-pills">
-      <button class="pill active" data-period="pastweek">Past Week</button>
-      <button class="pill" data-period="days30">30 Days</button>
-      <button class="pill" data-period="ytd">YTD</button>
-      <button class="pill" data-period="lastyear">Last Year</button>
-    </div>
-  </div>
-
-  <!-- Stat Tiles -->
-  <div class="stat-row">
-    <div class="stat-tile" id="tile-avo" style="border-top-color:#9c6b3a">
-      <div class="stat-num" id="num-avo">0</div>
-      <div class="stat-sub">AVO<br>Inspection</div>
-    </div>
-    <div class="stat-tile" id="tile-gwi">
-      <div class="stat-num" id="num-gwi">0</div>
-      <div class="stat-sub">Gas Well<br>Inspection</div>
-    </div>
-    <div class="stat-tile" id="tile-fap">
-      <div class="stat-num" id="num-fap">0</div>
-      <div class="stat-sub">Fluid Levels<br>(FAP)</div>
-    </div>
-    <div class="stat-tile" id="tile-pumpup">
-      <div class="stat-num" id="num-pumpup">0</div>
-      <div class="stat-sub">Pump Up<br>Entry</div>
-    </div>
-    <div class="stat-tile" id="tile-wellsite">
-      <div class="stat-num" id="num-wellsite">0</div>
-      <div class="stat-sub">Well Site<br>Inspection</div>
-    </div>
-    <div class="stat-tile" id="tile-facility">
-      <div class="stat-num" id="num-facility">0</div>
-      <div class="stat-sub">Facility<br>Inspection</div>
-    </div>
-    <div class="stat-tile" id="tile-whs">
-      <div class="stat-num" id="num-whs">0</div>
-      <div class="stat-sub">Wellhead<br>Grounding</div>
-    </div>
-  </div>
-
-  <!-- Collapsible Charts -->
-  <div class="collapse-header" id="chartsToggle">
-    <span class="collapse-title">&#9660; Charts by Pumper</span>
-    <span class="collapse-chevron" id="chevron">▼</span>
-  </div>
-  <div class="charts-grid" id="chartsGrid">
-
-    <div class="chart-card">
-      <div class="chart-title">📋 AVO Inspection</div>
-      <div class="chart-wrap"><canvas id="c-avo"></canvas></div>
-    </div>
-
-    <div class="chart-card">
-      <div class="chart-title">
-        <svg width="14" height="14" viewBox="0 0 24 24"><path d="M12 2C10 5 7 7 7 11c0 2.76 2.24 5 5 5s5-2.24 5-5c0-1.5-.6-2.8-1.5-3.8C15 8.5 14 10 12 10c1-2 1.5-5 0-8z" fill="#e67e22"/></svg>
-        Gas Well Inspection
+      <!-- Charts by Pumper -->
+      <div class="widget">
+        <div class="whead" id="chartsToggle">
+          <span>Charts by Pumper</span>
+          <span class="chev" id="chevron">&#9660;</span>
+        </div>
+        <div class="wbody" style="padding:0">
+          <div class="charts-grid" id="chartsGrid" style="padding:12px 15px">
+            <div class="chart-card">
+              <div class="chart-title">&#128203; AVO Inspection</div>
+              <div class="chart-wrap"><canvas id="c-avo"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">
+                <svg width="14" height="14" viewBox="0 0 24 24"><path d="M12 2C10 5 7 7 7 11c0 2.76 2.24 5 5 5s5-2.24 5-5c0-1.5-.6-2.8-1.5-3.8C15 8.5 14 10 12 10c1-2 1.5-5 0-8z" fill="#e67e22"/></svg>
+                Gas Well Inspection
+              </div>
+              <div class="chart-wrap"><canvas id="c-gwi"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">
+                <svg width="14" height="14" viewBox="0 0 24 24"><rect x="9" y="19" width="6" height="2" rx="0.5" fill="#555"/><rect x="11.2" y="11" width="1.6" height="8" fill="#555"/><polygon points="10,11 14,11 12,6" fill="#666"/><line x1="5" y1="9" x2="19" y2="11" stroke="#444" stroke-width="1.8" stroke-linecap="round"/></svg>
+                FAP &amp; Pump Up
+              </div>
+              <div class="chart-wrap"><canvas id="c-fap-pumpup"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">&#128269; Well Site &amp; Facility Inspection</div>
+              <div class="chart-wrap"><canvas id="c-wellsite-facility"></canvas></div>
+            </div>
+            <div class="chart-card" style="display:none">
+              <div class="chart-title">&#9889; Wellhead Grounding Survey</div>
+              <div class="chart-wrap"><canvas id="c-whs"></canvas></div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="chart-wrap"><canvas id="c-gwi"></canvas></div>
-    </div>
 
-    <div class="chart-card">
-      <div class="chart-title">
-        <svg width="14" height="14" viewBox="0 0 24 24"><rect x="9" y="19" width="6" height="2" rx="0.5" fill="#555"/><rect x="11.2" y="11" width="1.6" height="8" fill="#555"/><polygon points="10,11 14,11 12,6" fill="#666"/><line x1="5" y1="9" x2="19" y2="11" stroke="#444" stroke-width="1.8" stroke-linecap="round"/><path d="M4 9 Q3 7.5 5 7 Q6 6.5 6 8 L5 9Z" fill="#333"/></svg>
-        FAP &amp; Pump Up
+      <!-- All Entries -->
+      <div class="widget">
+        <div class="whead" id="entriesToggle">
+          <span id="entriesTitle">All Entries</span>
+          <span class="chev" id="entriesChevron">&#9660;</span>
+        </div>
+        <div class="wbody collapse" id="entriesBody">
+          <div id="entriesContent"></div>
+        </div>
       </div>
-      <div class="chart-wrap"><canvas id="c-fap-pumpup"></canvas></div>
-    </div>
 
-    <div class="chart-card">
-      <div class="chart-title">🔍 Well Site &amp; Facility Inspection</div>
-      <div class="chart-wrap"><canvas id="c-wellsite-facility"></canvas></div>
-    </div>
+      <footer>
+        Forty Acres Energy &nbsp;&middot;&nbsp; Field Operations &nbsp;&middot;&nbsp; Internal Use Only
+        <div class="data-note">Dashboard data from Google Sheets Ã‚Â· Updated 2026-05-26 13:05</div>
+      </footer>
 
-    <div class="chart-card" style="display:none">
-      <div class="chart-title">⚡ Wellhead Grounding Survey</div>
-      <div class="chart-wrap"><canvas id="c-whs"></canvas></div>
-    </div>
-
+    </main>
   </div>
-
-  <!-- Collapsible Entries (under Charts by Pumper; hidden by default) -->
-  <div class="collapse-header" id="entriesToggle" style="margin-top:14px">
-    <span class="collapse-title" id="entriesTitle">▼ All Entries</span>
-    <span class="collapse-chevron" id="entriesChevron">▼</span>
-  </div>
-  <div class="entries-body" id="entriesBody">
-    <div id="entriesContent"></div>
-  </div>
-
-  <!-- FORMS -->
-  <div class="section-label" style="margin-top:24px">Field Forms</div>
-  <div class="cards">
-
-    <a class="card" href="gwi.html" target="_blank">
-      <div class="card-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24"><path d="M12 2C10 5 7 7 7 11c0 2.76 2.24 5 5 5s5-2.24 5-5c0-1.5-.6-2.8-1.5-3.8C15 8.5 14 10 12 10c1-2 1.5-5 0-8z" fill="#e67e22"/><path d="M12 13c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" fill="#f39c12"/></svg>
-      </div>
-      <div><div class="card-name">Gas Well Inspection</div><div class="card-cta">Open form →</div></div>
-    </a>
-
-    <a class="card" href="fap.html" target="_blank">
-      <div class="card-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="9" y="19" width="6" height="2" rx="0.5" fill="#555"/><rect x="11.2" y="11" width="1.6" height="8" fill="#555"/><polygon points="10,11 14,11 12,6" fill="#666"/><line x1="5" y1="9" x2="19" y2="11" stroke="#444" stroke-width="1.8" stroke-linecap="round"/><path d="M4 9 Q3 7.5 5 7 Q6 6.5 6 8 L5 9Z" fill="#333"/><circle cx="18.5" cy="13" r="1.5" fill="none" stroke="#666" stroke-width="1.2"/><line x1="18.5" y1="11.5" x2="18.5" y2="11" stroke="#666" stroke-width="1.2"/></svg>
-      </div>
-      <div><div class="card-name">Fluid Levels (FAP)</div><div class="card-cta">Open form →</div></div>
-    </a>
-
-    <a class="card" href="pumpup.html" target="_blank">
-      <div class="card-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="#e8e8e8" stroke="#888" stroke-width="1.2"/><circle cx="12" cy="13" r="6" fill="#fff" stroke="#aaa" stroke-width="0.8"/><line x1="12" y1="7.5" x2="12" y2="9" stroke="#555" stroke-width="1"/><line x1="6.5" y1="13" x2="8" y2="13" stroke="#555" stroke-width="1"/><line x1="17.5" y1="13" x2="16" y2="13" stroke="#555" stroke-width="1"/><line x1="8.1" y1="9.1" x2="9.1" y2="10.1" stroke="#555" stroke-width="1"/><line x1="15.9" y1="9.1" x2="14.9" y2="10.1" stroke="#555" stroke-width="1"/><line x1="12" y1="13" x2="15" y2="9" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="13" r="1" fill="#555"/><rect x="10" y="3" width="4" height="2.5" rx="0.5" fill="#888"/></svg>
-      </div>
-      <div><div class="card-name">Pump Up Entry</div><div class="card-cta">Open form →</div></div>
-    </a>
-
-    <a class="card" href="wellsite.html" target="_blank">
-      <div class="card-icon">🔍</div>
-      <div><div class="card-name">Well Site Inspection</div><div class="card-cta">Open form →</div></div>
-    </a>
-
-    <a class="card" href="facility.html" target="_blank">
-      <div class="card-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24"><ellipse cx="12" cy="7" rx="7" ry="3" fill="#5a8fa8"/><rect x="5" y="7" width="14" height="10" fill="#4a7f98"/><ellipse cx="12" cy="17" rx="7" ry="3" fill="#3a6f88"/><line x1="12" y1="17" x2="12" y2="21" stroke="#3a6f88" stroke-width="1.5"/><line x1="9" y1="20" x2="15" y2="20" stroke="#3a6f88" stroke-width="1.5"/></svg>
-      </div>
-      <div><div class="card-name">Facility Inspection</div><div class="card-cta">Open form →</div></div>
-    </a>
-
-    <a class="card" href="grounding.html" target="_blank">
-      <div class="card-icon">⚡</div>
-      <div><div class="card-name">Wellhead Grounding Survey</div><div class="card-cta">Open form →</div></div>
-    </a>
-
-
-    <a class="card" href="https://forms.gle/PKeZWY5mUHxjVJXZA" target="_blank">
-      <div class="card-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <!-- Heater treater: horizontal vessel body -->
-          <rect x="2" y="8" width="16" height="8" rx="4" fill="#5a8fa8"/>
-          <!-- End cap right -->
-          <ellipse cx="18" cy="12" rx="2" ry="4" fill="#4a7f98"/>
-          <!-- Fire tube opening left -->
-          <circle cx="4" cy="12" r="2" fill="#c0392b" opacity="0.85"/>
-          <!-- Gas outlet nozzle top -->
-          <rect x="9" y="4" width="2" height="4" rx="1" fill="#4a7f98"/>
-          <rect x="7.5" y="3" width="5" height="1.5" rx="0.75" fill="#3a6f88"/>
-          <!-- Oil outlet nozzle bottom -->
-          <rect x="9" y="16" width="2" height="4" rx="1" fill="#4a7f98"/>
-          <rect x="7.5" y="19.5" width="5" height="1.5" rx="0.75" fill="#3a6f88"/>
-          <!-- Legs -->
-          <rect x="5" y="16" width="1.5" height="3" rx="0.75" fill="#3a6f88"/>
-          <rect x="11" y="16" width="1.5" height="3" rx="0.75" fill="#3a6f88"/>
-          <!-- Water drain bottom right -->
-          <rect x="14" y="16" width="1.5" height="2.5" rx="0.75" fill="#3a6f88"/>
-        </svg>
-      </div>
-      <div><div class="card-name">Spare Vessels</div><div class="card-cta">Open form →</div></div>
-    </a>
-
-  </div>
-
-  <!-- REPORTS -->
-  <div class="collapse-header" id="reportsToggle" style="margin-top:24px">
-    <span class="collapse-title">📋 Reports</span>
-    <span class="collapse-chevron" id="reportsChevron">▼</span>
-  </div>
-  <div class="reports-body" id="reportsBody">
-  <div class="reports-grid">
-    <a class="report-link-card" href="spare-vessels.html">
-      <div class="report-link-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <rect x="2" y="8" width="16" height="8" rx="4" fill="#5a8fa8"/>
-          <ellipse cx="18" cy="12" rx="2" ry="4" fill="#4a7f98"/>
-          <circle cx="4" cy="12" r="2" fill="#c0392b" opacity="0.85"/>
-          <rect x="9" y="4" width="2" height="4" rx="1" fill="#4a7f98"/>
-          <rect x="7.5" y="3" width="5" height="1.5" rx="0.75" fill="#3a6f88"/>
-          <rect x="9" y="16" width="2" height="4" rx="1" fill="#4a7f98"/>
-          <rect x="7.5" y="19.5" width="5" height="1.5" rx="0.75" fill="#3a6f88"/>
-          <rect x="5" y="16" width="1.5" height="3" rx="0.75" fill="#3a6f88"/>
-          <rect x="11" y="16" width="1.5" height="3" rx="0.75" fill="#3a6f88"/>
-          <rect x="14" y="16" width="1.5" height="2.5" rx="0.75" fill="#3a6f88"/>
-        </svg>
-      </div>
-      <div><div class="report-link-name">Spare Vessels</div><div class="report-link-cta">View report →</div></div>
-    </a>
-  </div>
-  </div>
-
-  <footer>
-    Forty Acres Energy &nbsp;·&nbsp; Field Operations &nbsp;·&nbsp; Internal Use Only
-    <div class="data-note">Dashboard data from Google Sheets Ã‚Â· Updated 2026-05-26 13:05</div>
-  </footer>
 </div>
 
 <script>
@@ -863,7 +690,7 @@ function applyEntries(period) {
   const titleEl = document.getElementById('entriesTitle');
   const open    = document.getElementById('entriesBody').classList.contains('open');
   const label   = isPumper ? 'My Entries' : 'All Entries';
-  if (titleEl) titleEl.textContent = (open ? '▲ ' : '▼ ') + label;
+  if (titleEl) titleEl.textContent = label;
 
   const d = DATA[period];
   if (!d) {
@@ -952,7 +779,7 @@ document.getElementById('entriesToggle').addEventListener('click', () => {
   document.getElementById('entriesChevron').textContent = open ? '▲' : '▼';
   const role  = (CURRENT_USER && CURRENT_USER.role || '').toLowerCase();
   const label = role === 'pumper' ? 'My Entries' : 'All Entries';
-  document.getElementById('entriesTitle').textContent = (open ? '▲ ' : '▼ ') + label;
+  document.getElementById('entriesTitle').textContent = label;
 });
 
 // Resize on orientation change / window resize (handles Android rotation)
@@ -964,31 +791,38 @@ applyPeriod('pastweek');
 // Defer initial resize one frame so the grid has painted
 requestAnimationFrame(resizeAll);
 
-// ── Reports collapse toggle ────────────────────────────────────────────────
-const rToggle  = document.getElementById('reportsToggle');
-const rBody    = document.getElementById('reportsBody');
-const rChevron = document.getElementById('reportsChevron');
-rToggle.addEventListener('click', () => {
-  const open = rBody.classList.toggle('open');
-  rChevron.textContent = open ? '▲' : '▼';
-});
+// (reports moved to sidebar)
 
 // ── Tasks collapse toggle ───────────────────────────────────────────────────
 document.getElementById('tasksToggle').addEventListener('click', () => {
   const open = document.getElementById('tasksBody').classList.toggle('open');
   document.getElementById('tasksChevron').textContent = open ? '▲' : '▼';
-  document.getElementById('tasksToggle').querySelector('.collapse-title').textContent =
-    (open ? '▲' : '▼') + ' Weekly Work Assignments';
+  const lbl = document.getElementById('tasksToggleLabel');
+  if (lbl) lbl.textContent = 'Weekly Work Assignments';
 });
+
+// ── Sidebar toggle (burger) ─────────────────────────────────────────────────
+const SIDEBAR_KEY = 'fae_forms_sidebar';
+function saveSidebarState(){
+  try { localStorage.setItem(SIDEBAR_KEY,
+    document.body.classList.contains('sb-open') ? 'open' : 'closed'); } catch(e){}
+}
+function toggleSidebar(){ document.body.classList.toggle('sb-open'); saveSidebarState(); }
+function closeSidebar(){ document.body.classList.remove('sb-open'); saveSidebarState(); }
+(function initSidebar(){
+  let pref = null;
+  try { pref = localStorage.getItem(SIDEBAR_KEY); } catch(e){}
+  if (pref === 'closed')      document.body.classList.remove('sb-open');
+  else if (pref === 'open')   document.body.classList.add('sb-open');
+  else if (window.innerWidth>760) document.body.classList.add('sb-open');
+})();
 
 </script>
 
 <!-- ── Login overlay ── -->
 <div id="login-overlay">
-  <div>
-    <div class="login-logo">fae<span>II</span></div>
-  </div>
-  <div class="login-tagline">forty acres <em>energy</em> &nbsp;·&nbsp; Field Operations Portal</div>
+  <img class="login-logo-img" src="40ACFAEII.png?v=6" alt="Forty Acres Energy">
+  <div class="login-tagline">forty acres <em>energy</em> &nbsp;&middot;&nbsp; Field Operations Portal</div>
   <div class="login-title">Sign in to continue</div>
   <div id="g_id_onload"
        data-client_id="629380732564-eh0uasomqjdo3up8o2po685g9ep544iq.apps.googleusercontent.com"
@@ -1180,12 +1014,11 @@ function renderTasks() {
   if (role === 'pumper') {
     body.classList.add('open');
     chevron.textContent = '▲';
-    tlabel.textContent  = '▲ Weekly Work Assignments';
   } else {
     body.classList.remove('open');
     chevron.textContent = '▼';
-    tlabel.textContent  = '▼ Weekly Work Assignments';
   }
+  tlabel.textContent = 'Weekly Work Assignments';
   panel.style.display = 'block';
 }
 
