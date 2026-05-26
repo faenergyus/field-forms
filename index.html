@@ -31,12 +31,15 @@
 
     /* Header */
     header{background:var(--header);display:flex;align-items:center;gap:12px;
-      height:var(--hdr-h);padding:0 16px;box-shadow:0 2px 8px rgba(0,0,0,.18);z-index:30}
+      height:var(--hdr-h);padding:0 16px;box-shadow:0 2px 8px rgba(0,0,0,.18);z-index:30;
+      position:relative}
     .burger{background:none;border:0;font-size:1.3rem;cursor:pointer;
       color:#33473a;padding:4px 6px;line-height:1;border-radius:5px}
     .burger:hover{background:rgba(0,0,0,.07)}
     .logo{height:38px;display:block}
-    .wordmark{font-size:1.05rem;font-weight:800;letter-spacing:.13em;color:#000}
+    .wordmark{font-size:1.05rem;font-weight:800;letter-spacing:.13em;color:#000;
+      position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+      pointer-events:none}
     .appnav{display:flex;align-items:center;gap:16px;margin-left:18px}
     .appnav a{font-size:.82rem;font-weight:600;color:#1a1a1a;text-decoration:none;white-space:nowrap}
     .appnav a:hover{color:#c0392b}
