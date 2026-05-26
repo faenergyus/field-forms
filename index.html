@@ -76,7 +76,7 @@
     .scrim{display:none}
 
     /* Content */
-    .content{flex:1;overflow:auto;padding:20px 26px}
+    .content{flex:1;overflow-y:auto;overflow-x:hidden;padding:20px 26px;min-width:0}
     .ptitle{font-size:1.3rem;font-weight:800;color:var(--green-d);line-height:1.1}
     .psub{font-size:.78rem;color:var(--muted);margin:2px 0 0}
 
@@ -178,10 +178,27 @@
       border-top:1px solid var(--line)}
     .data-note{font-size:.65rem;color:#8aaa8a;margin-top:2px}
 
-    /* Phone */
+    /* Mobile hardening — no horizontal scroll on phones. overflow-x:clip is
+       used so the page does not become a scrolling container (would break
+       the sticky-header pattern in other pages and the body height:100vh here). */
+    html,body{max-width:100vw;overflow-x:clip}
+    .charts-grid,.entry-table,.tasks-columns{max-width:100%}
+    .entry-form-card{overflow-x:auto}
+
+    /* ── @900: tablet — hide price ticker to free up header room ── */
+    @media (max-width:900px){
+      .price{display:none}
+    }
+
+    /* ── @760: phone ── */
     @media (max-width:760px){
       .price{display:none}
       .user-name{display:none}
+      .user-signout{font-size:0;width:22px;height:22px;border-radius:50%;
+        background:rgba(0,0,0,.06);text-decoration:none;
+        display:inline-flex;align-items:center;justify-content:center;padding:0}
+      .user-signout::before{content:'↪';font-size:13px;color:#3a3a3a;transform:scaleX(-1)}
+      .user-badge{gap:6px;padding-left:10px;margin-left:4px}
       .sidebar{position:fixed;top:var(--hdr-h);bottom:0;left:0;width:230px;
         transform:translateX(-100%);transition:transform .2s ease;z-index:25}
       body:not(.sb-open) .sidebar{width:230px;transform:translateX(-100%);border-right-color:var(--line)}

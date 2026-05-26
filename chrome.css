@@ -144,9 +144,34 @@
 }
 .appchrome-title .close-x:hover { color: #c0392b; }
 
-@media (max-width: 760px) {
+/* Global mobile hardening — applies to every page that includes chrome.css.
+   overflow-x: clip is used (not hidden) so sticky positioning on the header
+   keeps working. clip does not create a new scrolling container. */
+html, body { max-width: 100vw; overflow-x: clip; }
+
+@media (max-width: 900px) {
   .appchrome .price { display: none; }
+}
+@media (max-width: 760px) {
   .appchrome .user-name { display: none; }
+  .appchrome .user-signout {
+    font-size: 0;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: rgba(0,0,0,.06);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  .appchrome .user-signout::before {
+    content: '↪';
+    font-size: 13px;
+    color: #3a3a3a;
+    transform: scaleX(-1);
+  }
+  .appchrome .user-badge { gap: 6px; padding-left: 10px; margin-left: 4px; }
   .appchrome .appnav { gap: 10px; margin-left: 8px; }
   .appchrome { padding: 0 10px; gap: 8px; }
 }
