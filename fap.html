@@ -8,7 +8,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f4f1; color: #1a1a1a; min-height: 100vh; }
     .header { background: #d9d9d9; padding: 12px 16px; display: flex; align-items: center; gap: 12px; border-bottom: none; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.25); }
-    .header h1 { font-size: 1.1rem; color: #1c4a1c; font-weight: 700; flex: 1; display: flex; align-items: center; gap: 8px; }
+    .header h1 { font-size: 0.92rem; color: #1c4a1c; font-weight: 700; flex: 1; display: flex; align-items: center; gap: 8px; }
     .header h1 .h-icon svg { width: 22px; height: 22px; display: block; }
     .container { max-width: 600px; margin: 0 auto; padding: 16px; }
     .section { background: #fff; border-radius: 9px; padding: 16px; margin-bottom: 12px; border-left: 4px solid #3a8a3a; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
@@ -37,6 +37,14 @@
     .autocomplete-list div:hover, .autocomplete-list div.active { background: #eaf5ea; color: #1c4a1c; }
     .autocomplete-list div mark { background: none; color: #2d7a2d; font-weight: 700; }
     .well-count { font-size: 0.7rem; color: #6a8a6a; margin-top: 4px; margin-bottom: 12px; }
+    /* Compact well-info strip (top perf / pump depth etc.) — shown after a well is picked */
+    .well-info-strip { margin: 6px 0 12px; padding: 10px 12px; background: #f5faf5; border: 1px solid #c8ddc8; border-radius: 7px; display: none; }
+    .well-info-strip.show { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
+    .well-info-strip .wi-row { display: flex; justify-content: space-between; gap: 8px; font-size: 0.78rem; }
+    .well-info-strip .wi-lbl { color: #5a7a5a; font-weight: 600; text-transform: uppercase; font-size: 0.62rem; letter-spacing: 0.04em; align-self: center; }
+    .well-info-strip .wi-val { color: #1a2a1a; font-weight: 700; }
+    .well-info-strip .wi-val.none { color: #b0b0b0; font-weight: 400; }
+    .well-info-strip .wi-loading { grid-column: 1 / -1; color: #6a8a6a; font-size: 0.78rem; text-align: center; }
 
     /* Success overlay */
     .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
@@ -199,6 +207,7 @@
           <div class="autocomplete-list" id="wellList"></div>
         </div>
         <div class="well-count" id="wellCount">901 wells</div>
+        <div class="well-info-strip" id="wellInfoStrip"></div>
       </div>
 
       <div class="section">
@@ -286,6 +295,8 @@ let activeIdx = -1;
 wellInput.addEventListener('input', function() {
   const q = this.value.toUpperCase().trim();
   selectedWell = '';
+  var _wi = document.getElementById('wellInfoStrip');
+  if (_wi) { _wi.classList.remove('show'); _wi.innerHTML = ''; }
   if (q.length < 1) { wellListEl.style.display = 'none'; return; }
   const matches = WELLS.filter(w => w.toUpperCase().includes(q)).slice(0, 30);
   if (matches.length === 0) { wellListEl.style.display = 'none'; wellCountEl.textContent = 'No matches'; return; }
@@ -321,6 +332,57 @@ function selectWell(val) {
   selectedWell = val;
   wellListEl.style.display = 'none';
   wellCountEl.textContent = 'Selected: ' + val;
+  loadWellInfo(val);
+}
+
+// ── Well-info strip: 4 quick reference fields from /wbd ──────────────────
+// (Same data the lean wellinfo.html report shows — surfaced inline here
+// so the shot-taker has pump depth / top perf / casing / tubing without
+// leaving the FAP form.)
+const WI_API = 'https://api.40ac.us';
+const wiStrip = document.getElementById('wellInfoStrip');
+function _wiNum(x) {
+  if (x == null) return NaN;
+  return parseFloat(String(x).replace(/[, ']/g, ''));
+}
+function _wiRow(label, value, suffix) {
+  const has = value != null && value !== '';
+  const disp = has ? (value + (suffix || '')) : '—';
+  return '<div class="wi-row"><span class="wi-lbl">' + label + '</span>'
+       + '<span class="wi-val' + (has ? '' : ' none') + '">' + disp + '</span></div>';
+}
+async function loadWellInfo(name) {
+  wiStrip.classList.add('show');
+  wiStrip.innerHTML = '<div class="wi-loading">Loading well info…</div>';
+  try {
+    const res = await fetch(WI_API + '/wbd/' + encodeURIComponent(name));
+    if (!res.ok) { wiStrip.innerHTML = '<div class="wi-loading">No well data on file.</div>'; return; }
+    const well = await res.json();
+    const vers = (well.v || []).slice().sort((a, b) =>
+      ((b.csg||[]).length + (b.pf||[]).length + (b.tb||[]).length) -
+      ((a.csg||[]).length + (a.pf||[]).length + (a.tb||[]).length));
+    const v = vers[0] || {};
+    let prodSize = null;
+    (v.csg || []).forEach(c => { if (c.ty && /production/i.test(c.ty) && c.sz) prodSize = c.sz; });
+    const tbSizes = [];
+    (v.tb || []).forEach(t => {
+      const m = (t.desc || '').match(/^\s*(\d+(?:\s*\d+\/\d+)?\s*")/);
+      if (m) { const s = m[1].replace(/\s+/g,' ').trim(); if (tbSizes.indexOf(s) < 0) tbSizes.push(s); }
+    });
+    const perfTops = (v.pf || []).map(p => _wiNum(p.td)).filter(n => !isNaN(n) && n > 0);
+    const topPerf = perfTops.length ? Math.min.apply(null, perfTops) : null;
+    const isPacker = (v.tb || []).some(t => /packer/i.test(t.desc || ''));
+    const tbDepths = (v.tb || []).map(t => _wiNum(t.dp)).filter(n => !isNaN(n) && n > 0);
+    const ppDepth = tbDepths.length ? Math.max.apply(null, tbDepths) : null;
+    const ppLabel = isPacker ? 'Top of Packer' : 'Top of Pump';
+    wiStrip.innerHTML =
+      _wiRow('Prod Casing', prodSize) +
+      _wiRow('Tubing', tbSizes.length ? tbSizes.join(' / ') : null) +
+      _wiRow('Top Perf', topPerf != null ? topPerf.toLocaleString() : null, ' ft') +
+      _wiRow(ppLabel,    ppDepth != null ? ppDepth.toLocaleString() : null, ' ft');
+  } catch (e) {
+    wiStrip.innerHTML = '<div class="wi-loading">Could not load well info.</div>';
+  }
 }
 
 document.addEventListener('click', function(e) {
@@ -487,6 +549,7 @@ function resetForm() {
   selectedWell = '';
   wellInput.value = '';
   wellCountEl.textContent = '901 wells';
+  wiStrip.classList.remove('show'); wiStrip.innerHTML = '';
   resultsFiles = [];
   waveFiles = [];
   renderGrid('resultsPhotoGrid', resultsFiles);
