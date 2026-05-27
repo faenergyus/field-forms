@@ -66,11 +66,7 @@
       display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;
       transition:width .15s ease}
     body:not(.sb-open) .sidebar{width:0;border-right-color:transparent}
-    nav.snav{padding:0 0 8px;flex:1;overflow:auto}
-    .sb-cancel{display:block;width:calc(100% - 24px);margin:10px 12px 6px;padding:7px 10px;
-      background:#fff;border:1px solid #c0c0c0;border-radius:6px;cursor:pointer;
-      font-size:.78rem;font-weight:600;color:#3a3a3a;text-align:center}
-    .sb-cancel:hover{background:#f0eee9;color:#1a1a1a}
+    nav.snav{padding:8px 0;flex:1;overflow:auto}
     .nav-sec{font-size:.58rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
       color:#9aab9a;padding:13px 18px 5px;white-space:nowrap}
     .nav-i{display:flex;align-items:center;gap:11px;padding:9px 18px;white-space:nowrap;
@@ -285,8 +281,6 @@
   <div class="split">
     <aside class="sidebar">
       <nav class="snav">
-        <button type="button" class="sb-cancel" onclick="closeSidebar()">Cancel</button>
-
         <div class="nav-sec">Dashboard</div>
         <a class="nav-i" href="index.html"><span class="ic">
           <svg viewBox="0 0 24 24"><rect x="3" y="11" width="4" height="9" fill="#1c4a1c"/><rect x="10" y="6" width="4" height="14" fill="#2d7a2d"/><rect x="17" y="14" width="4" height="6" fill="#5dc85d"/></svg>

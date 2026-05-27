@@ -161,16 +161,18 @@ body {
   color: var(--chrome-green-d);
   margin: 0;
 }
-.appchrome-title .close-x {
-  background: none;
-  border: none;
+.appchrome-title .cancel-btn {
+  background: #fff;
+  border: 1px solid #c0c0c0;
+  border-radius: 6px;
   color: #3a3a3a;
-  font-size: 1.2rem;
+  font-size: .78rem;
+  font-weight: 600;
   cursor: pointer;
-  padding: 2px 6px;
+  padding: 6px 14px;
   line-height: 1;
 }
-.appchrome-title .close-x:hover { color: #c0392b; }
+.appchrome-title .cancel-btn:hover { background: #f0eee9; color: #1a1a1a; }
 
 /* ── Sidebar (fixed overlay; same nav on every page) ── */
 .appchrome-sidebar {
