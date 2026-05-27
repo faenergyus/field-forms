@@ -45,7 +45,7 @@
     .appnav a:hover{color:#c0392b}
     .appnav .cur{font-weight:800;color:#1a1a1a;cursor:default}
     .appnav .cur:hover{color:#1a1a1a}
-    .price{margin-left:auto;display:flex;gap:20px;align-items:center}
+    .price{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:20px;align-items:center;pointer-events:none}
     .pi{text-align:center;line-height:1.2;display:flex;flex-direction:column;align-items:center}
     .pl{font-size:.56rem;font-weight:700;letter-spacing:.1em;color:#2e2e2e;text-transform:uppercase;display:block}
     .pv{font-size:.92rem;font-weight:700;color:#111}
@@ -53,7 +53,7 @@
     .price-chg{font-size:.62rem;font-weight:600;margin-left:4px}
     .price-up{color:#155f15}
     .price-down{color:#a32020}
-    .user-badge{display:flex;align-items:center;gap:8px;padding-left:16px;border-left:1px solid #bcbcbc;margin-left:6px}
+    .user-badge{display:flex;align-items:center;gap:8px;padding-left:16px;border-left:1px solid #bcbcbc;margin-left:auto}
     .user-avatar{width:30px;height:30px;border-radius:50%;border:2px solid #3a8a3a}
     .user-name{font-size:.78rem;color:#1f1f1f;font-weight:600}
     .user-signout{background:none;border:0;font-size:.7rem;color:#3a3a3a;cursor:pointer;text-decoration:underline;padding:0}
@@ -262,7 +262,6 @@
     <button class="burger" onclick="toggleSidebar()" aria-label="Menu">&#9776;</button>
     <img class="logo" src="40ACFAEII.png?v=6" alt="Forty Acres Energy"
          onerror="this.style.display='none'">
-    <span class="wordmark">FORMS</span>
     <nav class="appnav">
       <a href="https://analyst.40ac.us">Analyst</a>
       <a href="https://scada.40ac.us">SCADA</a>
