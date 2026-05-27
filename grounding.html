@@ -102,6 +102,23 @@
     if (m && !localStorage.getItem(SESSION_KEY))
       localStorage.setItem(SESSION_KEY, decodeURIComponent(m[1]));
   } catch (e) {}
+  // Stale -> replace: if the .40ac.us cookie carries a fresh fae1.* token but
+  // localStorage still holds a stale credential (e.g. an expired Google JWT),
+  // replace LS so the session-resume / /auth/session call sees the fresh token.
+  try {
+    var _scm = document.cookie.match(/(?:^|;\s*)fae40_sso=([^;]+)/);
+    var cookieTok = _scm ? decodeURIComponent(_scm[1]) : null;
+    var lsRaw = localStorage.getItem(SESSION_KEY);
+    var lsObj = null; try { lsObj = JSON.parse(lsRaw || 'null'); } catch (e) {}
+    var lsCred = lsObj && lsObj.credential;
+    if (cookieTok && cookieTok.indexOf('fae1.') === 0
+        && (!lsCred || lsCred.indexOf('fae1.') !== 0)) {
+      localStorage.setItem(SESSION_KEY, JSON.stringify({
+        credential: cookieTok,
+        source: 'sso-self-heal'
+      }));
+    }
+  } catch (e) {}
   try {
     var hasCookie = /(?:^|;\s*)fae40_sso=/.test(document.cookie);
     var raw = localStorage.getItem(SESSION_KEY);
