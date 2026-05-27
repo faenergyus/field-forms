@@ -93,6 +93,44 @@
   if (document.readyState !== 'loading') patchLinks();
   else document.addEventListener('DOMContentLoaded', patchLinks);
 })();
+// ── Cross-subdomain SSO (self-healing .40ac.us cookie bridge) ──────────
+// One Google sign-in covers analyst / scada / forms.40ac.us. On load:
+// cookie→localStorage seed; if local session valid but cookie missing,
+// re-write the cookie (self-heal); intercept setItem/removeItem to keep
+// the cookie in sync with the localStorage session.
+(function () {
+  var SESSION_KEY = 'fae_user';
+  try {
+    var m = document.cookie.match(/(?:^|;\s*)fae40_sso=([^;]+)/);
+    if (m && !localStorage.getItem(SESSION_KEY))
+      localStorage.setItem(SESSION_KEY, decodeURIComponent(m[1]));
+  } catch (e) {}
+  try {
+    var hasCookie = /(?:^|;\s*)fae40_sso=/.test(document.cookie);
+    var raw = localStorage.getItem(SESSION_KEY);
+    if (!hasCookie && raw) {
+      var s = null; try { s = JSON.parse(raw); } catch (e) {}
+      if (s && s.credential && s.expires && s.expires > Date.now()) {
+        document.cookie = 'fae40_sso=' + encodeURIComponent(raw) +
+          ';domain=.40ac.us;path=/;max-age=2592000;Secure;SameSite=Lax';
+      }
+    }
+  } catch (e) {}
+  try {
+    var _set = localStorage.setItem.bind(localStorage);
+    var _rem = localStorage.removeItem.bind(localStorage);
+    localStorage.setItem = function (k, v) {
+      _set(k, v);
+      if (k === SESSION_KEY) { try { document.cookie = 'fae40_sso=' +
+        encodeURIComponent(v) + ';domain=.40ac.us;path=/;max-age=2592000;Secure;SameSite=Lax'; } catch (e) {} }
+    };
+    localStorage.removeItem = function (k) {
+      _rem(k);
+      if (k === SESSION_KEY) { try { document.cookie =
+        'fae40_sso=;domain=.40ac.us;path=/;max-age=0;Secure;SameSite=Lax'; } catch (e) {} }
+    };
+  } catch (e) {}
+})();
 </script>
 </head>
 <body>

@@ -138,7 +138,8 @@ TABLES = [
             description NVARCHAR(MAX) NULL,
             depth NVARCHAR(50) NULL,
             joints NVARCHAR(50) NULL,
-            notes NVARCHAR(500) NULL
+            notes NVARCHAR(500) NULL,
+            size NVARCHAR(40) NULL
         )""",
     },
     {
