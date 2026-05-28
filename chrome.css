@@ -145,21 +145,26 @@ body {
   padding: 0;
 }
 
-/* Page title strip (below chrome) — replaces the old inline form title bar */
+/* Page title strip (below chrome) — replaces the old inline form title bar.
+   Banner height capped at the main header (--chrome-hdr-h) so the two strips
+   read as a single header block. */
 .appchrome-title {
   background: #fff;
   border-bottom: 1px solid var(--chrome-line);
-  padding: 10px 18px;
+  padding: 0 18px;
+  height: var(--chrome-hdr-h);
+  max-height: var(--chrome-hdr-h);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 .appchrome-title h1 {
-  font-size: 1.05rem;
+  font-size: 0.92rem;
   font-weight: 700;
   color: var(--chrome-green-d);
   margin: 0;
+  line-height: 1.1;
 }
 .appchrome-title .cancel-btn {
   background: #fff;
@@ -169,7 +174,7 @@ body {
   font-size: .78rem;
   font-weight: 600;
   cursor: pointer;
-  padding: 6px 14px;
+  padding: 5px 12px;
   line-height: 1;
 }
 .appchrome-title .cancel-btn:hover { background: #f0eee9; color: #1a1a1a; }
