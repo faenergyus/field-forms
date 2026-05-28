@@ -165,7 +165,16 @@ body {
   color: var(--chrome-green-d);
   margin: 0;
   line-height: 1.1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
+/* Icon sizing in the form-page banner — 40% of the natural-render size
+   (SVGs rendered at ~72px, fap.png at ~93×199 with no width/height). */
+.appchrome-title h1 .h-icon { display: inline-flex; align-items: center; }
+.appchrome-title h1 .h-icon svg,
+.appchrome-title h1 .h-icon img { height: 29px; width: auto; display: block; }
+.appchrome-title h1 .h-icon svg { width: 29px; }
 .appchrome-title .cancel-btn {
   background: #fff;
   border: 1px solid #c0c0c0;
