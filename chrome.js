@@ -140,7 +140,7 @@
     /* Sidebar + scrim — injected once, after the header */
     if (!document.querySelector('.appchrome-sidebar')) {
       var here = currentPage();
-      var html = '<button type="button" class="sb-cancel">Cancel</button>';
+      var html = '';
       NAV.forEach(function (group) {
         html += '<div class="nav-sec">' + group.sec + '</div>';
         group.items.forEach(function (item) {
@@ -163,7 +163,6 @@
 
       var close = function () { document.body.classList.remove('sb-open'); };
       scrim.addEventListener('click', close);
-      aside.querySelector('.sb-cancel').addEventListener('click', close);
 
       header.parentNode.insertBefore(aside, header.nextSibling);
       header.parentNode.insertBefore(scrim, aside.nextSibling);
