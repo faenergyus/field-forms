@@ -298,14 +298,9 @@ function showApp(session) {
 }
 function signOut() { localStorage.removeItem(SESSION_KEY); location.reload(); }
 
-// ── API base (same loader as the rest of the portal) ────────────────────────
-var API_BASE = '';
-async function loadApiBase() {
-  try {
-    var res = await fetch('https://raw.githubusercontent.com/faenergyus/SCADA/main/beam/data/api_config.json?t=' + Date.now());
-    API_BASE = (await res.json()).apiBase || '';
-  } catch (e) { console.error('Could not load apiBase:', e); }
-}
+// ── API base (matches scada.40ac.us / analyst.40ac.us — hardcoded permanent tunnel) ──
+var API_BASE = 'https://api.40ac.us';
+async function loadApiBase() { /* no-op — kept for call-site compatibility */ }
 
 // ── Well list + picker ──────────────────────────────────────────────────────
 var WELL_NAMES = [];
