@@ -447,6 +447,17 @@ function renderTable(body, well) {
   var ppDepth = tbDepths.length ? Math.max.apply(null, tbDepths) : null;
   var ppLabel = isPacker ? 'Top of Packer Depth' : 'Top of Pump Depth';
 
+  // 5. TAC depth — Tubing Anchor Catcher. Match "TAC" as a whole word OR
+  //    "Tubing Anchor"; exclude "Mud Anchor" / mud-anchor variants.
+  var tacDepth = null;
+  (v.tb || []).forEach(function(t) {
+    var d = t.desc || '';
+    if (/mud\s+anchor/i.test(d)) return;
+    if (!/\bTAC\b|tubing\s+anchor/i.test(d)) return;
+    var n = num(t.dp);
+    if (!isNaN(n) && n > 0 && (tacDepth == null || n < tacDepth)) tacDepth = n;
+  });
+
   function row(label, value, suffix) {
     var has = value != null && value !== '';
     var disp = has ? (esc(value) + (suffix || '')) : '—';
@@ -460,6 +471,7 @@ function renderTable(body, well) {
     + row('Tubing Size', tbSizes.length ? tbSizes.join('  /  ') : null)
     + row('Top Perf', topPerf != null ? topPerf.toLocaleString() : null, " ft")
     + row(ppLabel, ppDepth != null ? ppDepth.toLocaleString() : null, " ft")
+    + row('TAC Depth', tacDepth != null ? tacDepth.toLocaleString() : null, " ft")
     + '</tbody></table>';
 }
 
