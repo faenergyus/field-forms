@@ -449,13 +449,17 @@ function renderTable(body, well) {
 
   // 5. TAC depth — Tubing Anchor Catcher. Match "TAC" as a whole word OR
   //    "Tubing Anchor"; exclude "Mud Anchor" / mud-anchor variants.
+  //    Sanity floor: TACs sit several hundred to thousands of feet down;
+  //    anything < 100 ft is almost certainly a missing-digit WBD entry,
+  //    so we treat it as missing rather than render a misleading value.
+  var TAC_MIN_DEPTH = 100;
   var tacDepth = null;
   (v.tb || []).forEach(function(t) {
     var d = t.desc || '';
     if (/mud\s+anchor/i.test(d)) return;
     if (!/\bTAC\b|tubing\s+anchor/i.test(d)) return;
     var n = num(t.dp);
-    if (!isNaN(n) && n > 0 && (tacDepth == null || n < tacDepth)) tacDepth = n;
+    if (!isNaN(n) && n >= TAC_MIN_DEPTH && (tacDepth == null || n < tacDepth)) tacDepth = n;
   });
 
   function row(label, value, suffix) {
