@@ -149,6 +149,7 @@ body {
    Banner height capped at the main header (--chrome-hdr-h) so the two strips
    read as a single header block. */
 .appchrome-title {
+  position: relative;
   background: #fff;
   border-bottom: 1px solid var(--chrome-line);
   padding: 0 18px;
@@ -156,10 +157,14 @@ body {
   max-height: var(--chrome-hdr-h);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
 }
 .appchrome-title h1 {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   font-size: 0.92rem;
   font-weight: 700;
   color: var(--chrome-green-d);
@@ -168,6 +173,7 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
 }
 /* Icon sizing in the form-page banner — 40% of the natural-render size
    (SVGs rendered at ~72px, fap.png at ~93×199 with no width/height). */
