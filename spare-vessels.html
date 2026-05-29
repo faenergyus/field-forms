@@ -47,21 +47,6 @@
     /* ── Layout ── */
     .page { max-width: 1020px; margin: 0 auto; padding: 24px 18px 60px; }
 
-    /* ── Back link ── */
-    .back-link {
-      display: inline-flex; align-items: center; gap: 6px;
-      color: #3a8a3a; font-size: 0.78rem; font-weight: 600;
-      text-decoration: none; letter-spacing: 0.04em;
-      margin-bottom: 20px;
-    }
-    .back-link:hover { color: #2d7a2d; text-decoration: underline; }
-
-    /* ── Page title ── */
-    .page-title {
-      font-size: 1.3rem; font-weight: 800; color: #1c4a1c;
-      display: flex; align-items: center; gap: 10px;
-      margin-bottom: 6px;
-    }
     .page-subtitle {
       font-size: 0.75rem; color: #6a8a6a; margin-bottom: 24px;
       letter-spacing: 0.04em;
@@ -226,13 +211,8 @@
     <button class="user-signout" onclick="signOut()">sign out</button>
   </div>
 </header>
-
-<div class="page">
-
-  <a class="back-link" href="index.html">← Portal Home</a>
-
-  <div class="page-title">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+<div class="appchrome-title">
+  <h1><span class="h-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none">
       <rect x="2" y="8" width="16" height="8" rx="4" fill="#5a8fa8"/>
       <ellipse cx="18" cy="12" rx="2" ry="4" fill="#4a7f98"/>
       <circle cx="4" cy="12" r="2" fill="#c0392b" opacity="0.85"/>
@@ -243,9 +223,11 @@
       <rect x="5" y="16" width="1.5" height="3" rx="0.75" fill="#3a6f88"/>
       <rect x="11" y="16" width="1.5" height="3" rx="0.75" fill="#3a6f88"/>
       <rect x="14" y="16" width="1.5" height="2.5" rx="0.75" fill="#3a6f88"/>
-    </svg>
-    Spare Vessels
-  </div>
+    </svg></span>Spare Vessels</h1>
+  <button class="cancel-btn" onclick="location.href='index.html'" title="Close">Close</button>
+</div>
+
+<div class="page">
   <div class="page-subtitle">Inventory of spare tanks, vessels, and separators in the field</div>
 
   <div class="report-container" id="reportContainer">
