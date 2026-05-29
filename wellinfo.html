@@ -24,15 +24,6 @@
     #login-overlay .login-error { color: #ff8080; font-size: 0.85rem; display: none; text-align: center; max-width: 280px; }
     /* ── Layout ── */
     .page { max-width: 720px; margin: 0 auto; padding: 18px 18px 60px; }
-    .back-link {
-      display: inline-flex; align-items: center; gap: 6px; color: #2d7a2d;
-      font-size: 0.78rem; font-weight: 600; text-decoration: none; letter-spacing: 0.04em; margin-bottom: 20px;
-    }
-    .back-link:hover { color: #1c5a1c; text-decoration: underline; }
-    .page-title {
-      font-size: 1.3rem; font-weight: 800; color: #1c4a1c;
-      display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
-    }
     .page-subtitle { font-size: 0.75rem; color: #6a8a6a; margin-bottom: 22px; letter-spacing: 0.04em; }
     /* ── Well picker ── */
     .picker { position: relative; margin-bottom: 20px; }
@@ -152,20 +143,18 @@
     <button class="user-signout" onclick="faeSignOut()">sign out</button>
   </div>
 </header>
-
-<div class="page">
-  <a class="back-link" href="index.html">← Portal Home</a>
-
-  <div class="page-title">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+<div class="appchrome-title">
+  <h1><span class="h-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none">
       <rect x="8" y="1" width="8" height="22" rx="1" fill="#d0c8b8" opacity="0.4"/>
       <rect x="9.5" y="2" width="5" height="18" rx="0.5" fill="#4a9a4a" opacity="0.7"/>
       <rect x="10.5" y="4" width="3" height="14" rx="0.5" fill="#3a6a8a" opacity="0.8"/>
       <line x1="11" y1="10" x2="13" y2="10" stroke="#c0392b" stroke-width="1.5"/>
       <line x1="11" y1="13" x2="13" y2="13" stroke="#c0392b" stroke-width="1.5"/>
-    </svg>
-    Well Info
-  </div>
+    </svg></span>Well Info</h1>
+  <button class="cancel-btn" onclick="location.href='index.html'" title="Cancel">Cancel</button>
+</div>
+
+<div class="page">
   <div class="page-subtitle">Key completion data for a well — live from the operations database</div>
 
   <div class="picker">
