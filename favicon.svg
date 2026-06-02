@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="420 0 430 600" width="100%" height="100%">
+  <defs>
+    <clipPath id="dropClip">
+      <path d="M 200 80
+               C 206 170, 338 260, 338 335
+               A 138 138 0 0 1 62 335
+               C 62 260, 194 170, 200 80 Z" />
+    </clipPath>
+  </defs>
+
+  <g transform="translate(440, 0)">
+    <ellipse cx="200" cy="250" rx="140" ry="200" fill="#2B5A2C" stroke="#2B5A2C" stroke-width="70" />
+
+    <g transform="translate(26, 10.4) scale(0.87) translate(0, -25) translate(200, 255) scale(1.15) translate(-200, -255) translate(200, 80) scale(1, 1.03) translate(-200, -80)">
+      <g clip-path="url(#dropClip)">
+        <rect x="-10" y="-10" width="420" height="620" fill="#000000" opacity="1.00" />
+
+        <path d="M 140 120 C 105 190, 80 260, 90 360 C 98 270, 120 190, 150 120 Z" fill="#ffffff" opacity="0.06" />
+
+        <g transform="translate(0, 75)">
+          <path d="M 60 260 C 160 330, 240 200, 340 260 L 340 500 L 60 500 Z" fill="#0A1828" />
+          <path d="M 60 265 C 160 335, 240 205, 340 265 L 340 500 L 60 500 Z" fill="#0F243B" />
+          <path d="M 60 270 C 160 340, 240 210, 340 270 L 340 500 L 60 500 Z" fill="#15314E" />
+          <path d="M 60 275 C 160 345, 240 215, 340 275 L 340 500 L 60 500 Z" fill="#1B3F62" />
+          <path d="M 60 280 C 160 350, 240 220, 340 280 L 340 500 L 60 500 Z" fill="#214C76" />
+          <path d="M 60 285 C 160 355, 240 225, 340 285 L 340 500 L 60 500 Z" fill="#285C8B" />
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>
