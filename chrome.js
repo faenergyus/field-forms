@@ -3,7 +3,7 @@
      carries over to form pages.
    - Hydrates the user badge.
    - Polls prices.json (15 min) to keep WTI/Waha ticker fresh.
-   - Auto-injects burger + wordmark into the header.
+   - Auto-injects burger into the header.
    - Auto-injects the shared sidebar (FORMS + REPORTS) into every page
      that has <header class="appchrome">, with the current page marked active. */
 
@@ -123,18 +123,6 @@
         document.body.classList.toggle('sb-open');
       });
       header.insertBefore(burger, header.firstChild);
-    }
-
-    /* Wordmark — sits next to the logo */
-    if (!header.querySelector('.wordmark')) {
-      var logoA = header.querySelector('a > .logo, .logo');
-      var anchor = logoA ? (logoA.parentNode.tagName === 'A' ? logoA.parentNode : logoA) : null;
-      if (anchor) {
-        var wm = document.createElement('span');
-        wm.className = 'wordmark';
-        wm.textContent = 'FORMS';
-        anchor.parentNode.insertBefore(wm, anchor.nextSibling);
-      }
     }
 
     /* Sidebar + scrim — injected once, after the header */
