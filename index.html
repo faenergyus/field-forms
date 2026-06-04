@@ -262,11 +262,8 @@
 
   <header>
     <button class="burger" onclick="toggleSidebar()" aria-label="Menu">&#9776;</button>
-    <picture>
-      <source media="(max-width:760px)" srcset="light-drop-with-unit.png">
-      <img class="logo" src="light-40aclogo.png" alt="Forty Acres Energy"
+    <img class="logo" src="light-40aclogo.png" alt="Forty Acres Energy"
            onerror="this.style.display='none'">
-    </picture>
     <nav class="appnav">
       <a href="https://analyst.40ac.us">Analyst</a>
       <a href="https://scada.40ac.us">SCADA</a>
@@ -886,10 +883,7 @@ function closeSidebar(){ document.body.classList.remove('sb-open'); saveSidebarS
 
 <!-- ── Login overlay ── -->
 <div id="login-overlay">
-  <picture>
-    <source media="(max-width:760px)" srcset="light-drop-with-unit.png">
-    <img class="login-logo-img" src="light-40aclogo.png" alt="Forty Acres Energy">
-  </picture>
+  <img class="login-logo-img" src="light-40aclogo.png" alt="Forty Acres Energy">
   <div class="login-tagline">forty acres <em>energy</em> &nbsp;&middot;&nbsp; Field Operations Portal</div>
   <div class="login-title">Sign in to continue</div>
   <div id="g_id_onload"
