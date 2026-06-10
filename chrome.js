@@ -84,6 +84,8 @@
         ic: '<svg viewBox="0 0 24 24"><rect x="3" y="11" width="4" height="9" fill="#2b3036"/><rect x="10" y="6" width="4" height="14" fill="#4a5158"/><rect x="17" y="14" width="4" height="6" fill="#9aa0a6"/></svg>' },
     ]},
     { sec: 'Forms', items: [
+      { href: 'my-avo.html', label: 'My AVO Inspections',
+        ic: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="#9c6b3a" opacity="0.18"/><path d="M7 12 L10 15 L17 8" stroke="#9c6b3a" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' },
       { href: 'avo.html', label: 'AVO Inspection',
         ic: '<svg viewBox="0 0 24 24"><circle cx="9" cy="11" r="3.5" fill="#9c6b3a"/><path d="M12 11 L20 7 L20 15 Z" fill="#9c6b3a"/><path d="M5 14 q3 3 7 0" stroke="#5b626b" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' },
       { href: 'gwi.html', label: 'Gas Well Inspection',

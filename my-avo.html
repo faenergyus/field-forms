@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg?v=3">
+  <link rel="icon" type="image/x-icon" href="favicon.ico?v=3">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=3">
+  <link rel="apple-touch-icon" sizes="180x180" href="favicon-180.png?v=3">
+  <title>My AVO Inspections</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f4f1; color: #1a1a1a; min-height: 100vh; }
+    .page { max-width: 1320px; margin: 0 auto; padding: 18px 18px 60px; }
+
+    .toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+    .toolbar label { font-size: 0.78rem; font-weight: 600; color: #565c63; }
+    .toolbar select { padding: 7px 10px; font-size: 0.85rem; border: 1.5px solid #d0d4d8; border-radius: 6px; background: #fff; }
+    .toolbar .summary { margin-left: auto; font-size: 0.78rem; color: #6b7177; }
+    .toolbar .summary b { color: #2b3036; }
+
+    .grid-card { background: #fff; border-radius: 9px; border: 1px solid #d8dadd; border-top: 3px solid #5b626b; overflow: hidden; }
+
+    table.batch { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    table.batch th { text-align: left; padding: 9px 10px; background: #f3f5f7; border-bottom: 1.5px solid #d8dadd; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; color: #565c63; white-space: nowrap; vertical-align: middle; }
+    table.batch td { padding: 8px 10px; border-bottom: 1px solid #eef2ee; vertical-align: middle; }
+    table.batch tr.unchecked td { background: #fafbfc; color: #9aa0a6; }
+    table.batch tr.unchecked td.col-name, table.batch tr.unchecked td.col-due { color: #6b7177; }
+
+    .yn-pair { display: inline-flex; border: 1px solid #d0d4d8; border-radius: 6px; overflow: hidden; }
+    .yn-pair button { background: #fff; color: #565c63; border: none; padding: 4px 10px; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+    .yn-pair button.active.no { background: #eef0f2; color: #444a50; }
+    .yn-pair button.active.yes { background: #fde2e4; color: #a23022; }
+    .yn-pair button:not(.active):hover { background: #f6f7f8; }
+    .yn-pair.individually-set { box-shadow: inset 0 0 0 2px #f0c84a; }
+
+    .chk { width: 18px; height: 18px; accent-color: #4a5158; cursor: pointer; vertical-align: middle; }
+    .col-chk { width: 32px; text-align: center; }
+
+    .col-name { min-width: 180px; }
+    .col-due  { min-width: 100px; white-space: nowrap; }
+    .col-pumper { min-width: 90px; }
+    .col-status { min-width: 80px; }
+    .col-yn { width: 110px; }
+    .col-detail { min-width: 220px; }
+
+    .badge { display: inline-block; padding: 1px 7px; font-size: 0.7rem; border-radius: 9px; font-weight: 600; }
+    .badge.due { background: #fff3cd; color: #856404; }
+    .badge.overdue { background: #fdebec; color: #a23022; }
+    .badge.approaching { background: #e2efff; color: #2b4a8a; }
+    .badge.ok { background: #e8f3e8; color: #2e6b2e; }
+
+    .detail-input { width: 100%; padding: 5px 8px; font-size: 0.8rem; border: 1.5px solid #d0d4d8; border-radius: 5px; background: #fff; }
+    .detail-input:focus { outline: none; border-color: #5b626b; }
+    .detail-cell.disabled { opacity: 0.35; pointer-events: none; }
+
+    .submit-row { display: flex; gap: 12px; align-items: center; margin-top: 16px; }
+    .submit-btn { padding: 11px 22px; background: #4a5158; color: #fff; border: none; border-radius: 7px; font-size: 0.92rem; font-weight: 600; cursor: pointer; }
+    .submit-btn:disabled { background: #9aa0a6; cursor: not-allowed; }
+    .submit-btn:active { background: #1c5a1c; }
+    .submit-info { font-size: 0.78rem; color: #6b7177; }
+
+    .state-msg { color: #6b7177; font-size: 0.88rem; padding: 30px; text-align: center; }
+    .state-msg.err { color: #c0392b; }
+    .state-msg.warn { color: #856404; }
+    .spinner { display:inline-block; width:14px; height:14px; border:2px solid #4a5158; border-top-color:transparent; border-radius:50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .success-overlay { position: fixed; inset: 0; background: rgba(245,244,241,0.97); display: none; align-items: center; justify-content: center; z-index: 9000; }
+    .success-overlay.show { display: flex; }
+    .success-card { background: #fff; border-top: 4px solid #4a5158; border-radius: 12px; padding: 28px 32px; text-align: center; min-width: 320px; max-width: 420px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
+    .success-card .check { font-size: 2.6rem; color: #2e6b2e; line-height: 1; margin-bottom: 8px; }
+    .success-card .title { font-size: 1.1rem; font-weight: 700; color: #2b3036; margin-bottom: 6px; }
+    .success-card .msg { font-size: 0.85rem; color: #565c63; margin-bottom: 16px; white-space: pre-line; }
+    .success-card .btn { display: inline-block; padding: 9px 20px; margin: 4px; background: #4a5158; color: #fff; border-radius: 7px; border: none; cursor: pointer; font-size: 0.88rem; font-weight: 600; text-decoration: none; }
+    .success-card .btn.alt { background: #f0eee9; color: #3a3a3a; }
+
+    /* Login overlay */
+    #login-overlay { position: fixed; inset: 0; z-index: 9999; background: #0d260d; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+    #login-overlay .login-logo { font-size: 2.8rem; font-weight: 900; letter-spacing: -1px; color: #5b626b; }
+    #login-overlay .login-logo span { color: #fff; font-weight: 300; }
+    #login-overlay .login-tagline { color: #90bc90; font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase; margin-top: -16px; }
+    #login-overlay .login-title { color: #c8dcc8; font-size: 1rem; margin-bottom: 8px; }
+    #login-overlay .login-error { color: #ff8080; font-size: 0.85rem; display: none; text-align: center; max-width: 280px; }
+  </style>
+  <link rel="stylesheet" href="chrome.css">
+  <script src="chrome.js" defer></script>
+  <script>
+    (function () {
+      var SITE = location.host.split('.')[0];
+      function readPos() { var m = document.cookie.match(/(?:^|; )fae40_pos=([^;]+)/); if (!m) return {}; try { return JSON.parse(decodeURIComponent(m[1])); } catch (e) { return {}; } }
+      function writePos(o) { document.cookie = 'fae40_pos=' + encodeURIComponent(JSON.stringify(o)) + '; domain=.40ac.us; path=/; max-age=2592000; Secure; SameSite=Lax'; }
+      var pos = readPos();
+      pos[SITE] = location.pathname + location.search;
+      writePos(pos);
+      function patchLinks() {
+        document.querySelectorAll('a[href]').forEach(function (a) {
+          var m = a.href.match(/^https:\/\/(analyst|scada|forms)\.40ac\.us\/?(?:[?#]|$)/);
+          if (m && m[1] !== SITE && pos[m[1]]) { a.href = 'https://' + m[1] + '.40ac.us' + pos[m[1]]; }
+        });
+      }
+      if (document.readyState !== 'loading') patchLinks();
+      else document.addEventListener('DOMContentLoaded', patchLinks);
+    })();
+  </script>
+</head>
+<body>
+
+<div id="login-overlay">
+  <div><div class="login-logo">fae<span>II</span></div></div>
+  <div class="login-tagline">forty acres <em>energy</em> &nbsp;·&nbsp; Field Operations Portal</div>
+  <div class="login-title">Sign in to continue</div>
+  <div id="g_id_onload"
+       data-client_id="629380732564-eh0uasomqjdo3up8o2po685g9ep544iq.apps.googleusercontent.com"
+       data-callback="handleCredentialResponse"
+       data-auto_select="true" data-itp_support="true" data-auto_prompt="false"></div>
+  <div class="g_id_signin" data-type="standard" data-size="large" data-theme="filled_blue" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left"></div>
+  <div class="login-error" id="login-error"></div>
+</div>
+
+<header class="appchrome">
+  <a href="index.html"><img class="logo" src="light-40aclogo.png" alt="Forty Acres Energy" onerror="this.style.display='none'"></a>
+  <nav class="appnav">
+    <a href="https://analyst.40ac.us">Analyst</a>
+    <a href="https://scada.40ac.us">SCADA</a>
+    <a class="cur" href="index.html">Forms</a>
+  </nav>
+  <div class="price" id="price-ticker">
+    <div class="pi"><span class="pl">WTI Crude</span>
+      <span><span id="wti-val" class="pv">&mdash;</span><span id="wti-chg" class="price-chg"></span></span>
+      <span id="wti-date" class="price-date"></span></div>
+    <div class="pi"><span class="pl">Waha Hub</span>
+      <span><span id="waha-val" class="pv">&mdash;</span><span id="waha-chg" class="price-chg"></span></span>
+      <span id="waha-date" class="price-date"></span></div>
+  </div>
+  <div class="user-badge" id="user-badge" style="display:none">
+    <img class="user-avatar" id="user-avatar" src="" alt="">
+    <span class="user-name" id="user-name"></span>
+    <button class="user-signout" onclick="faeSignOut()">sign out</button>
+  </div>
+</header>
+<div class="appchrome-title">
+  <h1><span class="h-icon">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <circle cx="9" cy="11" r="3.5" fill="#9c6b3a"/>
+      <path d="M12 11 L20 7 L20 15 Z" fill="#9c6b3a"/>
+      <path d="M5 14 q3 3 7 0" stroke="#5b626b" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    </svg>
+  </span>My AVO Inspections</h1>
+  <button class="cancel-btn" onclick="location.href='index.html'" title="Close">Close</button>
+</div>
+
+<div class="page">
+
+  <div class="toolbar">
+    <label>Inspector:</label>
+    <select id="inspectorSelect"><option value="me">Me</option><option value="">All</option></select>
+    <label>Window:</label>
+    <select id="windowSelect">
+      <option value="7">Due within 7 days</option>
+      <option value="14" selected>Due within 14 days</option>
+      <option value="30">Due within 30 days</option>
+      <option value="60">Due within 60 days</option>
+    </select>
+    <label>Status:</label>
+    <select id="statusSelect">
+      <option value="">Due + Overdue + Approaching</option>
+      <option value="Overdue">Overdue only</option>
+      <option value="Due">Due only</option>
+    </select>
+    <div class="summary" id="summary"></div>
+  </div>
+
+  <div class="grid-card">
+    <table class="batch" id="batch">
+      <thead>
+        <tr>
+          <th class="col-chk"><input type="checkbox" id="masterChk" class="chk" title="Check / uncheck all"></th>
+          <th class="col-name">Name</th>
+          <th class="col-due">Required Date</th>
+          <th class="col-pumper">Pumper</th>
+          <th class="col-status">Status</th>
+          <th class="col-yn">Odor
+            <div class="yn-pair" id="masterOdor">
+              <button type="button" data-v="No" class="active no">No</button>
+              <button type="button" data-v="Yes">Yes</button>
+            </div>
+          </th>
+          <th class="col-detail" id="hdrOdorDetail" style="display:none">Odor detail</th>
+          <th class="col-yn">Leaks
+            <div class="yn-pair" id="masterLeaks">
+              <button type="button" data-v="No" class="active no">No</button>
+              <button type="button" data-v="Yes">Yes</button>
+            </div>
+          </th>
+          <th class="col-detail" id="hdrLeaksDetail" style="display:none">Leaks detail</th>
+          <th class="col-yn">Noises
+            <div class="yn-pair" id="masterNoises">
+              <button type="button" data-v="No" class="active no">No</button>
+              <button type="button" data-v="Yes">Yes</button>
+            </div>
+          </th>
+          <th class="col-detail" id="hdrNoisesDetail" style="display:none">Noises detail</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="11" class="state-msg"><span class="spinner"></span>Loading due inspections...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="submit-row">
+    <button type="button" class="submit-btn" id="submitBtn" disabled>Submit checked inspections</button>
+    <div class="submit-info" id="submitInfo">No rows selected.</div>
+  </div>
+</div>
+
+<div class="success-overlay" id="successOverlay">
+  <div class="success-card">
+    <div class="check">&#10003;</div>
+    <div class="title">Batch saved</div>
+    <div class="msg" id="successMsg"></div>
+    <a class="btn" href="my-avo.html">Refresh queue</a>
+    <a class="btn alt" href="avo-report.html">View report</a>
+  </div>
+</div>
+
+<script>
+const SESSION_KEY = 'fae_user';
+const SESSION_HRS = 720;
+const ACCOUNTS_CSV = 'https://docs.google.com/spreadsheets/d/146yuHYjs3RF3wtCK3Qj9NXH94DrStwhieTGqPeLQRfA/gviz/tq?tqx=out:csv&sheet=Accounts';
+const API_BASE = 'https://api.40ac.us';
+
+// ── Tunables (Lea County NM, conservative 8a-4p window) ─────────────────────
+const SUNLIGHT_START_HOUR = 8;   // 24h local clock
+const SUNLIGHT_END_HOUR   = 16;
+const DAYS_BEFORE_DUE     = 3;   // pick a day from required-3 .. required
+const MIN_GAP_MINUTES     = 10;  // per-pumper-per-day spacing
+
+// ── SSO mirror ──────────────────────────────────────────────────────────────
+(function () {
+  try {
+    var m = document.cookie.match(/(?:^|;\s*)fae40_sso=([^;]+)/);
+    if (m && !localStorage.getItem(SESSION_KEY))
+      localStorage.setItem(SESSION_KEY, decodeURIComponent(m[1]));
+  } catch (e) {}
+  try {
+    var _set = localStorage.setItem.bind(localStorage);
+    var _rem = localStorage.removeItem.bind(localStorage);
+    localStorage.setItem = function (k, v) {
+      _set(k, v);
+      if (k === SESSION_KEY) { try { document.cookie = 'fae40_sso=' + encodeURIComponent(v) + ';domain=.40ac.us;path=/;max-age=2592000;Secure;SameSite=Lax'; } catch (e) {} }
+    };
+    localStorage.removeItem = function (k) {
+      _rem(k);
+      if (k === SESSION_KEY) { try { document.cookie = 'fae40_sso=;domain=.40ac.us;path=/;max-age=0;Secure;SameSite=Lax'; } catch (e) {} }
+    };
+  } catch (e) {}
+})();
+
+function parseAccountsCSV(text) {
+  const lines = text.trim().split('\n');
+  return lines.slice(1).map(line => {
+    const cols = line.match(/("(?:[^"]|"")*"|[^,]*)/g).map(c => c.replace(/^"|"$/g,'').trim());
+    return { email: cols[0], displayName: cols[1], pbiName: cols[2], role: cols[3] };
+  });
+}
+
+async function handleCredentialResponse(response) {
+  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  const email   = payload.email.toLowerCase();
+  const errorEl = document.getElementById('login-error');
+  errorEl.style.cssText = 'display:block;color:#90bc90';
+  errorEl.textContent   = 'Checking access…';
+  try {
+    const rows  = parseAccountsCSV(await fetch(ACCOUNTS_CSV).then(r => r.text()));
+    const match = rows.find(r => r.email.toLowerCase() === email && r.email !== 'x');
+    if (!match) {
+      errorEl.style.color = '#ff8080';
+      errorEl.textContent = `Access denied for ${email}. Contact Ryan Swift to request access.`;
+      return;
+    }
+    const session = {
+      email, displayName: match.displayName, pbiName: match.pbiName,
+      role: match.role, picture: payload.picture,
+      credential: response.credential,
+      expires: Date.now() + SESSION_HRS * 3600000
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    showApp(session);
+  } catch(e) {
+    errorEl.style.color = '#ff8080';
+    errorEl.textContent = 'Could not verify access. Check your connection and try again.';
+  }
+}
+
+function showApp(session) {
+  document.getElementById('login-overlay').style.display = 'none';
+  initApp(session);
+}
+
+(function () {
+  try {
+    const saved = localStorage.getItem(SESSION_KEY);
+    if (saved) {
+      const s = JSON.parse(saved);
+      if (s.expires > Date.now()) { showApp(s); return; }
+      localStorage.removeItem(SESSION_KEY);
+    }
+  } catch(e) { localStorage.removeItem(SESSION_KEY); }
+})();
+
+// ── App state ───────────────────────────────────────────────────────────────
+let currentSession = null;
+let DUE_ROWS = [];   // raw rows from /avo/due
+// Per-row local state: { checked, odor: 'No'|'Yes', leaks, noises,
+//                        odor_touched, leaks_touched, noises_touched,
+//                        chk_touched, detail: {odor, leaks, noises} }
+let STATE = {};
+// Master header values
+let MASTER = { odor: 'No', leaks: 'No', noises: 'No' };
+const QUESTIONS = ['odor', 'leaks', 'noises'];
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function fmtDate(s) {
+  if (!s) return '—';
+  try {
+    const d = new Date(s);
+    if (isNaN(d)) return s;
+    return `${d.getMonth()+1}/${d.getDate()}/${String(d.getFullYear()).slice(2)}`;
+  } catch (e) { return s; }
+}
+
+function initApp(session) {
+  currentSession = session;
+  document.getElementById('inspectorSelect').addEventListener('change', load);
+  document.getElementById('windowSelect').addEventListener('change', load);
+  document.getElementById('statusSelect').addEventListener('change', load);
+  document.getElementById('masterChk').addEventListener('change', onMasterChk);
+  QUESTIONS.forEach(q => {
+    const m = document.getElementById('master' + q[0].toUpperCase() + q.slice(1));
+    m.querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => onMasterYn(q, b.dataset.v));
+    });
+  });
+  document.getElementById('submitBtn').addEventListener('click', submitBatch);
+  load();
+}
+
+async function load() {
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '<tr><td colspan="11" class="state-msg"><span class="spinner"></span>Loading due inspections…</td></tr>';
+
+  const params = new URLSearchParams();
+  const insp = document.getElementById('inspectorSelect').value;
+  if (insp === 'me' && currentSession) {
+    const me = currentSession.pbiName || currentSession.displayName || '';
+    if (me) params.set('inspector', me);
+  }
+  const within = document.getElementById('windowSelect').value;
+  if (within) params.set('within_days', within);
+  const st = document.getElementById('statusSelect').value;
+  if (st) params.set('status', st);
+
+  try {
+    const tok = currentSession && currentSession.credential || '';
+    const r = await fetch(API_BASE + '/avo/due?' + params.toString(), {
+      headers: { 'Authorization': 'Bearer ' + tok }
+    });
+    if (r.status === 404) {
+      tbody.innerHTML = '<tr><td colspan="11" class="state-msg warn">'
+        + 'GET /avo/due endpoint not yet wired — orchestrator task 373 enqueued. '
+        + 'In the meantime, use <a href="avo.html" style="color:#4a5158;text-decoration:underline">single-location AVO form</a>.'
+        + '</td></tr>';
+      DUE_ROWS = []; STATE = {}; updateSubmitButton();
+      return;
+    }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    DUE_ROWS = await r.json();
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="11" class="state-msg err">Error loading due list: ' + esc(err.message || err) + '</td></tr>';
+    DUE_ROWS = []; STATE = {}; updateSubmitButton();
+    return;
+  }
+  // initialize state
+  STATE = {};
+  DUE_ROWS.forEach((row, i) => {
+    STATE[i] = {
+      checked: true,
+      odor:   MASTER.odor,
+      leaks:  MASTER.leaks,
+      noises: MASTER.noises,
+      odor_touched:   false,
+      leaks_touched:  false,
+      noises_touched: false,
+      chk_touched:    false,
+      detail: { odor: '', leaks: '', noises: '' },
+    };
+  });
+  document.getElementById('masterChk').checked = true;
+  renderRows();
+  updateSubmitButton();
+}
+
+function renderRows() {
+  const tbody = document.getElementById('tbody');
+  if (!DUE_ROWS.length) {
+    tbody.innerHTML = '<tr><td colspan="11" class="state-msg">No inspections currently due in this window. </td></tr>';
+    return;
+  }
+  // Header detail columns: visible iff master OR any-row Yes for that question
+  QUESTIONS.forEach(q => {
+    const anyYes = MASTER[q] === 'Yes' || DUE_ROWS.some((_, i) => STATE[i].checked && STATE[i][q] === 'Yes');
+    document.getElementById('hdr' + q[0].toUpperCase() + q.slice(1) + 'Detail').style.display = anyYes ? '' : 'none';
+  });
+
+  tbody.innerHTML = DUE_ROWS.map((r, i) => {
+    const s = STATE[i];
+    const cls = s.checked ? '' : 'unchecked';
+    const statusCls = (r.status || '').toLowerCase();
+    const statusBadge = '<span class="badge ' + (statusCls === 'overdue' ? 'overdue' : statusCls === 'approaching' ? 'approaching' : statusCls === 'due' ? 'due' : 'ok') + '">'
+                      + esc(r.status || '—') + '</span>';
+    const overdueNote = (r.days_overdue && r.days_overdue > 0) ? ' (' + r.days_overdue + 'd)' : '';
+
+    function ynCell(q) {
+      const v = s[q];
+      const touched = s[q + '_touched'];
+      return '<div class="yn-pair' + (touched ? ' individually-set' : '') + '" data-row="' + i + '" data-q="' + q + '">'
+           + '<button type="button" data-v="No"'  + (v === 'No'  ? ' class="active no"'  : '') + '>No</button>'
+           + '<button type="button" data-v="Yes"' + (v === 'Yes' ? ' class="active yes"' : '') + '>Yes</button>'
+           + '</div>';
+    }
+
+    function detailCell(q) {
+      const anyYesHdr = MASTER[q] === 'Yes' || DUE_ROWS.some((_, j) => STATE[j].checked && STATE[j][q] === 'Yes');
+      if (!anyYesHdr) return '';
+      const enabled = s.checked && s[q] === 'Yes';
+      return '<td class="detail-cell' + (enabled ? '' : ' disabled') + '">'
+           + '<input class="detail-input" placeholder="Describe…" '
+           + 'data-row="' + i + '" data-q="' + q + '" '
+           + 'value="' + esc(s.detail[q]) + '"' + (enabled ? '' : ' disabled') + '>'
+           + '</td>';
+    }
+
+    return '<tr class="' + cls + '" data-row="' + i + '">'
+      + '<td class="col-chk"><input type="checkbox" class="chk row-chk" data-row="' + i + '"' + (s.checked ? ' checked' : '') + '></td>'
+      + '<td class="col-name">' + esc(r.fac_name || '—') + '</td>'
+      + '<td class="col-due">' + esc(fmtDate(r.next_due_date)) + overdueNote + '</td>'
+      + '<td class="col-pumper">' + esc(r.pumper || '—') + '</td>'
+      + '<td class="col-status">' + statusBadge + '</td>'
+      + '<td class="col-yn">' + ynCell('odor') + '</td>'
+      + detailCell('odor')
+      + '<td class="col-yn">' + ynCell('leaks') + '</td>'
+      + detailCell('leaks')
+      + '<td class="col-yn">' + ynCell('noises') + '</td>'
+      + detailCell('noises')
+      + '</tr>';
+  }).join('');
+
+  // wire row checkboxes
+  tbody.querySelectorAll('.row-chk').forEach(el => {
+    el.addEventListener('change', () => {
+      const i = +el.dataset.row;
+      STATE[i].checked = el.checked;
+      STATE[i].chk_touched = true;
+      renderRows();
+      updateSubmitButton();
+    });
+  });
+  // wire row Y/N toggles
+  tbody.querySelectorAll('.yn-pair[data-row]').forEach(pair => {
+    pair.querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => {
+        const i = +pair.dataset.row;
+        const q = pair.dataset.q;
+        STATE[i][q] = b.dataset.v;
+        STATE[i][q + '_touched'] = true;
+        renderRows();
+        updateSubmitButton();
+      });
+    });
+  });
+  // wire detail inputs (re-render would lose focus; instead bind without re-render)
+  tbody.querySelectorAll('.detail-input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const i = +inp.dataset.row;
+      const q = inp.dataset.q;
+      STATE[i].detail[q] = inp.value;
+    });
+  });
+
+  // summary
+  const total = DUE_ROWS.length;
+  const checked = DUE_ROWS.filter((_, i) => STATE[i].checked).length;
+  const overdue = DUE_ROWS.filter(r => (r.status || '').toLowerCase() === 'overdue').length;
+  document.getElementById('summary').innerHTML =
+    '<b>' + total + '</b> due · <b>' + checked + '</b> selected'
+    + (overdue ? ' · <b>' + overdue + '</b> overdue' : '');
+}
+
+function onMasterChk(e) {
+  const v = e.target.checked;
+  DUE_ROWS.forEach((_, i) => {
+    if (!STATE[i].chk_touched) STATE[i].checked = v;
+  });
+  renderRows();
+  updateSubmitButton();
+}
+
+function onMasterYn(q, v) {
+  MASTER[q] = v;
+  // update master pair visual
+  const m = document.getElementById('master' + q[0].toUpperCase() + q.slice(1));
+  m.querySelectorAll('button').forEach(b => {
+    b.classList.toggle('active', b.dataset.v === v);
+    b.classList.toggle('no',  b.dataset.v === 'No');
+    b.classList.toggle('yes', b.dataset.v === 'Yes');
+    if (b.dataset.v !== v) { b.classList.remove('no'); b.classList.remove('yes'); }
+  });
+  // propagate to non-touched rows
+  DUE_ROWS.forEach((_, i) => {
+    if (!STATE[i][q + '_touched']) STATE[i][q] = v;
+  });
+  renderRows();
+  updateSubmitButton();
+}
+
+function updateSubmitButton() {
+  const checked = DUE_ROWS.filter((_, i) => STATE[i].checked).length;
+  const btn = document.getElementById('submitBtn');
+  const info = document.getElementById('submitInfo');
+  btn.disabled = checked === 0;
+  if (checked === 0) {
+    info.textContent = 'No rows selected.';
+  } else {
+    info.textContent = checked + ' inspection' + (checked === 1 ? '' : 's')
+      + ' will be submitted with auto-randomized 8a–4p datetimes within '
+      + DAYS_BEFORE_DUE + ' days before each due date (≥' + MIN_GAP_MINUTES + ' min apart per pumper).';
+  }
+}
+
+// ── Datetime generation: per-pumper-per-day, 8a–4p, ≥10 min apart ───────────
+function randInt(lo, hi) { return lo + Math.floor(Math.random() * (hi - lo + 1)); }
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function generateDatetimes(checkedRows) {
+  // Group by (pumper, date). For each row, pre-assign a random date in
+  // [due-DAYS_BEFORE_DUE .. due]. Then within each (pumper, date) group,
+  // pick minutes spaced >= MIN_GAP_MINUTES apart in [SUNLIGHT_START..END].
+  const result = new Map();  // i -> 'YYYY-MM-DDTHH:MM'
+
+  checkedRows.forEach(({ row, i }) => {
+    const due = new Date(row.next_due_date + 'T00:00:00');
+    const off = randInt(0, DAYS_BEFORE_DUE);  // 0..3 days BEFORE due
+    const d = new Date(due);
+    d.setDate(d.getDate() - off);
+    result.set(i, { date: d, pumper: (row.pumper || '_').toUpperCase() });
+  });
+
+  // Group
+  const groups = {};
+  for (const [i, { date, pumper }] of result.entries()) {
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    const key = pumper + '|' + dateStr;
+    (groups[key] = groups[key] || []).push({ i, dateStr });
+  }
+
+  // For each group, pick spaced minutes
+  const startMin = SUNLIGHT_START_HOUR * 60;
+  const endMin   = SUNLIGHT_END_HOUR   * 60;
+  const range    = endMin - startMin;  // e.g. 480
+  const minutesOut = new Map();
+
+  for (const key of Object.keys(groups)) {
+    const g = groups[key];
+    const n = g.length;
+    let mins;
+    if (n === 1) {
+      mins = [startMin + Math.floor(Math.random() * range)];
+    } else {
+      // Slot-based: divide range into n slots, pick within each slot leaving
+      // MIN_GAP_MINUTES headroom against the next slot.
+      const slot = Math.floor(range / n);
+      if (slot < MIN_GAP_MINUTES) {
+        // Too many rows; fall back to evenly-spaced + 1-min jitter
+        mins = [];
+        const step = Math.max(MIN_GAP_MINUTES, Math.floor(range / Math.max(1, n - 1)));
+        for (let k = 0; k < n; k++) mins.push(Math.min(endMin, startMin + k * step));
+      } else {
+        mins = [];
+        for (let k = 0; k < n; k++) {
+          const slotStart = startMin + k * slot;
+          const slotEnd   = startMin + (k + 1) * slot - MIN_GAP_MINUTES;
+          mins.push(slotStart + Math.floor(Math.random() * Math.max(1, slotEnd - slotStart)));
+        }
+      }
+    }
+    // Shuffle assignment so order in the table != order in the day
+    shuffle(g);
+    g.forEach((item, k) => {
+      const totalMin = mins[k];
+      const hh = String(Math.floor(totalMin / 60)).padStart(2, '0');
+      const mm = String(totalMin % 60).padStart(2, '0');
+      minutesOut.set(item.i, item.dateStr + 'T' + hh + ':' + mm);
+    });
+  }
+
+  return minutesOut;  // i -> 'YYYY-MM-DDTHH:MM'
+}
+
+async function submitBatch() {
+  const btn = document.getElementById('submitBtn');
+  const info = document.getElementById('submitInfo');
+  const checkedRows = DUE_ROWS
+    .map((row, i) => ({ row, i }))
+    .filter(x => STATE[x.i].checked);
+  if (!checkedRows.length) return;
+
+  // Validate: any Yes cell must have a detail value
+  const missing = checkedRows.filter(({ i }) => {
+    const s = STATE[i];
+    return QUESTIONS.some(q => s[q] === 'Yes' && !(s.detail[q] || '').trim());
+  });
+  if (missing.length) {
+    info.textContent = `Add detail text for ${missing.length} Yes cell${missing.length === 1 ? '' : 's'} before submitting.`;
+    return;
+  }
+
+  const datetimes = generateDatetimes(checkedRows);
+
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+  let ok = 0, fail = 0;
+  const tok = currentSession && currentSession.credential || '';
+
+  for (const { row, i } of checkedRows) {
+    const s = STATE[i];
+    const body = {
+      inspection_datetime: datetimes.get(i),
+      weather_conditions:  '',
+      item:                row.fac_name,
+      location:            row.fac_name,
+      linked_item_type:    'Facilities',
+      odor_detected:       s.odor,
+      odor_detail:         s.odor   === 'Yes' ? s.detail.odor   : '',
+      leaks_observed:      s.leaks,
+      leaks_detail:        s.leaks  === 'Yes' ? s.detail.leaks  : '',
+      noises_heard:        s.noises,
+      noises_detail:       s.noises === 'Yes' ? s.detail.noises : '',
+    };
+    try {
+      const r = await fetch(API_BASE + '/avo/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+        body: JSON.stringify(body),
+      });
+      if (r.ok) ok++; else fail++;
+    } catch (e) { fail++; }
+    info.textContent = `Submitted ${ok + fail} / ${checkedRows.length}…`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Submit checked inspections';
+  if (fail) {
+    info.innerHTML = `<span style="color:#c0392b">${ok} saved, ${fail} failed.</span>`;
+  } else {
+    info.textContent = `${ok} inspections saved.`;
+    document.getElementById('successMsg').textContent =
+      `${ok} AVO inspection${ok === 1 ? '' : 's'} saved with auto-randomized ` +
+      `8a–4p datetimes (≥${MIN_GAP_MINUTES} min apart per pumper).`;
+    document.getElementById('successOverlay').classList.add('show');
+  }
+}
+</script>
+
+</body>
+</html>
