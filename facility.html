@@ -158,11 +158,7 @@
 <body>
   <header class="appchrome">
     <a href="index.html"><img class="logo" src="light-40aclogo.png" alt="Forty Acres Energy" onerror="this.style.display='none'"></a>
-    <nav class="appnav">
-      <a href="https://analyst.40ac.us">Analyst</a>
-      <a href="https://scada.40ac.us">SCADA</a>
-      <a class="cur" href="index.html">Forms</a>
-    </nav>
+    <span class="fae-appnav" data-current="forms"></span>
     <div class="price" id="price-ticker">
       <div class="pi"><span class="pl">WTI Crude</span>
         <span><span id="wti-val" class="pv">&mdash;</span><span id="wti-chg" class="price-chg"></span></span>
@@ -610,5 +606,14 @@ function resetForm() {
 }
 </script>
 <script src="chrome.js"></script>
-</body>
+  <!-- Shared cross-app header (fae-header.js, owned by admin.40ac.us). Replaces the hand-rolled Analyst/SCADA/Forms trio. -->
+  <script>
+    // Minimal shared-auth shim so fae-header.js can gate the Admin link on role.
+    window.faeAuth = window.faeAuth || (function () {
+      function role() { try { return (JSON.parse(localStorage.getItem("fae_user") || "{}").role || "").toLowerCase(); } catch (e) { return ""; } }
+      return { userRole: role, ensureUserRole: function () { return Promise.resolve(role()); } };
+    })();
+  </script>
+  <script src="https://admin.40ac.us/fae-header.js?v=2"></script>
+  </body>
 </html>
