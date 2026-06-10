@@ -29,6 +29,27 @@
     .conditional { display: none; }
     .conditional.show { display: block; }
     .field-hint { font-size: 0.72rem; color: #9aa0a6; margin-top: -8px; margin-bottom: 10px; }
+    .autocomplete-wrap { position: relative; margin-bottom: 4px; }
+    .autocomplete-wrap input { margin-bottom: 0; }
+    .autocomplete-list {
+      position: absolute; top: 100%; left: 0; right: 0; background: #fff;
+      border: 1.5px solid #5b626b; border-top: none; border-radius: 0 0 6px 6px;
+      max-height: 220px; overflow-y: auto; z-index: 50; display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .autocomplete-list div { padding: 9px 12px; cursor: pointer; font-size: 0.88rem; border-bottom: 1px solid #eef0f2; color: #1a1a1a; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .autocomplete-list div:hover, .autocomplete-list div.active { background: #eef0f2; }
+    .autocomplete-list div mark { background: none; color: #4a5158; font-weight: 700; }
+    .autocomplete-list .tag { font-size: 0.62rem; padding: 1px 6px; border-radius: 9px; background: #eef0f2; color: #565c63; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+    .autocomplete-list .tag.facility { background: #e8f0fb; color: #1c4a8a; }
+    .loc-status { font-size: 0.72rem; color: #9aa0a6; margin-top: 2px; margin-bottom: 12px; }
+    .loc-status.selected { color: #2b3036; font-weight: 600; }
+    .loc-status.error { color: #c0392b; }
+    .dt-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .dt-row input[type="datetime-local"] { margin-bottom: 0; flex: 1; }
+    .now-btn { padding: 0 14px; background: #4a5158; color: #fff; border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .now-btn:hover { background: #2b3036; }
+    .now-btn:active { background: #1c5a1c; }
     .submit-btn { width: 100%; padding: 14px; background: #4a5158; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
     .submit-btn:active { background: #1c5a1c; }
     .submit-btn:disabled { background: #9aa0a6; cursor: not-allowed; }
@@ -125,8 +146,18 @@
     <div class="section">
       <div class="section-title">Inspection Details</div>
 
+      <label class="required">Location</label>
+      <div class="autocomplete-wrap">
+        <input type="text" id="locInput" placeholder="Start typing a well or facility..." autocomplete="off" required>
+        <div class="autocomplete-list" id="locList"></div>
+      </div>
+      <div class="loc-status" id="locStatus">Loading wells &amp; facilities...</div>
+
       <label class="required">Inspection Date/Time</label>
-      <input type="datetime-local" id="inspectionDatetime" required>
+      <div class="dt-row">
+        <input type="datetime-local" id="inspectionDatetime" required>
+        <button type="button" class="now-btn" id="nowBtn" title="Set to current date and time">Now</button>
+      </div>
 
       <label>Weather Conditions</label>
       <select id="weatherConditions">
@@ -141,12 +172,6 @@
         <option>Hot / Calm</option>
         <option>Cold / Calm</option>
       </select>
-
-      <label>Unit / Equipment</label>
-      <input type="text" id="item" placeholder="e.g. MATKINS #004, COMPRESSOR 12">
-
-      <label>Location (optional)</label>
-      <input type="text" id="location" placeholder="e.g. Tank Battery, Wellhead, Compressor Pad">
     </div>
 
     <div class="section">
@@ -281,13 +306,113 @@ function showApp(session) {
 
 // ── App logic ───────────────────────────────────────────────────────────────
 let currentSession = null;
+let LOCATIONS = [];          // [{name, type:'Units'|'Facilities'}]
+let selectedLocation = null; // {name, type} once user picks one
+let acIdx = -1;
+
+function setNowDatetime() {
+  const n = new Date();
+  n.setMinutes(n.getMinutes() - n.getTimezoneOffset());
+  document.getElementById('inspectionDatetime').value = n.toISOString().slice(0, 16);
+}
+
+async function loadLocations() {
+  const status = document.getElementById('locStatus');
+  const tok = currentSession && currentSession.credential || '';
+  let wells = [], facilities = [];
+  try {
+    const wr = await fetch(API_BASE + '/wbd/wells');
+    const wj = await wr.json();
+    const arr = Array.isArray(wj) ? wj : (wj.wells || []);
+    wells = arr.map(w => w.sn).filter(Boolean);
+  } catch (e) { console.warn('wells fetch failed', e); }
+  try {
+    const fr = await fetch(API_BASE + '/facilities', {
+      headers: { 'Authorization': 'Bearer ' + tok }
+    });
+    if (fr.ok) {
+      const fj = await fr.json();
+      const arr = Array.isArray(fj) ? fj : (fj.facilities || []);
+      facilities = arr.map(f => f.name || f.short_name || f.label).filter(Boolean);
+    }
+  } catch (e) { console.warn('facilities fetch failed', e); }
+  const seen = new Set();
+  LOCATIONS = [];
+  wells.sort().forEach(n => { const k = n.toUpperCase(); if (!seen.has(k)) { seen.add(k); LOCATIONS.push({name: n, type: 'Units'}); } });
+  facilities.sort().forEach(n => { const k = n.toUpperCase(); if (!seen.has(k)) { seen.add(k); LOCATIONS.push({name: n, type: 'Facilities'}); } });
+  status.classList.remove('error');
+  status.textContent = LOCATIONS.length
+    ? wells.length + ' wells · ' + facilities.length + ' facilities'
+    : 'Could not load locations — check your connection';
+  if (!LOCATIONS.length) status.classList.add('error');
+  document.getElementById('locInput').disabled = false;
+}
+
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function wireLocationPicker() {
+  const inp = document.getElementById('locInput');
+  const list = document.getElementById('locList');
+  const status = document.getElementById('locStatus');
+
+  inp.addEventListener('input', function () {
+    selectedLocation = null;
+    status.classList.remove('selected');
+    const q = this.value.toUpperCase().trim();
+    if (!q) { list.style.display = 'none'; status.textContent = LOCATIONS.length + ' locations'; return; }
+    const matches = LOCATIONS.filter(l => l.name.toUpperCase().includes(q)).slice(0, 40);
+    if (!matches.length) { list.style.display = 'none'; status.textContent = 'No matches'; return; }
+    acIdx = -1;
+    const qEsc = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('(' + qEsc + ')', 'gi');
+    list.innerHTML = matches.map((m, i) => {
+      const hi = escHtml(m.name).replace(re, '<mark>$1</mark>');
+      const tagCls = m.type === 'Facilities' ? 'tag facility' : 'tag';
+      return '<div data-i="' + i + '"><span>' + hi + '</span><span class="' + tagCls + '">' + m.type + '</span></div>';
+    }).join('');
+    list.style.display = 'block';
+    list._matches = matches;
+    status.textContent = matches.length + ' match' + (matches.length === 1 ? '' : 'es');
+  });
+
+  inp.addEventListener('keydown', function (e) {
+    const items = list.querySelectorAll('div');
+    if (!items.length) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); acIdx = Math.min(acIdx + 1, items.length - 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); acIdx = Math.max(acIdx - 1, 0); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (acIdx >= 0) items[acIdx].click(); return; }
+    else if (e.key === 'Escape') { list.style.display = 'none'; return; }
+    else return;
+    items.forEach((it, i) => it.classList.toggle('active', i === acIdx));
+    items[acIdx].scrollIntoView({ block: 'nearest' });
+  });
+
+  list.addEventListener('click', function (e) {
+    const div = e.target.closest('div[data-i]');
+    if (!div) return;
+    const m = (list._matches || [])[+div.dataset.i];
+    if (!m) return;
+    inp.value = m.name;
+    selectedLocation = m;
+    list.style.display = 'none';
+    status.textContent = 'Selected: ' + m.name + ' (' + m.type + ')';
+    status.classList.add('selected');
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.autocomplete-wrap')) list.style.display = 'none';
+  });
+}
 
 function initApp(session) {
   currentSession = session;
-  // Default datetime to "now"
-  const now = new Date();
-  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-  document.getElementById('inspectionDatetime').value = now.toISOString().slice(0, 16);
+  setNowDatetime();
+  document.getElementById('nowBtn').addEventListener('click', setNowDatetime);
+  document.getElementById('locInput').disabled = true;
+  wireLocationPicker();
+  loadLocations();
 
   // Conditional reveal for Y/N follow-up fields
   function bindReveal(radioName, wrapId) {
@@ -305,10 +430,12 @@ function initApp(session) {
     document.getElementById('successOverlay').classList.remove('show');
     document.getElementById('avo-form').reset();
     document.querySelectorAll('.conditional').forEach(c => c.classList.remove('show'));
-    const now2 = new Date();
-    now2.setMinutes(now2.getMinutes() - now2.getTimezoneOffset());
-    document.getElementById('inspectionDatetime').value = now2.toISOString().slice(0, 16);
-    document.getElementById('inspectionDatetime').focus();
+    selectedLocation = null;
+    const ls = document.getElementById('locStatus');
+    ls.classList.remove('selected');
+    ls.textContent = LOCATIONS.length + ' locations';
+    setNowDatetime();
+    document.getElementById('locInput').focus();
   });
 
   document.getElementById('avo-form').addEventListener('submit', submitForm);
@@ -323,6 +450,14 @@ function radio(name) {
 async function submitForm(e) {
   e.preventDefault();
   const btn = document.getElementById('submitBtn');
+
+  // Required location (must pick from dropdown — typed-but-not-selected won't count)
+  if (!selectedLocation) {
+    document.getElementById('locStatus').classList.add('error');
+    document.getElementById('locStatus').textContent = 'Please pick a location from the dropdown.';
+    document.getElementById('locInput').focus();
+    return;
+  }
 
   // Required radios
   const odor = radio('odor');
@@ -339,8 +474,9 @@ async function submitForm(e) {
   const body = {
     inspection_datetime: val('inspectionDatetime'),
     weather_conditions: val('weatherConditions'),
-    item: val('item'),
-    location: val('location'),
+    item: selectedLocation.name,
+    location: selectedLocation.name,
+    linked_item_type: selectedLocation.type,
     odor_detected: odor,
     odor_detail: odor === 'Yes' ? val('odorDetail') : '',
     leaks_observed: leaks,
