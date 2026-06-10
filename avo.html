@@ -12,40 +12,40 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f4f1; color: #1a1a1a; min-height: 100vh; }
-    label { display: block; color: #3a5a3a; font-size: 0.85rem; margin-bottom: 4px; font-weight: 500; }
+    label { display: block; color: #444a50; font-size: 0.85rem; margin-bottom: 4px; font-weight: 500; }
     .required::after { content: " *"; color: #c0392b; }
     input[type="text"], input[type="datetime-local"], input[type="file"], select, textarea {
-      width: 100%; padding: 9px 12px; background: #fff; border: 1.5px solid #c8ddc8;
+      width: 100%; padding: 9px 12px; background: #fff; border: 1.5px solid #d0d4d8;
       border-radius: 6px; color: #1a1a1a; font-size: 16px; margin-bottom: 12px;
       -webkit-appearance: none;
     }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: #3a8a3a; box-shadow: 0 0 0 2px rgba(58,138,58,0.15); }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #5b626b; box-shadow: 0 0 0 2px rgba(90,98,107,0.15); }
     textarea { min-height: 60px; resize: vertical; }
     .radio-group { display: flex; gap: 8px; margin-bottom: 12px; }
     .radio-btn { flex: 1; }
     .radio-btn input { display: none; }
-    .radio-btn label { display: block; text-align: center; padding: 8px; background: #f5faf5; border: 1.5px solid #c8ddc8; border-radius: 6px; cursor: pointer; color: #3a5a3a; font-size: 0.9rem; }
-    .radio-btn input:checked + label { background: #eaf5ea; border-color: #3a8a3a; color: #1c4a1c; font-weight: 600; }
+    .radio-btn label { display: block; text-align: center; padding: 8px; background: #f4f5f6; border: 1.5px solid #d0d4d8; border-radius: 6px; cursor: pointer; color: #444a50; font-size: 0.9rem; }
+    .radio-btn input:checked + label { background: #eef0f2; border-color: #5b626b; color: #2b3036; font-weight: 600; }
     .conditional { display: none; }
     .conditional.show { display: block; }
-    .field-hint { font-size: 0.72rem; color: #8aaa8a; margin-top: -8px; margin-bottom: 10px; }
-    .submit-btn { width: 100%; padding: 14px; background: #2d7a2d; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+    .field-hint { font-size: 0.72rem; color: #9aa0a6; margin-top: -8px; margin-bottom: 10px; }
+    .submit-btn { width: 100%; padding: 14px; background: #4a5158; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
     .submit-btn:active { background: #1c5a1c; }
-    .submit-btn:disabled { background: #8aaa8a; cursor: not-allowed; }
+    .submit-btn:disabled { background: #9aa0a6; cursor: not-allowed; }
     .success-overlay {
       position: fixed; inset: 0; background: rgba(245,244,241,0.97);
       display: none; align-items: center; justify-content: center; z-index: 9000;
     }
     .success-overlay.show { display: flex; }
-    .success-card { background: #fff; border-top: 4px solid #2d7a2d; border-radius: 12px; padding: 28px 32px; text-align: center; min-width: 280px; max-width: 360px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
-    .success-card .check { font-size: 2.6rem; color: #2d7a2d; line-height: 1; margin-bottom: 8px; }
-    .success-card .title { font-size: 1.1rem; font-weight: 700; color: #1c4a1c; margin-bottom: 8px; }
-    .success-card .msg { font-size: 0.88rem; color: #4a724a; margin-bottom: 18px; }
-    .success-card .btn { display: inline-block; padding: 9px 20px; margin: 4px; background: #2d7a2d; color: #fff; border-radius: 7px; border: none; cursor: pointer; font-size: 0.88rem; font-weight: 600; text-decoration: none; }
+    .success-card { background: #fff; border-top: 4px solid #4a5158; border-radius: 12px; padding: 28px 32px; text-align: center; min-width: 280px; max-width: 360px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
+    .success-card .check { font-size: 2.6rem; color: #4a5158; line-height: 1; margin-bottom: 8px; }
+    .success-card .title { font-size: 1.1rem; font-weight: 700; color: #2b3036; margin-bottom: 8px; }
+    .success-card .msg { font-size: 0.88rem; color: #565c63; margin-bottom: 18px; }
+    .success-card .btn { display: inline-block; padding: 9px 20px; margin: 4px; background: #4a5158; color: #fff; border-radius: 7px; border: none; cursor: pointer; font-size: 0.88rem; font-weight: 600; text-decoration: none; }
     .success-card .btn.alt { background: #f0eee9; color: #3a3a3a; }
     /* Login overlay */
     #login-overlay { position: fixed; inset: 0; z-index: 9999; background: #0d260d; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
-    #login-overlay .login-logo { font-size: 2.8rem; font-weight: 900; letter-spacing: -1px; color: #5dc85d; }
+    #login-overlay .login-logo { font-size: 2.8rem; font-weight: 900; letter-spacing: -1px; color: #5b626b; }
     #login-overlay .login-logo span { color: #fff; font-weight: 300; }
     #login-overlay .login-tagline { color: #90bc90; font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase; margin-top: -16px; }
     #login-overlay .login-title { color: #c8dcc8; font-size: 1rem; margin-bottom: 8px; }
