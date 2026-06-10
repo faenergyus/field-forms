@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg?v=3">
+  <link rel="icon" type="image/x-icon" href="favicon.ico?v=3">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=3">
+  <link rel="apple-touch-icon" sizes="180x180" href="favicon-180.png?v=3">
+  <title>AVO Inspection</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f4f1; color: #1a1a1a; min-height: 100vh; }
+    label { display: block; color: #3a5a3a; font-size: 0.85rem; margin-bottom: 4px; font-weight: 500; }
+    .required::after { content: " *"; color: #c0392b; }
+    input[type="text"], input[type="datetime-local"], input[type="file"], select, textarea {
+      width: 100%; padding: 9px 12px; background: #fff; border: 1.5px solid #c8ddc8;
+      border-radius: 6px; color: #1a1a1a; font-size: 16px; margin-bottom: 12px;
+      -webkit-appearance: none;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #3a8a3a; box-shadow: 0 0 0 2px rgba(58,138,58,0.15); }
+    textarea { min-height: 60px; resize: vertical; }
+    .radio-group { display: flex; gap: 8px; margin-bottom: 12px; }
+    .radio-btn { flex: 1; }
+    .radio-btn input { display: none; }
+    .radio-btn label { display: block; text-align: center; padding: 8px; background: #f5faf5; border: 1.5px solid #c8ddc8; border-radius: 6px; cursor: pointer; color: #3a5a3a; font-size: 0.9rem; }
+    .radio-btn input:checked + label { background: #eaf5ea; border-color: #3a8a3a; color: #1c4a1c; font-weight: 600; }
+    .conditional { display: none; }
+    .conditional.show { display: block; }
+    .field-hint { font-size: 0.72rem; color: #8aaa8a; margin-top: -8px; margin-bottom: 10px; }
+    .submit-btn { width: 100%; padding: 14px; background: #2d7a2d; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+    .submit-btn:active { background: #1c5a1c; }
+    .submit-btn:disabled { background: #8aaa8a; cursor: not-allowed; }
+    .success-overlay {
+      position: fixed; inset: 0; background: rgba(245,244,241,0.97);
+      display: none; align-items: center; justify-content: center; z-index: 9000;
+    }
+    .success-overlay.show { display: flex; }
+    .success-card { background: #fff; border-top: 4px solid #2d7a2d; border-radius: 12px; padding: 28px 32px; text-align: center; min-width: 280px; max-width: 360px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
+    .success-card .check { font-size: 2.6rem; color: #2d7a2d; line-height: 1; margin-bottom: 8px; }
+    .success-card .title { font-size: 1.1rem; font-weight: 700; color: #1c4a1c; margin-bottom: 8px; }
+    .success-card .msg { font-size: 0.88rem; color: #4a724a; margin-bottom: 18px; }
+    .success-card .btn { display: inline-block; padding: 9px 20px; margin: 4px; background: #2d7a2d; color: #fff; border-radius: 7px; border: none; cursor: pointer; font-size: 0.88rem; font-weight: 600; text-decoration: none; }
+    .success-card .btn.alt { background: #f0eee9; color: #3a3a3a; }
+    /* Login overlay */
+    #login-overlay { position: fixed; inset: 0; z-index: 9999; background: #0d260d; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+    #login-overlay .login-logo { font-size: 2.8rem; font-weight: 900; letter-spacing: -1px; color: #5dc85d; }
+    #login-overlay .login-logo span { color: #fff; font-weight: 300; }
+    #login-overlay .login-tagline { color: #90bc90; font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase; margin-top: -16px; }
+    #login-overlay .login-title { color: #c8dcc8; font-size: 1rem; margin-bottom: 8px; }
+    #login-overlay .login-error { color: #ff8080; font-size: 0.85rem; display: none; text-align: center; max-width: 280px; }
+  </style>
+  <link rel="stylesheet" href="chrome.css">
+  <script src="chrome.js" defer></script>
+  <script>
+    // Cross-app cookie position tracker (matches other form pages)
+    (function () {
+      var SITE = location.host.split('.')[0];
+      function readPos() { var m = document.cookie.match(/(?:^|; )fae40_pos=([^;]+)/); if (!m) return {}; try { return JSON.parse(decodeURIComponent(m[1])); } catch (e) { return {}; } }
+      function writePos(o) { document.cookie = 'fae40_pos=' + encodeURIComponent(JSON.stringify(o)) + '; domain=.40ac.us; path=/; max-age=2592000; Secure; SameSite=Lax'; }
+      var pos = readPos();
+      pos[SITE] = location.pathname + location.search;
+      writePos(pos);
+      function patchLinks() {
+        document.querySelectorAll('a[href]').forEach(function (a) {
+          var m = a.href.match(/^https:\/\/(analyst|scada|forms)\.40ac\.us\/?(?:[?#]|$)/);
+          if (m && m[1] !== SITE && pos[m[1]]) { a.href = 'https://' + m[1] + '.40ac.us' + pos[m[1]]; }
+        });
+      }
+      if (document.readyState !== 'loading') patchLinks();
+      else document.addEventListener('DOMContentLoaded', patchLinks);
+    })();
+  </script>
+</head>
+<body>
+
+<div id="login-overlay">
+  <div><div class="login-logo">fae<span>II</span></div></div>
+  <div class="login-tagline">forty acres <em>energy</em> &nbsp;·&nbsp; Field Operations Portal</div>
+  <div class="login-title">Sign in to continue</div>
+  <div id="g_id_onload"
+       data-client_id="629380732564-eh0uasomqjdo3up8o2po685g9ep544iq.apps.googleusercontent.com"
+       data-callback="handleCredentialResponse"
+       data-auto_select="true" data-itp_support="true" data-auto_prompt="false"></div>
+  <div class="g_id_signin" data-type="standard" data-size="large" data-theme="filled_blue" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left"></div>
+  <div class="login-error" id="login-error"></div>
+</div>
+
+<header class="appchrome">
+  <a href="index.html"><img class="logo" src="light-40aclogo.png" alt="Forty Acres Energy" onerror="this.style.display='none'"></a>
+  <nav class="appnav">
+    <a href="https://analyst.40ac.us">Analyst</a>
+    <a href="https://scada.40ac.us">SCADA</a>
+    <a class="cur" href="index.html">Forms</a>
+  </nav>
+  <div class="price" id="price-ticker">
+    <div class="pi"><span class="pl">WTI Crude</span>
+      <span><span id="wti-val" class="pv">&mdash;</span><span id="wti-chg" class="price-chg"></span></span>
+      <span id="wti-date" class="price-date"></span></div>
+    <div class="pi"><span class="pl">Waha Hub</span>
+      <span><span id="waha-val" class="pv">&mdash;</span><span id="waha-chg" class="price-chg"></span></span>
+      <span id="waha-date" class="price-date"></span></div>
+  </div>
+  <div class="user-badge" id="user-badge" style="display:none">
+    <img class="user-avatar" id="user-avatar" src="" alt="">
+    <span class="user-name" id="user-name"></span>
+    <button class="user-signout" onclick="faeSignOut()">sign out</button>
+  </div>
+</header>
+<div class="appchrome-title">
+  <h1><span class="h-icon">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <circle cx="9" cy="11" r="3.5" fill="#9c6b3a"/>
+      <path d="M12 11 L20 7 L20 15 Z" fill="#9c6b3a"/>
+      <path d="M5 14 q3 3 7 0" stroke="#5b626b" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    </svg>
+  </span>AVO Inspection</h1>
+  <button class="cancel-btn" onclick="location.href='index.html'" title="Cancel">Cancel</button>
+</div>
+
+<div class="container">
+  <form id="avo-form" autocomplete="off">
+
+    <div class="section">
+      <div class="section-title">Inspection Details</div>
+
+      <label class="required">Inspection Date/Time</label>
+      <input type="datetime-local" id="inspectionDatetime" required>
+
+      <label>Weather Conditions</label>
+      <select id="weatherConditions">
+        <option value="">Select...</option>
+        <option>Clear / Sunny</option>
+        <option>Partly Cloudy</option>
+        <option>Overcast</option>
+        <option>Rain</option>
+        <option>Snow</option>
+        <option>Fog</option>
+        <option>Windy</option>
+        <option>Hot / Calm</option>
+        <option>Cold / Calm</option>
+      </select>
+
+      <label>Unit / Equipment</label>
+      <input type="text" id="item" placeholder="e.g. MATKINS #004, COMPRESSOR 12">
+
+      <label>Location (optional)</label>
+      <input type="text" id="location" placeholder="e.g. Tank Battery, Wellhead, Compressor Pad">
+    </div>
+
+    <div class="section">
+      <div class="section-title">Observations</div>
+
+      <label class="required">Was any odor detected during the inspection?</label>
+      <div class="radio-group" data-name="odorDetected">
+        <div class="radio-btn"><input type="radio" id="odor-y" name="odor" value="Yes"><label for="odor-y">Yes</label></div>
+        <div class="radio-btn"><input type="radio" id="odor-n" name="odor" value="No"><label for="odor-n">No</label></div>
+      </div>
+      <div class="conditional" id="odorDetailWrap">
+        <label>Describe the odor and its source (if known)</label>
+        <textarea id="odorDetail" placeholder="What did it smell like? Where was it strongest?"></textarea>
+      </div>
+
+      <label class="required">Were any visible leaks observed?</label>
+      <div class="radio-group" data-name="leaksObserved">
+        <div class="radio-btn"><input type="radio" id="leaks-y" name="leaks" value="Yes"><label for="leaks-y">Yes</label></div>
+        <div class="radio-btn"><input type="radio" id="leaks-n" name="leaks" value="No"><label for="leaks-n">No</label></div>
+      </div>
+      <div class="conditional" id="leaksDetailWrap">
+        <label>Specify location and equipment</label>
+        <textarea id="leaksDetail" placeholder="What's leaking? Where on the unit?"></textarea>
+        <label>Photo of the leak (if applicable)</label>
+        <input type="file" id="leakPhoto" accept="image/*">
+        <div class="field-hint">Photo storage is being wired up — file is captured locally but not uploaded yet.</div>
+      </div>
+
+      <label class="required">Were unusual noises heard from equipment?</label>
+      <div class="radio-group" data-name="noisesHeard">
+        <div class="radio-btn"><input type="radio" id="noises-y" name="noises" value="Yes"><label for="noises-y">Yes</label></div>
+        <div class="radio-btn"><input type="radio" id="noises-n" name="noises" value="No"><label for="noises-n">No</label></div>
+      </div>
+      <div class="conditional" id="noisesDetailWrap">
+        <label>Describe the noise and its source (if known)</label>
+        <textarea id="noisesDetail" placeholder="Knocking, squealing, grinding...?"></textarea>
+      </div>
+    </div>
+
+    <button type="submit" class="submit-btn" id="submitBtn">Submit AVO Inspection</button>
+  </form>
+
+  <div class="success-overlay" id="successOverlay">
+    <div class="success-card">
+      <div class="check">&#10003;</div>
+      <div class="title">Inspection saved</div>
+      <div class="msg" id="successMsg"></div>
+      <button class="btn" id="newAvoBtn">New AVO Inspection</button>
+      <a class="btn alt" href="avo-report.html">View Report</a>
+    </div>
+  </div>
+</div>
+
+<script>
+const SESSION_KEY = 'fae_user';
+const SESSION_HRS = 720;
+const ACCOUNTS_CSV = 'https://docs.google.com/spreadsheets/d/146yuHYjs3RF3wtCK3Qj9NXH94DrStwhieTGqPeLQRfA/gviz/tq?tqx=out:csv&sheet=Accounts';
+const API_BASE = 'https://api.40ac.us';
+
+// ── SSO bridge (same pattern as other form pages) ───────────────────────────
+(function () {
+  try {
+    var m = document.cookie.match(/(?:^|;\s*)fae40_sso=([^;]+)/);
+    if (m && !localStorage.getItem(SESSION_KEY))
+      localStorage.setItem(SESSION_KEY, decodeURIComponent(m[1]));
+  } catch (e) {}
+  try {
+    var _set = localStorage.setItem.bind(localStorage);
+    var _rem = localStorage.removeItem.bind(localStorage);
+    localStorage.setItem = function (k, v) {
+      _set(k, v);
+      if (k === SESSION_KEY) { try { document.cookie = 'fae40_sso=' + encodeURIComponent(v) + ';domain=.40ac.us;path=/;max-age=2592000;Secure;SameSite=Lax'; } catch (e) {} }
+    };
+    localStorage.removeItem = function (k) {
+      _rem(k);
+      if (k === SESSION_KEY) { try { document.cookie = 'fae40_sso=;domain=.40ac.us;path=/;max-age=0;Secure;SameSite=Lax'; } catch (e) {} }
+    };
+  } catch (e) {}
+})();
+
+function parseAccountsCSV(text) {
+  const lines = text.trim().split('\n');
+  return lines.slice(1).map(line => {
+    const cols = line.match(/("(?:[^"]|"")*"|[^,]*)/g).map(c => c.replace(/^"|"$/g,'').trim());
+    return { email: cols[0], displayName: cols[1], pbiName: cols[2], role: cols[3] };
+  });
+}
+
+async function handleCredentialResponse(response) {
+  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  const email   = payload.email.toLowerCase();
+  const errorEl = document.getElementById('login-error');
+  errorEl.style.cssText = 'display:block;color:#90bc90';
+  errorEl.textContent   = 'Checking access…';
+  try {
+    const rows  = parseAccountsCSV(await fetch(ACCOUNTS_CSV).then(r => r.text()));
+    const match = rows.find(r => r.email.toLowerCase() === email && r.email !== 'x');
+    if (!match) {
+      errorEl.style.color = '#ff8080';
+      errorEl.textContent = `Access denied for ${email}. Contact Ryan Swift to request access.`;
+      return;
+    }
+    const session = {
+      email, displayName: match.displayName, pbiName: match.pbiName,
+      role: match.role, picture: payload.picture,
+      credential: response.credential,
+      expires: Date.now() + SESSION_HRS * 3600000
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    showApp(session);
+  } catch(e) {
+    errorEl.style.color = '#ff8080';
+    errorEl.textContent = 'Could not verify access. Check your connection and try again.';
+  }
+}
+
+function showApp(session) {
+  document.getElementById('login-overlay').style.display = 'none';
+  initApp(session);
+}
+
+(function () {
+  try {
+    const saved = localStorage.getItem(SESSION_KEY);
+    if (saved) {
+      const s = JSON.parse(saved);
+      if (s.expires > Date.now()) { showApp(s); return; }
+      localStorage.removeItem(SESSION_KEY);
+    }
+  } catch(e) { localStorage.removeItem(SESSION_KEY); }
+})();
+
+// ── App logic ───────────────────────────────────────────────────────────────
+let currentSession = null;
+
+function initApp(session) {
+  currentSession = session;
+  // Default datetime to "now"
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  document.getElementById('inspectionDatetime').value = now.toISOString().slice(0, 16);
+
+  // Conditional reveal for Y/N follow-up fields
+  function bindReveal(radioName, wrapId) {
+    document.querySelectorAll('input[name="' + radioName + '"]').forEach(function (r) {
+      r.addEventListener('change', function () {
+        document.getElementById(wrapId).classList.toggle('show', r.value === 'Yes' && r.checked);
+      });
+    });
+  }
+  bindReveal('odor', 'odorDetailWrap');
+  bindReveal('leaks', 'leaksDetailWrap');
+  bindReveal('noises', 'noisesDetailWrap');
+
+  document.getElementById('newAvoBtn').addEventListener('click', function () {
+    document.getElementById('successOverlay').classList.remove('show');
+    document.getElementById('avo-form').reset();
+    document.querySelectorAll('.conditional').forEach(c => c.classList.remove('show'));
+    const now2 = new Date();
+    now2.setMinutes(now2.getMinutes() - now2.getTimezoneOffset());
+    document.getElementById('inspectionDatetime').value = now2.toISOString().slice(0, 16);
+    document.getElementById('inspectionDatetime').focus();
+  });
+
+  document.getElementById('avo-form').addEventListener('submit', submitForm);
+}
+
+function val(id) { var el = document.getElementById(id); return el ? (el.value || '').trim() : ''; }
+function radio(name) {
+  var sel = document.querySelector('input[name="' + name + '"]:checked');
+  return sel ? sel.value : '';
+}
+
+async function submitForm(e) {
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn');
+
+  // Required radios
+  const odor = radio('odor');
+  const leaks = radio('leaks');
+  const noises = radio('noises');
+  if (!odor || !leaks || !noises) {
+    alert('Please answer all three Yes/No questions.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+
+  const body = {
+    inspection_datetime: val('inspectionDatetime'),
+    weather_conditions: val('weatherConditions'),
+    item: val('item'),
+    location: val('location'),
+    odor_detected: odor,
+    odor_detail: odor === 'Yes' ? val('odorDetail') : '',
+    leaks_observed: leaks,
+    leaks_detail: leaks === 'Yes' ? val('leaksDetail') : '',
+    noises_heard: noises,
+    noises_detail: noises === 'Yes' ? val('noisesDetail') : ''
+  };
+
+  try {
+    const resp = await fetch(API_BASE + '/avo/submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (currentSession && currentSession.credential || '')
+      },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error('HTTP ' + resp.status + ' — ' + errText.slice(0, 200));
+    }
+    const result = await resp.json();
+    const unitDisplay = body.item || '(no unit)';
+    document.getElementById('successMsg').textContent =
+      unitDisplay + ' — ' + (body.inspection_datetime || '').replace('T', ' ');
+    document.getElementById('successOverlay').classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'Submit AVO Inspection';
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = 'Submit AVO Inspection';
+    alert('Submit failed: ' + (err.message || err));
+  }
+}
+</script>
+
+</body>
+</html>

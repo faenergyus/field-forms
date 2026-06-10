@@ -84,6 +84,8 @@
         ic: '<svg viewBox="0 0 24 24"><rect x="3" y="11" width="4" height="9" fill="#2b3036"/><rect x="10" y="6" width="4" height="14" fill="#4a5158"/><rect x="17" y="14" width="4" height="6" fill="#9aa0a6"/></svg>' },
     ]},
     { sec: 'Forms', items: [
+      { href: 'avo.html', label: 'AVO Inspection',
+        ic: '<svg viewBox="0 0 24 24"><circle cx="9" cy="11" r="3.5" fill="#9c6b3a"/><path d="M12 11 L20 7 L20 15 Z" fill="#9c6b3a"/><path d="M5 14 q3 3 7 0" stroke="#5b626b" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' },
       { href: 'gwi.html', label: 'Gas Well Inspection',
         ic: '<svg viewBox="0 0 24 24"><path d="M12 2C10 5 7 7 7 11c0 2.76 2.24 5 5 5s5-2.24 5-5c0-1.5-.6-2.8-1.5-3.8C15 8.5 14 10 12 10c1-2 1.5-5 0-8z" fill="#e67e22"/></svg>' },
       { href: 'fap.html', label: 'Fluid Levels (FAP)',
@@ -98,6 +100,8 @@
         ic: '<svg viewBox="0 0 24 24"><rect x="2" y="8" width="16" height="8" rx="4" fill="#5a8fa8"/><ellipse cx="18" cy="12" rx="2" ry="4" fill="#4a7f98"/><circle cx="4" cy="12" r="2" fill="#c0392b" opacity="0.85"/></svg>' },
     ]},
     { sec: 'Reports', items: [
+      { href: 'avo-report.html', label: 'AVO Inspections',
+        ic: '<svg viewBox="0 0 24 24"><circle cx="9" cy="11" r="3.5" fill="#9c6b3a"/><path d="M12 11 L20 7 L20 15 Z" fill="#9c6b3a"/></svg>' },
       { href: 'spare-vessels.html', label: 'Spare Vessels View', ic: '📋' },
     ]},
   ];
