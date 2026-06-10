@@ -13,9 +13,11 @@
   <style>
     :root{
       --bg:#f5f4f1; --header:#d9d9d9; --panel:#fff; --ink:#1a1a1a;
-      --green:#3a8a3a; --green-d:#1c4a1c; --green-l:#4a724a; --muted:#6a8a6a;
-      --line:#d0e0d0; --tint:#eaf5ea;
-      --ok:#3a8a3a; --warn:#c98a2b; --bad:#b23b3b;
+      /* Neutral gray accent (rebrand 2026-06-10 — replaced FAE green to match admin.40ac.us).
+         Var names kept as --green* so existing references resolve. */
+      --green:#5b626b; --green-d:#2b3036; --green-l:#565c63; --muted:#6b7177;
+      --line:#d8dadd; --tint:#eef0f2;
+      --ok:#5b626b; --warn:#c98a2b; --bad:#b23b3b;
       --hdr-h:54px;
     }
     *{box-sizing:border-box;margin:0;padding:0}
@@ -26,9 +28,9 @@
     #login-overlay{position:fixed;inset:0;z-index:9999;background:#f5f4f1;
       display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem}
     .login-logo-img{height:60px;display:block}
-    .login-tagline{color:#5a6a5a;font-size:.95rem}
-    .login-tagline em{color:#3a8a3a;font-style:normal;font-weight:600}
-    .login-title{color:#1c4a1c;font-size:1.1rem;margin-bottom:.5rem}
+    .login-tagline{color:#5a6066;font-size:.95rem}
+    .login-tagline em{color:#5b626b;font-style:normal;font-weight:600}
+    .login-title{color:#2b3036;font-size:1.1rem;margin-bottom:.5rem}
     .login-error{display:none;margin-top:.5rem;font-size:.85rem}
 
     .app{display:flex;flex-direction:column;height:100vh}
@@ -38,7 +40,7 @@
       height:var(--hdr-h);padding:0 16px;box-shadow:0 2px 8px rgba(0,0,0,.18);z-index:30;
       position:relative}
     .burger{background:none;border:0;font-size:1.3rem;cursor:pointer;
-      color:#33473a;padding:4px 6px;line-height:1;border-radius:5px}
+      color:#444a50;padding:4px 6px;line-height:1;border-radius:5px}
     .burger:hover{background:rgba(0,0,0,.07)}
     .logo{height:38px;display:block}
     .wordmark{font-size:1.05rem;font-weight:800;letter-spacing:.13em;color:#000;
@@ -58,7 +60,7 @@
     .price-up{color:#155f15}
     .price-down{color:#a32020}
     .user-badge{display:flex;align-items:center;gap:8px;padding-left:16px;border-left:1px solid #bcbcbc;margin-left:auto}
-    .user-avatar{width:30px;height:30px;border-radius:50%;border:2px solid #3a8a3a}
+    .user-avatar{width:30px;height:30px;border-radius:50%;border:2px solid #5b626b}
     .user-name{font-size:.78rem;color:#1f1f1f;font-weight:600}
     .user-signout{background:none;border:0;font-size:.7rem;color:#3a3a3a;cursor:pointer;text-decoration:underline;padding:0}
 
@@ -72,9 +74,9 @@
     body:not(.sb-open) .sidebar{width:0;border-right-color:transparent}
     nav.snav{padding:8px 0;flex:1;overflow:auto}
     .nav-sec{font-size:.58rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
-      color:#9aab9a;padding:13px 18px 5px;white-space:nowrap}
+      color:#9aa0a6;padding:13px 18px 5px;white-space:nowrap}
     .nav-i{display:flex;align-items:center;gap:11px;padding:9px 18px;white-space:nowrap;
-      font-size:.86rem;color:#33473a;cursor:pointer;border-left:3px solid transparent;
+      font-size:.86rem;color:#444a50;cursor:pointer;border-left:3px solid transparent;
       text-decoration:none}
     .nav-i .ic{width:18px;height:18px;text-align:center;font-size:.95rem;opacity:.85;flex-shrink:0;
       display:inline-flex;align-items:center;justify-content:center}
@@ -91,17 +93,17 @@
       gap:10px;flex-wrap:wrap;
       background:var(--bg);position:sticky;top:-20px;z-index:5;padding:20px 0 12px;margin:-20px 0 0}
     .period-pills{display:flex;gap:6px}
-    .pill{padding:5px 14px;border-radius:20px;border:1.5px solid #3a8a3a;
-      background:#fff;color:#3a6a3a;font-size:.75rem;font-weight:600;
+    .pill{padding:5px 14px;border-radius:20px;border:1.5px solid #5b626b;
+      background:#fff;color:#5b626b;font-size:.75rem;font-weight:600;
       cursor:pointer;transition:all .15s;letter-spacing:.03em}
-    .pill.active{background:#2d7a2d;color:#fff;border-color:#2d7a2d}
-    .pill:hover:not(.active){background:#eaf5ea}
+    .pill.active{background:#4a5158;color:#fff;border-color:#4a5158}
+    .pill:hover:not(.active){background:#eef0f2}
 
     /* KPI strip (SCADA .kpi pattern, 7 form tiles) */
     .kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-bottom:11px}
     .kpi{background:var(--panel);border:1px solid var(--line);border-radius:9px;
       padding:8px 10px;border-top:3px solid var(--green);text-align:center}
-    .kpi .n{font-size:1.3rem;font-weight:800;line-height:1;color:#1c4a1c}
+    .kpi .n{font-size:1.3rem;font-weight:800;line-height:1;color:#2b3036}
     .kpi .l{font-size:.6rem;color:var(--muted);text-transform:uppercase;
       letter-spacing:.06em;margin-top:3px;line-height:1.3;font-weight:600}
     .kpi.avo{border-top-color:#9c6b3a}
@@ -117,7 +119,7 @@
     .whead{padding:7px 12px;border-bottom:1px solid var(--line);
       font-size:.76rem;font-weight:700;color:var(--green-d);
       display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
-    .whead .chev{font-size:.7rem;color:#5a8a5a;transition:transform .25s}
+    .whead .chev{font-size:.7rem;color:#6b7177;transition:transform .25s}
     .whead.open .chev{transform:rotate(180deg)}
     .wbody{padding:9px 12px}
     .wbody.collapse{overflow:hidden;max-height:0;padding:0 12px;
@@ -130,7 +132,7 @@
     .charts-grid.open{max-height:9000px}
     .chart-card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px 14px}
     .chart-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
-      color:#3a5a3a;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+      color:#444a50;margin-bottom:10px;display:flex;align-items:center;gap:6px}
     .chart-wrap{position:relative;height:300px;width:100%}
     canvas{display:block}
     .chart-card.span2{grid-column:span 2}
@@ -144,46 +146,46 @@
     .entry-form-card{background:#fff;border:1px solid var(--line);border-radius:8px;
       padding:10px 14px;margin-bottom:8px}
     .entry-form-head{font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
-      color:#1c4a1c;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
-    .entry-form-head .efc-count{background:#e3f1e3;color:#2d7a2d;border-radius:10px;
+      color:#2b3036;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+    .entry-form-head .efc-count{background:#e8eaed;color:#4a5158;border-radius:10px;
       font-size:.66rem;font-weight:700;padding:1px 9px;letter-spacing:0}
-    .entry-form-head .efc-chevron{font-size:.7rem;color:#5a8a5a;width:12px}
+    .entry-form-head .efc-chevron{font-size:.7rem;color:#6b7177;width:12px}
     .efc-body{display:none;margin-top:8px}
     .efc-body.efc-open{display:block}
     .entry-table{width:100%;border-collapse:collapse;font-size:.78rem}
     .entry-table th{text-align:left;font-size:.6rem;text-transform:uppercase;letter-spacing:.07em;
-      color:#6a8a6a;font-weight:700;border-bottom:1.5px solid #e0ece0;padding:6px 8px}
-    .entry-table td{padding:7px 8px;border-bottom:1px solid #f0f4f0;vertical-align:top}
+      color:#6b7177;font-weight:700;border-bottom:1.5px solid #e2e4e7;padding:6px 8px}
+    .entry-table td{padding:7px 8px;border-bottom:1px solid #f0f1f3;vertical-align:top}
     .entry-table tr:last-child td{border-bottom:none}
-    .entry-table .et-pumper{font-weight:600;color:#2d5a2d;white-space:nowrap}
+    .entry-table .et-pumper{font-weight:600;color:#3a4047;white-space:nowrap}
     .entry-empty{color:#aaa;font-size:.78rem;font-style:italic}
 
     /* Weekly Work Assignments */
     .tasks-week-label{font-size:.72rem;font-weight:700;text-transform:uppercase;
-      letter-spacing:.1em;color:#4a724a;margin-bottom:8px}
-    .tasks-week-label span{font-weight:400;color:#6a8a6a;text-transform:none;letter-spacing:0}
+      letter-spacing:.1em;color:#565c63;margin-bottom:8px}
+    .tasks-week-label span{font-weight:400;color:#6b7177;text-transform:none;letter-spacing:0}
     .tasks-columns{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
-    .task-col{background:#fafdf9;border:1px solid var(--line);border-left:3px solid #2d7a2d;
+    .task-col{background:#fafafb;border:1px solid var(--line);border-left:3px solid #4a5158;
       border-radius:7px;padding:10px 12px}
     .task-col-title{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
-      color:#3a5a3a;margin-bottom:6px}
-    .task-well{font-size:.8rem;color:#1a1a1a;padding:3px 0;border-bottom:1px solid #f0f4f0;line-height:1.4}
+      color:#444a50;margin-bottom:6px}
+    .task-well{font-size:.8rem;color:#1a1a1a;padding:3px 0;border-bottom:1px solid #f0f1f3;line-height:1.4}
     .task-well:last-child{border-bottom:none}
-    .task-empty{font-size:.78rem;color:#8aaa8a;font-style:italic}
+    .task-empty{font-size:.78rem;color:#9aa0a6;font-style:italic}
     .tasks-next{opacity:.85;margin-top:10px}
     .tasks-sub-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;
-      padding:6px 10px;border-radius:6px;background:#eef4ee;user-select:none}
-    .tasks-sub-header:hover{background:#e4ede4}
-    .tasks-sub-title{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#4a724a}
+      padding:6px 10px;border-radius:6px;background:#eef0f2;user-select:none}
+    .tasks-sub-header:hover{background:#e6e8ea}
+    .tasks-sub-title{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#565c63}
     .tasks-sub-body{overflow:hidden;max-height:0;transition:max-height .3s ease}
     .tasks-sub-body.open{max-height:9000px}
     .tasks-eng-row{margin-bottom:14px}
-    .tasks-eng-name{font-size:.74rem;font-weight:700;color:#2d5a2d;text-transform:uppercase;
-      letter-spacing:.08em;margin-bottom:6px;padding-left:6px;border-left:3px solid #2d7a2d}
+    .tasks-eng-name{font-size:.74rem;font-weight:700;color:#3a4047;text-transform:uppercase;
+      letter-spacing:.08em;margin-bottom:6px;padding-left:6px;border-left:3px solid #4a5158}
 
-    footer{text-align:center;color:#8aaa8a;font-size:.72rem;margin-top:24px;padding:14px 0;
+    footer{text-align:center;color:#9aa0a6;font-size:.72rem;margin-top:24px;padding:14px 0;
       border-top:1px solid var(--line)}
-    .data-note{font-size:.65rem;color:#8aaa8a;margin-top:2px}
+    .data-note{font-size:.65rem;color:#9aa0a6;margin-top:2px}
 
     /* Mobile hardening — no horizontal scroll on phones. overflow-x:clip is
        used so the page does not become a scrolling container (would break
@@ -289,7 +291,7 @@
       <nav class="snav">
         <div class="nav-sec">Dashboard</div>
         <a class="nav-i" href="index.html"><span class="ic">
-          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="4" height="9" fill="#1c4a1c"/><rect x="10" y="6" width="4" height="14" fill="#2d7a2d"/><rect x="17" y="14" width="4" height="6" fill="#5dc85d"/></svg>
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="4" height="9" fill="#2b3036"/><rect x="10" y="6" width="4" height="14" fill="#4a5158"/><rect x="17" y="14" width="4" height="6" fill="#9aa0a6"/></svg>
         </span>Activity Dashboard</a>
 
         <div class="nav-sec">Forms</div>
@@ -364,7 +366,7 @@
             <div id="tasks-last-collapsible" style="display:none">
               <div class="tasks-sub-header" id="tasksLastToggle">
                 <span class="tasks-sub-title" id="tasks-next-label-coll">&#9654; Last Week</span>
-                <span style="font-size:.75rem;color:#6a8a6a" id="tasksLastChevron">&#9654;</span>
+                <span style="font-size:.75rem;color:#6b7177" id="tasksLastChevron">&#9654;</span>
               </div>
               <div class="tasks-sub-body" id="tasksLastBody">
                 <div style="padding-top:8px" id="tasks-next-cols-coll"></div>
@@ -441,7 +443,7 @@ const PUMPERS = ['Andy','Armando','Eli','Henry','Jason','Raul','Waldo','Wynn'];
 // Tile definitions (drives stat tiles; avo is first)
 const TILE_DEFS = [
   { key:'avo',      color:'#9c6b3a' },
-  { key:'gwi',      color:'#2d7a2d' },
+  { key:'gwi',      color:'#4a5158' },
   { key:'fap',      color:'#1a8a7a' },
   { key:'pumpup',   color:'#c8860a' },
   { key:'wellsite', color:'#1565c0' },
@@ -452,7 +454,7 @@ const TILE_DEFS = [
 // Chart definitions (single = one dataset; combo = two datasets side-by-side)
 const CHART_DEFS = [
   { id:'c-avo',               keys:['avo'],                 colors:['#9c6b3a'],           labels:['AVO Inspection'] },
-  { id:'c-gwi',               keys:['gwi'],                 colors:['#2d7a2d'],           labels:['Gas Well Inspection'] },
+  { id:'c-gwi',               keys:['gwi'],                 colors:['#4a5158'],           labels:['Gas Well Inspection'] },
   { id:'c-fap-pumpup',        keys:['fap','pumpup'],        colors:['#1a8a7a','#c8860a'], labels:['FAP','Pump Up'] },
   { id:'c-wellsite-facility', keys:['wellsite','facility'], colors:['#1565c0','#b94c00'], labels:['Well Site','Facility'] },
 ];
@@ -598,7 +600,7 @@ const PRICES = {  // auto-refreshed 2026-06-10 16:06
 const CHARTS = {};
 let CURRENT_USER = null;  // set after login; {displayName, pbiName, role}
 const GRID_COLOR = '#eef2ee';
-const TICK_COLOR = '#5a6a5a';
+const TICK_COLOR = '#5a6066';
 
 // Shared external tooltip handler (works for single and multi-dataset charts)
 function externalTooltip(context) {

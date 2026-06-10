@@ -81,7 +81,7 @@
   var NAV = [
     { sec: 'Dashboard', items: [
       { href: 'index.html', label: 'Activity Dashboard',
-        ic: '<svg viewBox="0 0 24 24"><rect x="3" y="11" width="4" height="9" fill="#1c4a1c"/><rect x="10" y="6" width="4" height="14" fill="#2d7a2d"/><rect x="17" y="14" width="4" height="6" fill="#5dc85d"/></svg>' },
+        ic: '<svg viewBox="0 0 24 24"><rect x="3" y="11" width="4" height="9" fill="#2b3036"/><rect x="10" y="6" width="4" height="14" fill="#4a5158"/><rect x="17" y="14" width="4" height="6" fill="#9aa0a6"/></svg>' },
     ]},
     { sec: 'Forms', items: [
       { href: 'gwi.html', label: 'Gas Well Inspection',

@@ -6,12 +6,14 @@
   --chrome-bar: #d9d9d9;
   --chrome-bg: #f5f4f1;
   --chrome-ink: #1a1a1a;
-  --chrome-green: #3a8a3a;
-  --chrome-green-d: #1c4a1c;
-  --chrome-green-l: #4a724a;
-  --chrome-muted: #6a8a6a;
-  --chrome-line: #d0e0d0;
-  --chrome-tint: #eaf5ea;
+  /* Neutral gray accent (rebrand 2026-06-10 — replaced FAE green to match admin.40ac.us).
+     Var names kept as --chrome-green* so per-page references still resolve. */
+  --chrome-green: #5b626b;
+  --chrome-green-d: #2b3036;
+  --chrome-green-l: #565c63;
+  --chrome-muted: #6b7177;
+  --chrome-line: #d8dadd;
+  --chrome-tint: #eef0f2;
 }
 
 /* Base body — unified across all form pages */
@@ -39,7 +41,7 @@ body {
   border: 0;
   font-size: 1.3rem;
   cursor: pointer;
-  color: #33473a;
+  color: #444a50;
   padding: 4px 6px;
   line-height: 1;
   border-radius: 5px;
@@ -128,7 +130,7 @@ body {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  border: 2px solid #3a8a3a;
+  border: 2px solid #5b626b;
 }
 .appchrome .user-name {
   font-size: .78rem;
@@ -232,7 +234,7 @@ body.sb-open .appchrome-sidebar { transform: translateX(0); }
   font-weight: 700;
   letter-spacing: .12em;
   text-transform: uppercase;
-  color: #9aab9a;
+  color: #9aa0a6;
   padding: 13px 18px 5px;
   white-space: nowrap;
 }
@@ -243,7 +245,7 @@ body.sb-open .appchrome-sidebar { transform: translateX(0); }
   padding: 9px 18px;
   white-space: nowrap;
   font-size: .86rem;
-  color: #33473a;
+  color: #444a50;
   cursor: pointer;
   border-left: 3px solid transparent;
   text-decoration: none;
@@ -318,10 +320,10 @@ body.sb-open .appchrome-scrim { display: block; }
   margin-top: 8px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
-.submit-btn:hover, .btn-primary:hover { background: #2d7a2d; }
+.submit-btn:hover, .btn-primary:hover { background: #4a5158; }
 .submit-btn:active, .btn-primary:active { background: var(--chrome-green-d); }
 .submit-btn:disabled, .btn-primary:disabled {
-  background: #8aaa8a;
+  background: #a8acb1;
   cursor: not-allowed;
 }
 .btn-secondary {
