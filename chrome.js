@@ -85,7 +85,7 @@
     ]},
     { sec: 'Forms', items: [
       { href: 'my-avo.html', label: 'My AVO Inspections',
-        ic: '<img src="sensory.png" alt="" style="width:24px;height:24px;display:block">' },
+        ic: '<img src="avo.png" alt="" style="width:24px;height:24px;display:block">' },
       { href: 'gwi.html', label: 'Gas Well Inspection',
         ic: '<svg viewBox="0 0 24 24"><path d="M12 2C10 5 7 7 7 11c0 2.76 2.24 5 5 5s5-2.24 5-5c0-1.5-.6-2.8-1.5-3.8C15 8.5 14 10 12 10c1-2 1.5-5 0-8z" fill="#e67e22"/></svg>' },
       { href: 'fap.html', label: 'Fluid Levels (FAP)',
@@ -101,7 +101,7 @@
     ]},
     { sec: 'Reports', items: [
       { href: 'avo-report.html', label: 'AVO Inspections',
-        ic: '<img src="sensory.png" alt="" style="width:24px;height:24px;display:block">' },
+        ic: '<img src="avo.png" alt="" style="width:24px;height:24px;display:block">' },
       { href: 'spare-vessels.html', label: 'Spare Vessels View', ic: '📋' },
     ]},
   ];
