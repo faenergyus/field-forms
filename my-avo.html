@@ -124,6 +124,11 @@
     /* Site name filter — sits in a sticky row right below the header. */
     table.batch tr.filter-row th { background: #eef1f4; padding: 4px 6px; border-bottom: 1px solid #d8dadd; position: sticky; top: calc(var(--chrome-hdr-h, 54px) + 35px); z-index: 4; }
     .col-filter { width: 100%; box-sizing: border-box; background: #fff; border: 1px solid #c0cad6; border-radius: 4px; padding: 4px 8px; font-size: 0.78rem; color: #1a1a1a; font-family: inherit; }
+    /* Site name column flexes wide; its filter input takes 50% of that so it
+       doesn't look bloated next to the narrow Pumper filter. Phone is still
+       full-width because the row collapses anyway. */
+    .col-filter-site { width: 50%; }
+    @media (max-width: 640px) { .col-filter-site { width: 100%; } }
     .col-filter.has-value { background: #fff8d8; border-color: #d6c25a; font-weight: 600; }
     .col-filter::placeholder { color: #9aa0a6; font-style: italic; font-weight: 400; }
     .col-filter:focus { outline: none; border-color: #3d68b8; box-shadow: 0 0 0 1px rgba(61,104,184,0.35); }
@@ -292,7 +297,7 @@
   </div>
 </header>
 <div class="appchrome-title">
-  <h1><span class="h-icon"><img src="sensory.png" alt=""></span>My AVO Inspections</h1>
+  <h1><span class="h-icon"><img src="sensory.png" alt="" style="height:44px;width:44px"></span>My AVO Inspections</h1>
   <button class="cancel-btn" onclick="location.href='index.html'" title="Close">Close</button>
 </div>
 
@@ -357,8 +362,8 @@
         </tr>
         <tr class="filter-row">
           <th></th>
-          <th><input type="search" class="col-filter" id="siteFilter" placeholder="Start typing to filter sites…" autocomplete="off"></th>
-          <th class="desk-only"></th>
+          <th><input type="search" class="col-filter col-filter-site" id="siteFilter" placeholder="Filter site…" autocomplete="off"></th>
+          <th class="desk-only"><input type="search" class="col-filter" id="pumperFilter" placeholder="Filter pumper…" autocomplete="off"></th>
           <th></th>
           <th></th>
           <th></th>
@@ -578,14 +583,23 @@ function initApp(session) {
   });
   document.getElementById('submitBtn').addEventListener('click', submitBatch);
 
-  // Site name filter (Gas Sales Analysis style — typeahead substring filter)
-  const filterEl = document.getElementById('siteFilter');
-  filterEl.addEventListener('input', () => {
-    NAME_FILTER = filterEl.value;
-    filterEl.classList.toggle('has-value', !!NAME_FILTER.trim());
+  // Site + Pumper typeahead filters (Gas Sales Analysis style)
+  const siteEl = document.getElementById('siteFilter');
+  siteEl.addEventListener('input', () => {
+    NAME_FILTER = siteEl.value;
+    siteEl.classList.toggle('has-value', !!NAME_FILTER.trim());
     renderRows();
     updateSubmitButton();
   });
+  const pumperEl = document.getElementById('pumperFilter');
+  if (pumperEl) {
+    pumperEl.addEventListener('input', () => {
+      PUMPER_FILTER = pumperEl.value;
+      pumperEl.classList.toggle('has-value', !!PUMPER_FILTER.trim());
+      renderRows();
+      updateSubmitButton();
+    });
+  }
 
   load();
 }
@@ -644,10 +658,11 @@ async function load() {
 // Sort state — clicking a sortable header cycles asc → desc.
 let SORT = { col: 'due_date', dir: 'asc' };
 
-// Site-name typeahead filter — Gas Sales Analysis style. Substring match,
-// case-insensitive. Applies to BOTH the rendered list AND submitBatch
+// Typeahead filters — Gas Sales Analysis style. Substring match,
+// case-insensitive. Both apply to the rendered list AND to submitBatch
 // (only currently-visible rows are submitted).
 let NAME_FILTER = '';
+let PUMPER_FILTER = '';
 
 function rowName(r) { return r.site_name || r.fac_name || r.well_name || ''; }
 function rowDate(r) {
@@ -677,12 +692,15 @@ function sortedIndices() {
   return idxs;
 }
 
-// Visible = sorted ∩ matches NAME_FILTER. The single source of truth for both
-// what gets rendered AND what gets submitted.
+// Visible = sorted ∩ matches every active filter. Single source of truth for
+// rendering AND submit.
 function visibleIndices() {
-  const q = NAME_FILTER.trim().toUpperCase();
-  if (!q) return sortedIndices();
-  return sortedIndices().filter(i => rowName(DUE_ROWS[i]).toUpperCase().includes(q));
+  const qName   = NAME_FILTER.trim().toUpperCase();
+  const qPumper = PUMPER_FILTER.trim().toUpperCase();
+  let idxs = sortedIndices();
+  if (qName)   idxs = idxs.filter(i => rowName(DUE_ROWS[i]).toUpperCase().includes(qName));
+  if (qPumper) idxs = idxs.filter(i => (DUE_ROWS[i].pumper || '').toUpperCase().includes(qPumper));
+  return idxs;
 }
 
 function renderRows() {
@@ -819,7 +837,7 @@ function updateSubmitButton() {
   const info = document.getElementById('submitInfo');
   btn.disabled = checked === 0;
   if (checked === 0) {
-    info.textContent = NAME_FILTER.trim() ? 'No matching rows selected.' : 'No rows selected.';
+    info.textContent = (NAME_FILTER.trim() || PUMPER_FILTER.trim()) ? 'No matching rows selected.' : 'No rows selected.';
   } else {
     info.textContent = checked + ' inspection' + (checked === 1 ? '' : 's')
       + ' will be submitted with auto-randomized 8a–4p datetimes within '
