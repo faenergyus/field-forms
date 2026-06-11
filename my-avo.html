@@ -27,6 +27,17 @@
     .toolbar select { padding: 7px 10px; font-size: 0.85rem; border: 1.5px solid #d0d4d8; border-radius: 6px; background: #fff; }
     .toolbar .summary { margin-left: auto; font-size: 0.78rem; color: #6b7177; }
     .toolbar .summary b { color: #2b3036; }
+    /* Refresh + Submit + Site count all on one line. flex-wrap stays for
+       narrow viewports but the row never collapses gratuitously. */
+    .toolbar.single-line { flex-wrap: nowrap; }
+    .toolbar .submit-info { font-size: 0.75rem; color: #6b7177; white-space: nowrap; }
+    @media (max-width: 640px) {
+      .toolbar { gap: 8px; }
+      /* Drop the verbose wells/facilities breakdown on phone — keep the row
+         to just the open count via the .compact class set in renderRows. */
+      .toolbar .summary .desk-detail { display: none; }
+      .toolbar .submit-info { display: none; }
+    }
 
     .grid-card { background: #fff; border-radius: 9px; border: 1px solid #d8dadd; border-top: 3px solid #5b626b; overflow-x: auto; }
 
@@ -95,8 +106,7 @@
     details.info { background: #fff; border: 1px solid #d8dadd; border-left: 4px solid #5b626b; border-radius: 8px; margin-bottom: 12px; }
     details.info > summary { list-style: none; cursor: pointer; padding: 10px 14px; font-size: 0.85rem; font-weight: 600; color: #2b3036; display: flex; align-items: center; gap: 10px; user-select: none; }
     details.info > summary::-webkit-details-marker { display: none; }
-    details.info > summary::before { content: '▸'; font-size: 0.75rem; color: #6b7177; transition: transform 0.15s ease; flex-shrink: 0; }
-    details.info[open] > summary::before { transform: rotate(90deg); }
+    details.info > summary .toggle-icon { color: #6b7177; }
     details.info > summary .info-i { display: inline-flex; width: 18px; height: 18px; border-radius: 50%; background: #eef0f2; color: #565c63; align-items: center; justify-content: center; font-style: italic; font-family: Georgia, serif; font-weight: 700; font-size: 0.78rem; flex-shrink: 0; }
     details.info > .info-body { padding: 0 16px 14px; font-size: 0.82rem; line-height: 1.55; color: #2b3036; }
     details.info > .info-body p { margin: 6px 0; }
@@ -304,7 +314,7 @@
 <div class="page">
 
   <details class="info" id="aboutAvo">
-    <summary><span class="info-i">i</span>About AVO inspections — what they are &amp; how to log one</summary>
+    <summary><span class="toggle-icon"><i></i></span><span class="info-i">i</span>About AVO inspections — what they are &amp; how to log one</summary>
     <div class="info-body">
       <p><b>AVO = Audio, Visual, Olfactory.</b> A walk-around inspection of a well or facility where the operator listens, looks, and smells for signs of a leak, odor, malfunction, or unusual condition. AVOs are a baseline LDAR (Leak Detection and Repair) compliance activity required by NMOCD 19.15.27 NMAC and the EPA NSPS OOOOa methane rules — every site shows up on this list on a cadence (typically monthly for production sites, weekly for higher-risk equipment).</p>
 
@@ -335,11 +345,14 @@
     </div>
   </details>
 
-  <div class="toolbar">
+  <div class="toolbar single-line">
     <button type="button" class="refresh-btn" id="refreshBtn" title="Reload open list">↻ Refresh</button>
     <button type="button" class="submit-btn" id="submitBtn" disabled style="padding:7px 16px;font-size:0.85rem">Submit checked</button>
     <div class="summary" id="summary"></div>
-    <div class="submit-info" id="submitInfo" style="flex:1;font-size:0.75rem;color:#6b7177">No rows selected.</div>
+    <!-- #submitInfo retained as a hidden span so existing code that writes
+         to it (e.g. "Submitted N/M…", "Add detail for N Yes cells…") still
+         works; surfaced only when there's actual transient status. -->
+    <span class="submit-info" id="submitInfo" hidden></span>
   </div>
 
   <div class="grid-card">
@@ -804,9 +817,14 @@ function updateSummary() {
   const checked = DUE_ROWS.filter((_, i) => STATE[i].checked).length;
   const wells = DUE_ROWS.filter(r => (r.unit_type || '').toLowerCase() === 'well').length;
   const facs  = DUE_ROWS.filter(r => (r.unit_type || '').toLowerCase() === 'facility').length;
+  // .desk-detail wraps the wells/facilities breakdown so the phone CSS can
+  // hide it and leave just "<b>N</b> open" on the row.
+  const breakdown = (wells || facs)
+    ? ' · ' + checked + ' selected · ' + wells + ' well' + (wells === 1 ? '' : 's')
+      + ', ' + facs + ' facilit' + (facs === 1 ? 'y' : 'ies')
+    : '';
   document.getElementById('summary').innerHTML =
-    '<b>' + total + '</b> open · <b>' + checked + '</b> selected'
-    + (wells || facs ? ' · ' + wells + ' well' + (wells === 1 ? '' : 's') + ', ' + facs + ' facilit' + (facs === 1 ? 'y' : 'ies') : '');
+    '<b>' + total + '</b> open<span class="desk-detail">' + breakdown + '</span>';
 }
 
 function onMasterChk(e) {
@@ -840,13 +858,12 @@ function updateSubmitButton() {
   const info = document.getElementById('submitInfo');
   btn.disabled = checked === 0;
   btn.textContent = checked === 0 ? 'Submit checked' : 'Submit checked (' + checked + ')';
-  if (checked === 0) {
-    info.textContent = (NAME_FILTER.trim() || PUMPER_FILTER.trim()) ? 'No matching rows selected.' : 'No rows selected.';
-  } else {
-    info.textContent = checked + ' inspection' + (checked === 1 ? '' : 's')
-      + ' will be submitted with auto-randomized 8a–4p datetimes within '
-      + DAYS_BEFORE_DUE + ' days before each due date (≥' + MIN_GAP_MINUTES + ' min apart per pumper).';
-  }
+  // Count + breakdown already live in #summary (see updateSummary). The
+  // submit-info span is for transient status only (e.g. "Submitted 3/5…",
+  // "Add detail for 2 Yes cells…"); keep it hidden when there's nothing
+  // to report. Note: timestamp explanation now lives in the About panel.
+  info.hidden = true;
+  info.textContent = '';
 }
 
 // ── Datetime generation: per-pumper-per-day, 8a–4p, ≥10 min apart ───────────
@@ -948,6 +965,7 @@ async function submitBatch() {
     return QUESTIONS.some(q => s[q] === 'Yes' && !(s.detail[q] || '').trim());
   });
   if (missing.length) {
+    info.hidden = false;
     info.textContent = `Add detail text for ${missing.length} Yes cell${missing.length === 1 ? '' : 's'} before submitting.`;
     return;
   }
@@ -1003,11 +1021,13 @@ async function submitBatch() {
       const r = await window.faeAuth.fetchAuthed(API_BASE, API_BASE + '/avo/submit', reqInit);
       if (r.ok) ok++; else fail++;
     } catch (e) { fail++; }
+    info.hidden = false;
     info.textContent = `Submitted ${ok + fail} / ${checkedRows.length}…`;
   }
 
   btn.disabled = false;
   btn.textContent = 'Submit checked inspections';
+  info.hidden = false;
   if (fail) {
     info.innerHTML = `<span style="color:#c0392b">${ok} saved, ${fail} failed.</span>`;
   } else {

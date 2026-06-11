@@ -362,7 +362,7 @@
       <div id="tasks-panel" class="widget" style="display:none">
         <div class="whead" id="tasksToggle">
           <span id="tasksToggleLabel">Weekly Work Assignments</span>
-          <span class="chev" id="tasksChevron">&#9660;</span>
+          <span class="toggle-icon" id="tasksChevron"><i></i></span>
         </div>
         <div class="wbody collapse" id="tasksBody">
           <div class="tasks-week-label" id="tasks-current-label"></div>
@@ -374,8 +374,8 @@
             </div>
             <div id="tasks-last-collapsible" style="display:none">
               <div class="tasks-sub-header" id="tasksLastToggle">
-                <span class="tasks-sub-title" id="tasks-next-label-coll">&#9654; Last Week</span>
-                <span style="font-size:.75rem;color:#6b7177" id="tasksLastChevron">&#9654;</span>
+                <span class="tasks-sub-title" id="tasks-next-label-coll">Last Week</span>
+                <span class="toggle-icon" id="tasksLastChevron"><i></i></span>
               </div>
               <div class="tasks-sub-body" id="tasksLastBody">
                 <div style="padding-top:8px" id="tasks-next-cols-coll"></div>
@@ -389,7 +389,7 @@
       <div class="widget">
         <div class="whead" id="chartsToggle">
           <span>Charts by Pumper</span>
-          <span class="chev" id="chevron">&#9660;</span>
+          <span class="toggle-icon" id="chevron"><i></i></span>
         </div>
         <div class="wbody" style="padding:0">
           <div class="charts-grid" id="chartsGrid" style="padding:12px 15px">
@@ -427,7 +427,7 @@
       <div class="widget">
         <div class="whead" id="entriesToggle">
           <span id="entriesTitle">All Entries</span>
-          <span class="chev" id="entriesChevron">&#9660;</span>
+          <span class="toggle-icon" id="entriesChevron"><i></i></span>
         </div>
         <div class="wbody collapse" id="entriesBody">
           <div id="entriesContent"></div>
@@ -840,8 +840,7 @@ const grid    = document.getElementById('chartsGrid');
 const chevron = document.getElementById('chevron');
 toggle.addEventListener('click', () => {
   const open = grid.classList.toggle('open');
-  chevron.textContent = open ? '▲' : '▼';
-  // Resize after CSS transition completes so charts fill their containers
+  toggle.classList.toggle('open', open);  // drives the CSS hamburger → X morph
   if (open) grid.addEventListener('transitionend', resizeAll, { once: true });
 });
 
@@ -849,7 +848,7 @@ toggle.addEventListener('click', () => {
 document.getElementById('entriesToggle').addEventListener('click', () => {
   const body  = document.getElementById('entriesBody');
   const open  = body.classList.toggle('open');
-  document.getElementById('entriesChevron').textContent = open ? '▲' : '▼';
+  document.getElementById('entriesToggle').classList.toggle('open', open);
   const role  = (CURRENT_USER && CURRENT_USER.role || '').toLowerCase();
   const label = role === 'pumper' ? 'My Entries' : 'All Entries';
   document.getElementById('entriesTitle').textContent = label;
@@ -869,7 +868,7 @@ requestAnimationFrame(resizeAll);
 // ── Tasks collapse toggle ───────────────────────────────────────────────────
 document.getElementById('tasksToggle').addEventListener('click', () => {
   const open = document.getElementById('tasksBody').classList.toggle('open');
-  document.getElementById('tasksChevron').textContent = open ? '▲' : '▼';
+  document.getElementById('tasksToggle').classList.toggle('open', open);
   const lbl = document.getElementById('tasksToggleLabel');
   if (lbl) lbl.textContent = 'Weekly Work Assignments';
 });
@@ -1106,29 +1105,22 @@ function renderTasks() {
     // Engineer/admin/ops/tech: sub-collapsible, starts closed
     plainEl.style.display = 'none';
     collEl.style.display  = '';
-    document.getElementById('tasks-next-label-coll').textContent = '▶ ' + lastLabel;
-    document.getElementById('tasksLastChevron').textContent      = '▶';
+    document.getElementById('tasks-next-label-coll').textContent = lastLabel;
     if (PUMPER_TASKS.lastWeek) renderWeek(null, '', 'tasks-next-cols-coll', PUMPER_TASKS.lastWeek, true);
     document.getElementById('tasksLastToggle').onclick = () => {
       const open = document.getElementById('tasksLastBody').classList.toggle('open');
-      const sym  = open ? '▼' : '▶';
-      document.getElementById('tasks-next-label-coll').textContent = sym + ' ' + lastLabel;
-      document.getElementById('tasksLastChevron').textContent      = sym;
+      document.getElementById('tasksLastToggle').classList.toggle('open', open);
     };
   }
   nextBlock.style.display = '';
 
   // Pumpers: open by default; engineers/admin: collapsed by default
   const body    = document.getElementById('tasksBody');
-  const chevron = document.getElementById('tasksChevron');
+  const head    = document.getElementById('tasksToggle');
   const tlabel  = document.getElementById('tasksToggleLabel');
-  if (role === 'pumper') {
-    body.classList.add('open');
-    chevron.textContent = '▲';
-  } else {
-    body.classList.remove('open');
-    chevron.textContent = '▼';
-  }
+  const open    = role === 'pumper';
+  body.classList.toggle('open', open);
+  head.classList.toggle('open', open);  // drives CSS hamburger → X
   tlabel.textContent = 'Weekly Work Assignments';
   panel.style.display = 'block';
 }
