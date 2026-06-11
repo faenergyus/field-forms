@@ -8,6 +8,11 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=3">
   <link rel="apple-touch-icon" sizes="180x180" href="favicon-180.png?v=3">
   <title>My AVO Inspections</title>
+  <!-- Canonical shared auth helper: exchanges the ~1h Google JWT for a 30-day
+       fae1.* session token (POST /auth/session) and provides fetchAuthed with
+       auto-401-retry + ensureUserRole (/wbd/whoami). Loaded BEFORE the app
+       script. Replaces the old bespoke window.faeAuth shim. (Bug #415) -->
+  <script src="https://admin.40ac.us/fae-auth.js?v=1"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -239,8 +244,6 @@
 <div class="page">
 
   <div class="toolbar">
-    <label>Inspector:</label>
-    <select id="inspectorSelect"><option value="me">Me</option><option value="">All</option></select>
     <label>Window:</label>
     <select id="windowSelect">
       <option value="7">Due within 7 days</option>
@@ -390,6 +393,10 @@ function showApp(session) {
 
 // ── App state ───────────────────────────────────────────────────────────────
 let currentSession = null;
+// Role-based-auto inspector scope (Ryan #421): pumpers see only their own
+// inspections; engineer/admin/tech/ops see all. Resolved in initApp from
+// /wbd/whoami. Defaults to true (restrictive) until role is known.
+let IS_PUMPER = true;
 let DUE_ROWS = [];   // raw rows from /avo/due
 // Per-row local state: { checked, odor: 'No'|'Yes', leaks, noises,
 //                        odor_touched, leaks_touched, noises_touched,
@@ -415,34 +422,34 @@ function fmtDate(s) {
   } catch (e) { return s; }
 }
 
-function isPumperRole(session) {
-  const r = (session && session.role || '').toLowerCase();
-  // Treat anything that's NOT an editor/admin/tech/engineer as a pumper for
-  // the purposes of "show only my rows". Pumpers can never override "Me".
-  return !['engineer', 'admin', 'tech'].includes(r);
+function roleIsPumper(role) {
+  const r = (role || '').toLowerCase();
+  // Engineer / Admin / Tech / Ops see ALL inspections (Ryan #421); everyone
+  // else — pumper or unknown role — is scoped to their own rows only.
+  return !['engineer', 'admin', 'tech', 'ops'].includes(r);
 }
 
 function meName(session) {
   return (session && (session.pbiName || session.displayName) || '').trim();
 }
 
-function initApp(session) {
+async function initApp(session) {
   currentSession = session;
 
-  // Inspector dropdown behavior depends on role:
-  //   - Pumper: locked to "Me" (their own due list only)
-  //   - Engineer/Admin/Tech: defaults to "All" (every required inspection)
-  //     but can switch to "Me" to see just their own.
-  const insp = document.getElementById('inspectorSelect');
-  if (isPumperRole(session)) {
-    insp.innerHTML = '<option value="me">Me</option>';
-    insp.value = 'me';
-    insp.disabled = true;
-  } else {
-    insp.value = '';  // "All" by default for editors
-  }
+  // Inspector scope is AUTOMATIC and role-based — there is no user-facing
+  // control (Ryan #421). Resolve the viewer's role from /wbd/whoami via the
+  // canonical fae-auth helper; fall back to the role on the signed-in session
+  // (Accounts sheet) if whoami is unavailable. Pumpers -> own rows only;
+  // engineer/admin/tech/ops -> all rows.
+  let role = null;
+  try {
+    if (window.faeAuth && window.faeAuth.ensureUserRole) {
+      role = await window.faeAuth.ensureUserRole();
+    }
+  } catch (e) { /* fall through to session role */ }
+  if (!role) role = (session && session.role) || '';
+  IS_PUMPER = roleIsPumper(role);
 
-  document.getElementById('inspectorSelect').addEventListener('change', load);
   document.getElementById('windowSelect').addEventListener('change', load);
   document.getElementById('statusSelect').addEventListener('change', load);
   document.getElementById('masterChk').addEventListener('change', onMasterChk);
@@ -471,19 +478,18 @@ async function load() {
   tbody.innerHTML = '<tr><td colspan="8" class="state-msg"><span class="spinner"></span>Loading due inspections…</td></tr>';
 
   const params = new URLSearchParams();
-  const inspVal = document.getElementById('inspectorSelect').value;
   const me = meName(currentSession);
-  if (inspVal === 'me' && me) params.set('inspector', me);
+  // Role-based scope: pumpers are restricted to their own inspections.
+  if (IS_PUMPER && me) params.set('inspector', me);
   const within = document.getElementById('windowSelect').value;
   if (within) params.set('within_days', within);
   const st = document.getElementById('statusSelect').value;
   if (st) params.set('status', st);
 
   try {
-    const tok = currentSession && currentSession.credential || '';
-    const r = await fetch(API_BASE + '/avo/due?' + params.toString(), {
-      headers: { 'Authorization': 'Bearer ' + tok }
-    });
+    // Authed via fae-auth (30-day fae1.* session token + auto-401-retry).
+    // Bug #415: was using the raw ~1h Google JWT, which silently 401'd.
+    const r = await window.faeAuth.fetchAuthed(API_BASE, API_BASE + '/avo/due?' + params.toString());
     if (r.status === 404) {
       tbody.innerHTML = '<tr><td colspan="8" class="state-msg warn">'
         + 'GET /avo/due endpoint not yet wired — orchestrator task 373 enqueued. '
@@ -492,16 +498,26 @@ async function load() {
       DUE_ROWS = []; STATE = {}; updateSubmitButton();
       return;
     }
+    // Distinguish an auth/session failure from a genuine empty result so a 401
+    // can't masquerade as "no inspections due" (the core symptom of #415).
+    if (r.status === 401 || r.status === 403) {
+      tbody.innerHTML = '<tr><td colspan="8" class="state-msg err">'
+        + 'Could not load inspections (auth/session expired). Try reloading the page, '
+        + 'or sign out and back in.</td></tr>';
+      DUE_ROWS = []; STATE = {}; updateSubmitButton();
+      return;
+    }
     if (!r.ok) throw new Error('HTTP ' + r.status);
     DUE_ROWS = await r.json();
     // Client-side safety filter: pumpers see only their own rows even if the
     // endpoint ignores ?inspector=... or returns extras.
-    if (isPumperRole(currentSession) && me) {
+    if (IS_PUMPER && me) {
       const meUp = me.toUpperCase();
       DUE_ROWS = DUE_ROWS.filter(r => (r.pumper || '').toUpperCase() === meUp);
     }
   } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="8" class="state-msg err">Error loading due list: ' + esc(err.message || err) + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="state-msg err">'
+      + 'Could not load inspections (' + esc(err.message || err) + '). Try reloading.</td></tr>';
     DUE_ROWS = []; STATE = {}; updateSubmitButton();
     return;
   }
@@ -820,7 +836,6 @@ async function submitBatch() {
   btn.disabled = true;
   btn.textContent = 'Submitting…';
   let ok = 0, fail = 0;
-  const tok = currentSession && currentSession.credential || '';
 
   for (const { row, i } of checkedRows) {
     const s = STATE[i];
@@ -840,9 +855,9 @@ async function submitBatch() {
       noises_detail:       s.noises === 'Yes' ? s.detail.noises : '',
     };
     try {
-      const r = await fetch(API_BASE + '/avo/submit', {
+      const r = await window.faeAuth.fetchAuthed(API_BASE, API_BASE + '/avo/submit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
       if (r.ok) ok++; else fail++;
@@ -864,14 +879,8 @@ async function submitBatch() {
 }
 </script>
 
-<!-- Shared cross-app header (fae-header.js, owned by admin.40ac.us). Populates .fae-appnav with Analyst / SCADA / Forms / (Admin if role permits). -->
-<script>
-  // Minimal shared-auth shim so fae-header.js can gate the Admin link on role.
-  window.faeAuth = window.faeAuth || (function () {
-    function role() { try { return (JSON.parse(localStorage.getItem("fae_user") || "{}").role || "").toLowerCase(); } catch (e) { return ""; } }
-    return { userRole: role, ensureUserRole: function () { return Promise.resolve(role()); } };
-  })();
-</script>
+<!-- Shared cross-app header (fae-header.js, owned by admin.40ac.us). Populates .fae-appnav with Analyst / SCADA / Forms / (Admin if role permits).
+     window.faeAuth (userRole/ensureUserRole/fetchAuthed) is provided by the canonical fae-auth.js loaded in <head>. -->
 <script src="https://admin.40ac.us/fae-header.js?v=2"></script>
 </body>
 </html>
