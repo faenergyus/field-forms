@@ -8,6 +8,11 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=3">
   <link rel="apple-touch-icon" sizes="180x180" href="favicon-180.png?v=3">
   <title>AVO Inspection Report</title>
+  <!-- Canonical shared auth helper: exchanges the ~1h Google JWT for the 30-day
+       fae1.* session token (POST /auth/session) + auto-401-retry. Loaded BEFORE
+       the app script so the resume path's load() can use it. This is the fix for
+       the report showing NO DATA after ~1h (expired raw-credential -> 401). -->
+  <script src="https://admin.40ac.us/fae-auth.js?v=1"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -29,11 +34,16 @@
     }
     table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
     th {
-      text-align: left; padding: 9px 10px; background: #f3f7f3;
-      border-bottom: 1.5px solid #d8dadd;
+      text-align: left; padding: 8px 9px; background: #f3f7f3;
+      border-bottom: 1.5px solid #d8dadd; white-space: nowrap;
       font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; color: #565c63;
     }
-    td { padding: 9px 10px; border-bottom: 1px solid #eef2ee; vertical-align: top; }
+    td { padding: 8px 9px; border-bottom: 1px solid #eef2ee; vertical-align: top; white-space: nowrap; }
+    /* Pack the short columns tight to the left; let the Unit/Item column absorb
+       the remaining width so cells aren't stretched far apart. */
+    th.col-item, td.col-item { width: 100%; white-space: normal; }
+    /* The expandable detail row spans all columns — let it wrap normally. */
+    tr.detail td, td.state-msg { white-space: normal; }
     tr.row { cursor: pointer; }
     tr.row:hover td { background: #f8fbf8; }
     tr.detail { display: none; background: #f9faf7; }
@@ -157,16 +167,18 @@
         <tr>
           <th>Date</th>
           <th>Inspector</th>
-          <th>Unit / Item</th>
+          <th class="col-item">Unit / Item</th>
+          <th>Battery</th>
           <th>Route</th>
           <th>Odor</th>
           <th>Leaks</th>
           <th>Noises</th>
+          <th>Due Date</th>
           <th>Source</th>
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="8" class="state-msg"><span class="spinner"></span>Loading...</td></tr>
+        <tr><td colspan="10" class="state-msg"><span class="spinner"></span>Loading...</td></tr>
       </tbody>
     </table>
   </div>
@@ -252,6 +264,44 @@ function showApp(session) {
 
 let currentSession = null;
 let allRows = [];
+// item-name -> { battery, due } from /avo/due (loaded once, not date-windowed).
+let dueByItem = null;
+
+// Normalize a unit/facility name for matching inspection.item against the
+// avo_required well_name / fac_name (uppercase, collapse internal whitespace).
+function normName(s) {
+  return String(s == null ? '' : s).toUpperCase().replace(/\s+/g, ' ').trim();
+}
+
+// Load the Battery (facility) + next Due Date per well from /avo/due once and
+// index it by normalized name so the report can show those columns. /avo/recent
+// carries neither field; /avo/due (dbo.avo_required) has fac_name + next_due_date
+// per well. Best-effort: failure just leaves the columns blank.
+async function loadDueMap() {
+  if (dueByItem) return dueByItem;
+  const map = {};
+  try {
+    const r = await window.faeAuth.fetchAuthed(
+      API_BASE, API_BASE + '/avo/due?within_days=365');
+    if (r.ok) {
+      const rows = await r.json();
+      (Array.isArray(rows) ? rows : []).forEach(w => {
+        const battery = w.fac_name || '';
+        const due = w.next_due_date || '';
+        const put = (name) => {
+          const k = normName(name);
+          if (!k) return;
+          // Prefer a row that actually has a due date if duplicates collide.
+          if (!map[k] || (due && !map[k].due)) map[k] = { battery, due };
+        };
+        put(w.well_name);
+        if (battery && !map[normName(battery)]) put(battery);
+      });
+    }
+  } catch (e) { console.warn('due-map fetch failed', e); }
+  dueByItem = map;
+  return map;
+}
 
 function initApp(session) {
   currentSession = session;
@@ -302,16 +352,19 @@ function isYes(v) { return /^(yes|y|true|1)$/i.test(String(v || '').trim()); }
 async function load() {
   const days = document.getElementById('daysSelect').value;
   const tbody = document.getElementById('tbody');
-  tbody.innerHTML = '<tr><td colspan="8" class="state-msg"><span class="spinner"></span>Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="10" class="state-msg"><span class="spinner"></span>Loading...</td></tr>';
   try {
-    const r = await fetch(API_BASE + '/avo/recent?days=' + encodeURIComponent(days), {
-      headers: { 'Authorization': 'Bearer ' + (currentSession && currentSession.credential || '') }
-    });
+    // fetchAuthed exchanges the Google JWT for the long-lived fae token and
+    // auto-retries on 401 — fixes the report going blank after ~1h.
+    const [r] = await Promise.all([
+      window.faeAuth.fetchAuthed(API_BASE, API_BASE + '/avo/recent?days=' + encodeURIComponent(days)),
+      loadDueMap(),
+    ]);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     allRows = await r.json();
     render();
   } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="8" class="state-msg err">Error loading inspections: ' + esc(err.message || err) + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="state-msg err">Error loading inspections: ' + esc(err.message || err) + '</td></tr>';
   }
 }
 
@@ -333,7 +386,7 @@ function render() {
                     + (hits ? ', <b>' + hits + '</b> with at least one Yes' : '');
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="state-msg">No inspections in this window.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="state-msg">No inspections in this window.</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map((r, i) => {
@@ -358,18 +411,23 @@ function render() {
     }).join('');
 
     const srcCls = (r.source || '').toLowerCase() === 'form' ? 'src-pill src-form' : 'src-pill';
+    const dm      = (dueByItem && dueByItem[normName(r.item)]) || null;
+    const battery = dm && dm.battery ? dm.battery : '—';
+    const dueTxt  = dm && dm.due     ? fmtDt(dm.due, null) : '—';
     return ''
       + '<tr class="row" data-i="' + i + '">'
       +   '<td>' + esc(fmtDt(r.inspection_date, r.inspection_datetime)) + '</td>'
       +   '<td>' + esc(r.inspected_by || '—') + '</td>'
-      +   '<td>' + esc(r.item || '—') + '</td>'
+      +   '<td class="col-item">' + esc(r.item || '—') + '</td>'
+      +   '<td>' + esc(battery) + '</td>'
       +   '<td>' + esc(r.route_name || '—') + '</td>'
       +   '<td>' + yn(r.odor_detected) + '</td>'
       +   '<td>' + yn(r.leaks_observed) + '</td>'
       +   '<td>' + yn(r.noises_heard) + '</td>'
+      +   '<td>' + esc(dueTxt) + '</td>'
       +   '<td><span class="' + srcCls + '">' + esc(r.source || '—') + '</span></td>'
       + '</tr>'
-      + '<tr class="detail" id="d-' + i + '"><td colspan="8">'
+      + '<tr class="detail" id="d-' + i + '"><td colspan="10">'
       +   '<div class="detail-grid">' + detail + '</div>'
       + '</td></tr>';
   }).join('');
@@ -383,14 +441,8 @@ function render() {
 }
 </script>
 
-  <!-- Shared cross-app header (fae-header.js, owned by admin.40ac.us). Replaces the hand-rolled Analyst/SCADA/Forms trio. -->
-  <script>
-    // Minimal shared-auth shim so fae-header.js can gate the Admin link on role.
-    window.faeAuth = window.faeAuth || (function () {
-      function role() { try { return (JSON.parse(localStorage.getItem("fae_user") || "{}").role || "").toLowerCase(); } catch (e) { return ""; } }
-      return { userRole: role, ensureUserRole: function () { return Promise.resolve(role()); } };
-    })();
-  </script>
+  <!-- Shared cross-app header (fae-header.js, owned by admin.40ac.us). Replaces the hand-rolled Analyst/SCADA/Forms trio.
+       window.faeAuth (userRole/ensureUserRole) is provided by the canonical fae-auth.js loaded in <head>. -->
   <script src="https://admin.40ac.us/fae-header.js?v=2"></script>
   </body>
 </html>
