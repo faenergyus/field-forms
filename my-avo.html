@@ -39,12 +39,13 @@
 
     /* Slide-toggle Y/N — single pill, click anywhere to toggle.
        Track color = selection (red NO, green YES); label sits on the
-       colored side; white knob sits on the opposite end. */
+       colored side; white knob sits on the opposite end.
+       Sized ~30% smaller than the first pass per Ryan: 50×18 desktop. */
     .yn {
       position: relative;
       display: inline-block;
-      width: 72px; height: 26px;
-      border-radius: 13px;
+      width: 50px; height: 18px;
+      border-radius: 9px;
       background: #c0392b;
       cursor: pointer;
       user-select: none;
@@ -57,37 +58,47 @@
       position: absolute;
       top: 0; bottom: 0;
       display: flex; align-items: center;
-      font-size: 0.66rem; font-weight: 800; color: #fff;
+      font-size: 0.52rem; font-weight: 800; color: #fff;
       letter-spacing: 0.04em;
       pointer-events: none;
       transition: left 0.18s ease, right 0.18s ease;
       text-shadow: 0 1px 0 rgba(0,0,0,0.12);
     }
-    .yn[data-v="No"]::before  { content: 'NO';  right: 12px; }
-    .yn[data-v="Yes"]::before { content: 'YES'; left: 11px; }
+    .yn[data-v="No"]::before  { content: 'NO';  right: 7px; }
+    .yn[data-v="Yes"]::before { content: 'YES'; left: 6px; }
     .yn::after {
       content: '';
       position: absolute;
-      top: 2px;
-      width: 22px; height: 22px;
+      top: 1px;
+      width: 16px; height: 16px;
       border-radius: 50%;
       background: linear-gradient(135deg, #ffffff 35%, #d4d4d4 100%);
       border: 1px solid #b0b0b0;
-      box-shadow: 0 2px 3px rgba(0,0,0,0.25);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.25);
       transition: left 0.18s ease;
     }
-    .yn[data-v="No"]::after  { left: 2px; }
-    .yn[data-v="Yes"]::after { left: calc(100% - 24px); }
+    .yn[data-v="No"]::after  { left: 1px; }
+    .yn[data-v="Yes"]::after { left: calc(100% - 17px); }
     .yn.individually-set { outline: 2px solid #f0c84a; outline-offset: 1px; }
+
+    /* Sortable column headers */
+    th.sortable { cursor: pointer; user-select: none; }
+    th.sortable:hover { background: #e8eef4; }
+    th.sortable .sort-ind { display: inline-block; width: 10px; text-align: center; opacity: 0.45; font-weight: 700; }
+    th.sortable.sort-asc  .sort-ind::after { content: '▲'; opacity: 1; }
+    th.sortable.sort-desc .sort-ind::after { content: '▼'; opacity: 1; }
+
+    /* Refresh button */
+    .refresh-btn { background: #fff; border: 1px solid #d0d4d8; color: #565c63; padding: 6px 12px; font-size: 0.78rem; font-weight: 600; border-radius: 6px; cursor: pointer; }
+    .refresh-btn:hover { background: #f3f5f7; color: #2b3036; }
+    .refresh-btn:active { background: #eef0f2; }
 
     .chk { width: 20px; height: 20px; accent-color: #4a5158; cursor: pointer; vertical-align: middle; }
     .col-chk { width: 36px; text-align: center; }
 
-    .col-name { min-width: 160px; }
-    .col-due  { min-width: 92px; white-space: nowrap; font-size: 0.78rem; }
-    .col-pumper { min-width: 84px; font-size: 0.78rem; }
-    .col-status { min-width: 76px; }
-    .col-q { min-width: 130px; }
+    .col-name { width: 32%; min-width: 180px; white-space: normal; }
+    .col-due  { width: 100px; white-space: nowrap; font-size: 0.82rem; }
+    .col-q    { width: 17%; min-width: 160px; }     /* room for the detail input below the toggle */
 
     .badge { display: inline-block; padding: 1px 7px; font-size: 0.68rem; border-radius: 9px; font-weight: 600; }
     .badge.due { background: #fff3cd; color: #856404; }
@@ -129,12 +140,16 @@
       table.batch thead th { border: 0; background: transparent; padding: 0; }
       table.batch thead th.col-chk { grid-column: 1; }
       table.batch thead th.col-name,
-      table.batch thead th.col-due,
-      table.batch thead th.col-pumper,
-      table.batch thead th.col-status { display: none; }
-      table.batch thead th.q-hdr { padding: 0; font-size: 0.58rem; }
-      table.batch thead th.q-hdr .q-label { margin-bottom: 2px; font-size: 0.58rem; }
-      table.batch thead th.q-hdr .yn { transform: scale(0.92); transform-origin: left center; }
+      table.batch thead th.col-due { display: none; }
+      table.batch thead th.q-hdr { padding: 0; font-size: 0.56rem; }
+      table.batch thead th.q-hdr .q-label { margin-bottom: 2px; font-size: 0.56rem; }
+      /* Phone: shrink the toggle further (~38×14) */
+      .yn { width: 38px; height: 14px; border-radius: 7px; }
+      .yn::before { font-size: 0.46rem; }
+      .yn[data-v="No"]::before  { right: 5px; }
+      .yn[data-v="Yes"]::before { left:  5px; }
+      .yn::after { width: 12px; height: 12px; top: 1px; }
+      .yn[data-v="Yes"]::after { left: calc(100% - 13px); }
       /* Body rows are cards on mobile */
       table.batch tbody tr { border: 1px solid #eef2ee; border-radius: 8px; margin: 6px 8px; padding: 8px 10px; background: #fff; }
       table.batch tbody tr.unchecked { opacity: 0.55; }
@@ -143,10 +158,8 @@
       table.batch td { border: 0; padding: 3px 0; }
       table.batch td.col-chk { display: inline-block; vertical-align: middle; padding-right: 6px; }
       table.batch td.col-name { display: inline-block; font-weight: 700; font-size: 0.88rem; }
-      table.batch td.col-due, table.batch td.col-pumper, table.batch td.col-status { display: inline-block; font-size: 0.7rem; color: #6b7177; padding-right: 8px; }
+      table.batch td.col-due { display: inline-block; font-size: 0.7rem; color: #6b7177; padding-right: 8px; }
       table.batch td.col-due::before { content: 'Due '; color: #9aa0a6; }
-      table.batch td.col-pumper::before { content: '· '; color: #9aa0a6; }
-      table.batch td.col-status::before { content: '· '; color: #9aa0a6; }
       table.batch td.col-q { display: grid; grid-template-columns: 60px 1fr; gap: 6px; align-items: center; padding: 4px 0; border-top: 1px solid #eef2ee; min-width: 0; text-align: left; }
       table.batch td.col-q::before { content: attr(data-q-label); font-size: 0.62rem; font-weight: 700; text-transform: uppercase; color: #565c63; letter-spacing: 0.04em; }
       table.batch td.col-q .q-cell { align-items: flex-start; gap: 4px; }
@@ -244,20 +257,7 @@
 <div class="page">
 
   <div class="toolbar">
-    <label>Window:</label>
-    <select id="windowSelect">
-      <option value="7">Due within 7 days</option>
-      <option value="14" selected>Due within 14 days</option>
-      <option value="30">Due within 30 days</option>
-      <option value="60">Due within 60 days</option>
-    </select>
-    <label>Status:</label>
-    <select id="statusSelect">
-      <option value="">All (due, overdue &amp; gaps)</option>
-      <option value="Overdue">Overdue only</option>
-      <option value="Never AVO">Never AVO</option>
-      <option value="No inspection link">No inspection link</option>
-    </select>
+    <button type="button" class="refresh-btn" id="refreshBtn" title="Reload open list">↻ Refresh</button>
     <div class="summary" id="summary"></div>
   </div>
 
@@ -266,10 +266,8 @@
       <thead>
         <tr>
           <th class="col-chk"><input type="checkbox" id="masterChk" class="chk" title="Check / uncheck all" checked></th>
-          <th class="col-name">Name</th>
-          <th class="col-due">Required Date</th>
-          <th class="col-pumper">Pumper</th>
-          <th class="col-status">Status</th>
+          <th class="col-name sortable" data-sort="site_name">Name <span class="sort-ind"></span></th>
+          <th class="col-due sortable" data-sort="due_date">Due Date <span class="sort-ind"></span></th>
           <th class="col-q q-hdr">
             <span class="q-label">Odor</span>
             <div class="yn" id="masterOdor" data-q="odor" data-v="No" role="switch" aria-checked="false" tabindex="0"></div>
@@ -285,7 +283,7 @@
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="8" class="state-msg"><span class="spinner"></span>Loading due inspections...</td></tr>
+        <tr><td colspan="6" class="state-msg"><span class="spinner"></span>Loading open inspections...</td></tr>
       </tbody>
     </table>
   </div>
@@ -429,9 +427,19 @@ function fmtDate(s) {
 function initApp(session) {
   currentSession = session;
 
-  document.getElementById('windowSelect').addEventListener('change', load);
-  document.getElementById('statusSelect').addEventListener('change', load);
+  document.getElementById('refreshBtn').addEventListener('click', load);
   document.getElementById('masterChk').addEventListener('change', onMasterChk);
+
+  // Sortable column headers — cycle asc → desc → asc on repeated clicks
+  document.querySelectorAll('th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.sort;
+      if (SORT.col === col) SORT.dir = SORT.dir === 'asc' ? 'desc' : 'asc';
+      else                  { SORT.col = col; SORT.dir = col === 'due_date' ? 'asc' : 'asc'; }
+      renderRows();
+    });
+  });
+
   QUESTIONS.forEach(q => {
     const m = document.getElementById('master' + q[0].toUpperCase() + q.slice(1));
     // Click anywhere on the pill = toggle between No / Yes
@@ -456,38 +464,28 @@ async function load() {
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '<tr><td colspan="8" class="state-msg"><span class="spinner"></span>Loading due inspections…</td></tr>';
 
-  const params = new URLSearchParams();
-  // No inspector param — /avo/due enforces role-based visibility server-side.
-  const within = document.getElementById('windowSelect').value;
-  if (within) params.set('within_days', within);
-  const st = document.getElementById('statusSelect').value;
-  if (st) params.set('status', st);
-
   try {
-    // Authed via fae-auth (30-day fae1.* session token + auto-401-retry).
-    // Bug #415: was using the raw ~1h Google JWT, which silently 401'd.
-    const r = await window.faeAuth.fetchAuthed(API_BASE, API_BASE + '/avo/due?' + params.toString());
+    // No params — endpoint returns every open row from dbo.avo_due. Front-end
+    // owns sort. Authed via fae-auth (30-day fae1.* session token + auto-401-retry).
+    const r = await window.faeAuth.fetchAuthed(API_BASE, API_BASE + '/avo/due');
     if (r.status === 404) {
-      tbody.innerHTML = '<tr><td colspan="8" class="state-msg warn">'
-        + 'GET /avo/due endpoint not yet wired — orchestrator task 373 enqueued. '
-        + 'In the meantime, use <a href="avo.html" style="color:#4a5158;text-decoration:underline">single-location AVO form</a>.'
+      tbody.innerHTML = '<tr><td colspan="6" class="state-msg warn">'
+        + 'GET /avo/due endpoint not yet wired. In the meantime use the '
+        + '<a href="avo.html" style="color:#4a5158;text-decoration:underline">single-location AVO form</a>.'
         + '</td></tr>';
       DUE_ROWS = []; STATE = {}; updateSubmitButton();
       return;
     }
-    // Distinguish an auth/session failure from a genuine empty result so a 401
-    // can't masquerade as "no inspections due" (the core symptom of #415).
     if (r.status === 401 || r.status === 403) {
-      tbody.innerHTML = '<tr><td colspan="8" class="state-msg err">'
-        + 'Could not load inspections (auth/session expired). Try reloading the page, '
-        + 'or sign out and back in.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="state-msg err">'
+        + 'Could not load inspections (auth/session expired). Reload the page or sign out and back in.</td></tr>';
       DUE_ROWS = []; STATE = {}; updateSubmitButton();
       return;
     }
     if (!r.ok) throw new Error('HTTP ' + r.status);
     DUE_ROWS = await r.json();
   } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="8" class="state-msg err">'
+    tbody.innerHTML = '<tr><td colspan="6" class="state-msg err">'
       + 'Could not load inspections (' + esc(err.message || err) + '). Try reloading.</td></tr>';
     DUE_ROWS = []; STATE = {}; updateSubmitButton();
     return;
@@ -512,52 +510,51 @@ async function load() {
   updateSubmitButton();
 }
 
-// Stable per-facility grouping key (facility_id, or fac_name when id is null).
-function facKey(r) { return r.facility_id != null ? 'F' + r.facility_id : 'N' + (r.fac_name || ''); }
+// Sort state — clicking a sortable header cycles asc → desc.
+let SORT = { col: 'due_date', dir: 'asc' };
 
-// Build contiguous facility groups in DUE_ROWS order (the endpoint already
-// orders wells by facility, soonest-due site first).
-function buildGroups() {
-  const groups = [];
-  const byKey = {};
-  DUE_ROWS.forEach((r, i) => {
-    const k = facKey(r);
-    if (!(k in byKey)) {
-      byKey[k] = groups.length;
-      groups.push({ key: k, fac_name: r.fac_name, company: r.company,
-                    pumper: r.pumper, frequency: r.avo_frequency,
-                    site_gas: r.site_gas_mcfd, idxs: [] });
-    }
-    groups[byKey[k]].idxs.push(i);
-  });
-  return groups;
+function rowName(r) { return r.site_name || r.fac_name || r.well_name || ''; }
+function rowDate(r) {
+  // dbo.avo_due column is `due_date`; tolerate the older `next_due_date` too.
+  const s = r.due_date || r.next_due_date;
+  if (!s) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s));
+  return m ? new Date(+m[1], +m[2] - 1, +m[3]).getTime() : null;
 }
 
-function statusBadgeHtml(status) {
-  const s = (status || '').toLowerCase();
-  let cls = 'ok';
-  if (s === 'overdue' || s === 'never avo') cls = 'overdue';
-  else if (s === 'no inspection link') cls = 'gap';
-  else if (s === 'ok') cls = 'ok';
-  else if (s === 'approaching') cls = 'approaching';
-  else cls = 'due';
-  return '<span class="badge ' + cls + '">' + esc(status || '—') + '</span>';
+function sortedIndices() {
+  const idxs = DUE_ROWS.map((_, i) => i);
+  const dir = SORT.dir === 'desc' ? -1 : 1;
+  idxs.sort((a, b) => {
+    const ra = DUE_ROWS[a], rb = DUE_ROWS[b];
+    let va, vb;
+    if (SORT.col === 'due_date') { va = rowDate(ra); vb = rowDate(rb); }
+    else                         { va = rowName(ra).toUpperCase(); vb = rowName(rb).toUpperCase(); }
+    if (va == null && vb == null) return 0;
+    if (va == null) return  1;   // missing dates sink to the bottom regardless of dir
+    if (vb == null) return -1;
+    if (va < vb) return -1 * dir;
+    if (va > vb) return  1 * dir;
+    return 0;
+  });
+  return idxs;
 }
 
 function renderRows() {
   const tbody = document.getElementById('tbody');
   if (!DUE_ROWS.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="state-msg">No inspections currently due in this window.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="state-msg">No open inspections.</td></tr>';
+    updateSortIndicators();
+    updateSummary();
     return;
   }
 
-  const groups = buildGroups();
-
-  function wellRow(i) {
+  function rowHtml(i) {
     const r = DUE_ROWS[i];
     const s = STATE[i];
     const cls = s.checked ? '' : 'unchecked';
-    const overdueNote = (r.days_overdue && r.days_overdue > 0) ? ' (' + r.days_overdue + 'd)' : '';
+    const dueIso = r.due_date || r.next_due_date;
+    const dueCell = dueIso ? esc(fmtDate(dueIso)) : '';
 
     function qCell(q, label) {
       const v = s[q];
@@ -577,55 +574,17 @@ function renderRows() {
 
     return '<tr class="' + cls + '" data-row="' + i + '">'
       + '<td class="col-chk"><input type="checkbox" class="chk row-chk" data-row="' + i + '"' + (s.checked ? ' checked' : '') + '></td>'
-      + '<td class="col-name is-well">' + esc(r.well_name || r.fac_name || '—') + '</td>'
-      + '<td class="col-due">' + esc(fmtDate(r.next_due_date)) + overdueNote + '</td>'
-      + '<td class="col-pumper">' + esc(r.pumper || '—') + '</td>'
-      + '<td class="col-status">' + statusBadgeHtml(r.status) + '</td>'
+      + '<td class="col-name">' + esc(rowName(r) || '—') + '</td>'
+      + '<td class="col-due">' + dueCell + '</td>'
       + qCell('odor',   'Odor')
       + qCell('leaks',  'Leaks')
       + qCell('noises', 'Noises')
       + '</tr>';
   }
 
-  function siteHeader(g) {
-    const all  = g.idxs.every(i => STATE[i].checked);
-    const n    = g.idxs.length;
-    const gas  = (g.site_gas != null && !isNaN(g.site_gas))
-               ? (Math.round(g.site_gas * 10) / 10) + ' Mcf/d' : '';
-    return '<tr class="site-row" data-fac="' + esc(g.key) + '">'
-      + '<td class="col-chk"><input type="checkbox" class="chk site-chk" data-fac="' + esc(g.key) + '"' + (all ? ' checked' : '') + ' title="Check / uncheck all wells at this site"></td>'
-      + '<td colspan="7">' + esc(g.fac_name || '(unnamed site)')
-      +   ' <span class="site-meta">· ' + n + ' well' + (n === 1 ? '' : 's')
-      +     (g.company  ? ' · ' + esc(g.company) : '')
-      +     (g.pumper   ? ' · ' + esc(g.pumper)  : '')
-      +     (g.frequency ? ' · <b>' + esc(g.frequency) + '</b>' : '')
-      +     (gas        ? ' · ' + esc(gas) : '')
-      +   '</span></td>'
-      + '</tr>';
-  }
+  tbody.innerHTML = sortedIndices().map(rowHtml).join('');
 
-  tbody.innerHTML = groups.map(g =>
-    siteHeader(g) + g.idxs.map(wellRow).join('')
-  ).join('');
-
-  // wire site (facility) checkboxes — toggle every well under the site
-  tbody.querySelectorAll('.site-chk').forEach(el => {
-    const g = groups.find(x => x.key === el.dataset.fac);
-    if (g) {
-      const all  = g.idxs.every(i => STATE[i].checked);
-      const some = g.idxs.some(i => STATE[i].checked);
-      el.indeterminate = some && !all;
-    }
-    el.addEventListener('change', () => {
-      const g2 = groups.find(x => x.key === el.dataset.fac);
-      if (!g2) return;
-      g2.idxs.forEach(i => { STATE[i].checked = el.checked; STATE[i].chk_touched = true; });
-      renderRows();
-      updateSubmitButton();
-    });
-  });
-
-  // wire row checkboxes
+  // Row checkboxes
   tbody.querySelectorAll('.row-chk').forEach(el => {
     el.addEventListener('change', () => {
       const i = +el.dataset.row;
@@ -635,7 +594,7 @@ function renderRows() {
       updateSubmitButton();
     });
   });
-  // wire row Y/N slide toggles — click anywhere on the pill toggles state
+  // Row Y/N slide toggles — click anywhere on the pill toggles state
   tbody.querySelectorAll('.yn[data-row]').forEach(pair => {
     const flip = () => {
       const i = +pair.dataset.row;
@@ -650,7 +609,7 @@ function renderRows() {
       if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flip(); }
     });
   });
-  // wire detail inputs (input handler only — no re-render so focus is kept)
+  // Detail inputs (no re-render on type — focus stays)
   tbody.querySelectorAll('.detail-input').forEach(inp => {
     inp.addEventListener('input', () => {
       const i = +inp.dataset.row;
@@ -659,17 +618,25 @@ function renderRows() {
     });
   });
 
-  // summary
+  updateSortIndicators();
+  updateSummary();
+}
+
+function updateSortIndicators() {
+  document.querySelectorAll('th.sortable').forEach(th => {
+    th.classList.toggle('sort-asc',  SORT.col === th.dataset.sort && SORT.dir === 'asc');
+    th.classList.toggle('sort-desc', SORT.col === th.dataset.sort && SORT.dir === 'desc');
+  });
+}
+
+function updateSummary() {
   const total = DUE_ROWS.length;
-  const sites = groups.length;
   const checked = DUE_ROWS.filter((_, i) => STATE[i].checked).length;
-  const overdue = DUE_ROWS.filter(r => (r.status || '').toLowerCase() === 'overdue').length;
-  const nolink  = DUE_ROWS.filter(r => (r.status || '').toLowerCase() === 'no inspection link').length;
+  const wells = DUE_ROWS.filter(r => (r.unit_type || '').toLowerCase() === 'well').length;
+  const facs  = DUE_ROWS.filter(r => (r.unit_type || '').toLowerCase() === 'facility').length;
   document.getElementById('summary').innerHTML =
-    '<b>' + total + '</b> well' + (total === 1 ? '' : 's') + ' at <b>' + sites + '</b> site' + (sites === 1 ? '' : 's')
-    + ' · <b>' + checked + '</b> selected'
-    + (overdue ? ' · <b>' + overdue + '</b> overdue' : '')
-    + (nolink ? ' · <b>' + nolink + '</b> never AVO-ed' : '');
+    '<b>' + total + '</b> open · <b>' + checked + '</b> selected'
+    + (wells || facs ? ' · ' + wells + ' well' + (wells === 1 ? '' : 's') + ', ' + facs + ' facilit' + (facs === 1 ? 'y' : 'ies') : '');
 }
 
 function onMasterChk(e) {
@@ -726,10 +693,17 @@ function generateDatetimes(checkedRows) {
   const result = new Map();  // i -> 'YYYY-MM-DDTHH:MM'
 
   checkedRows.forEach(({ row, i }) => {
-    const due = new Date(row.next_due_date + 'T00:00:00');
-    const off = randInt(0, DAYS_BEFORE_DUE);  // 0..3 days BEFORE due
-    const d = new Date(due);
-    d.setDate(d.getDate() - off);
+    const dueIso = row.due_date || row.next_due_date;
+    let d;
+    if (dueIso) {
+      const due = new Date(dueIso + 'T00:00:00');
+      const off = randInt(0, DAYS_BEFORE_DUE);  // 0..3 days BEFORE due
+      d = new Date(due);
+      d.setDate(d.getDate() - off);
+    } else {
+      // No due date on file — anchor on today.
+      d = new Date(); d.setHours(0, 0, 0, 0);
+    }
     result.set(i, { date: d, pumper: (row.pumper || '_').toUpperCase() });
   });
 
@@ -810,14 +784,22 @@ async function submitBatch() {
 
   for (const { row, i } of checkedRows) {
     const s = STATE[i];
+    const name = rowName(row);
+    const unitType = (row.unit_type || '').toLowerCase();
     const body = {
+      // Contract: backend closes dbo.avo_due (status=closed, closed_pumper,
+      // closed_date, inspection_entry_id) by due_id, then INSERTs into
+      // dbo.avo_inspections.
+      due_id:              row.due_id,
+      unit_key:            row.unit_key,
+      unit_type:           row.unit_type,
       inspection_datetime: datetimes.get(i),
       weather_conditions:  '',
-      item:                row.well_name || row.fac_name,
-      location:            row.well_name || row.fac_name,
+      item:                name,
+      location:            name,
       facility_id:         row.facility_id,
       well_api:            row.well_api,
-      linked_item_type:    'Wells',
+      linked_item_type:    unitType === 'facility' ? 'Facilities' : 'Wells',
       odor_detected:       s.odor,
       odor_detail:         s.odor   === 'Yes' ? s.detail.odor   : '',
       leaks_observed:      s.leaks,
