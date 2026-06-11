@@ -186,8 +186,10 @@
     .success-card .btn { display: inline-block; padding: 9px 20px; margin: 4px; background: #4a5158; color: #fff; border-radius: 7px; border: none; cursor: pointer; font-size: 0.88rem; font-weight: 600; text-decoration: none; }
     .success-card .btn.alt { background: #f0eee9; color: #3a3a3a; }
 
-    /* Login overlay */
-    #login-overlay { position: fixed; inset: 0; z-index: 9999; background: #0d260d; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+    /* Login overlay — hidden by default. Only shown if every session-resume
+       path (localStorage / fae40_sso cookie / fae-auth.js) failed. */
+    #login-overlay { position: fixed; inset: 0; z-index: 9999; background: #0d260d; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+    #login-overlay.show { display: flex; }
     #login-overlay .login-logo { font-size: 2.8rem; font-weight: 900; letter-spacing: -1px; color: #5b626b; }
     #login-overlay .login-logo span { color: #fff; font-weight: 300; }
     #login-overlay .login-tagline { color: #90bc90; font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase; margin-top: -16px; }
@@ -377,7 +379,9 @@ async function handleCredentialResponse(response) {
 }
 
 function showApp(session) {
-  document.getElementById('login-overlay').style.display = 'none';
+  const ov = document.getElementById('login-overlay');
+  ov.classList.remove('show');
+  ov.style.display = 'none';
   initApp(session);
 }
 
@@ -396,19 +400,31 @@ let STATE = {};
 let MASTER = { odor: 'No', leaks: 'No', noises: 'No' };
 const QUESTIONS = ['odor', 'leaks', 'noises'];
 
-// Resume an existing session — MUST run AFTER the app-state `let`s above are
-// initialized. (It previously ran before `let currentSession`, so showApp ->
-// initApp hit a TDZ "Cannot access 'currentSession' before initialization"
-// ReferenceError that crashed init and left the page stuck on "Loading…".)
+// Resume an existing session.
+// Lenient: if there is ANY session blob (with or without an `expires` field,
+// freshly minted Google JWT or a longer-lived fae1.* token already paired by
+// fae-auth.js), just hand it to showApp() and let fae-auth.fetchAuthed
+// do the right thing (exchange / refresh / 401-retry). The overlay is hidden
+// by default; we only show it when we have absolutely no session at all,
+// so a signed-in user navigating across forms.40ac.us pages never sees the
+// Google login screen flash up. (The strict `expires > Date.now()` check
+// used to wipe long-lived faeToken sessions just because the original
+// Google JWT had aged past its 1h expiry, which made my-avo look broken
+// for everyone whose last sign-in was more than an hour ago.)
 (function () {
   try {
     const saved = localStorage.getItem(SESSION_KEY);
     if (saved) {
       const s = JSON.parse(saved);
-      if (s.expires > Date.now()) { showApp(s); return; }
-      localStorage.removeItem(SESSION_KEY);
+      if (s && (s.faeToken || s.credential || s.token || s.email)) {
+        showApp(s);
+        return;
+      }
     }
-  } catch(e) { localStorage.removeItem(SESSION_KEY); }
+  } catch(e) {}
+  // No session at all — show the sign-in overlay so the user can sign in.
+  // We do NOT pre-clear localStorage; another tab might be mid-bootstrap.
+  document.getElementById('login-overlay').classList.add('show');
 })();
 
 function esc(s) {
