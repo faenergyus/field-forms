@@ -23,10 +23,11 @@
     #login-overlay {
       position: fixed; inset: 0; z-index: 9999;
       background: #0d260d;
-      display: flex; flex-direction: column;
+      display: none; flex-direction: column;
       align-items: center; justify-content: center;
       gap: 24px;
     }
+    #login-overlay.show { display: flex; }
     #login-overlay .login-logo { font-size: 2.8rem; font-weight: 900; letter-spacing: -1px; color: #5b626b; }
     #login-overlay .login-logo span { color: #fff; font-weight: 300; }
     #login-overlay .login-tagline { color: #90bc90; font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase; margin-top: -16px; }
@@ -353,7 +354,9 @@ async function handleCredentialResponse(response) {
 }
 
 function showPortal(session) {
-  document.getElementById('login-overlay').style.display = 'none';
+  const ov = document.getElementById('login-overlay');
+  ov.classList.remove('show');
+  ov.style.display = 'none';
   document.getElementById('user-badge').style.display    = 'flex';
   document.getElementById('user-name').textContent       = 'Welcome, ' + session.displayName;
   const av = document.getElementById('user-avatar');
@@ -458,16 +461,23 @@ function toggleUsed(rowNum, checked, el) {
     });
 }
 
-// ── Session check (runs last so REPORT_API and all functions are defined) ──
+// Lenient session resume — fae-auth.js handles token freshness via
+// /auth/session. Any session shape (faeToken / credential / token / email)
+// is enough to proceed; don't destroy localStorage if the original Google
+// JWT timestamp aged out.
 (function () {
   try {
-    const saved = localStorage.getItem(SESSION_KEY);
-    if (saved) {
-      const session = JSON.parse(saved);
-      if (session.expires > Date.now()) { showPortal(session); loadReport(); return; }
-      localStorage.removeItem(SESSION_KEY);
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s && (s.faeToken || s.credential || s.token || s.email)) {
+        showPortal(s);
+        loadReport();
+        return;
+      }
     }
-  } catch(e) { localStorage.removeItem(SESSION_KEY); }
+  } catch(e) {}
+  document.getElementById('login-overlay').classList.add('show');
 })();
 </script>
 <script src="chrome.js"></script>

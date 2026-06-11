@@ -70,7 +70,8 @@
     .success-card .btn { display: inline-block; padding: 9px 20px; margin: 4px; background: #4a5158; color: #fff; border-radius: 7px; border: none; cursor: pointer; font-size: 0.88rem; font-weight: 600; text-decoration: none; }
     .success-card .btn.alt { background: #f0eee9; color: #3a3a3a; }
     /* Login overlay */
-    #login-overlay { position: fixed; inset: 0; z-index: 9999; background: #0d260d; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+    #login-overlay { position: fixed; inset: 0; z-index: 9999; background: #0d260d; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+    #login-overlay.show { display: flex; }
     #login-overlay .login-logo { font-size: 2.8rem; font-weight: 900; letter-spacing: -1px; color: #5b626b; }
     #login-overlay .login-logo span { color: #fff; font-weight: 300; }
     #login-overlay .login-tagline { color: #90bc90; font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase; margin-top: -16px; }
@@ -290,19 +291,27 @@ async function handleCredentialResponse(response) {
 }
 
 function showApp(session) {
-  document.getElementById('login-overlay').style.display = 'none';
+  const ov = document.getElementById('login-overlay');
+  ov.classList.remove('show');
+  ov.style.display = 'none';
   initApp(session);
 }
 
+// Lenient resume — fae-auth.js handles token freshness via /auth/session.
+// Don't destroy localStorage on stale Google-JWT timestamps (was making
+// every form page flash the Google sign-in screen after the first hour).
 (function () {
   try {
-    const saved = localStorage.getItem(SESSION_KEY);
-    if (saved) {
-      const s = JSON.parse(saved);
-      if (s.expires > Date.now()) { showApp(s); return; }
-      localStorage.removeItem(SESSION_KEY);
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s && (s.faeToken || s.credential || s.token || s.email)) {
+        showApp(s);
+        return;
+      }
     }
-  } catch(e) { localStorage.removeItem(SESSION_KEY); }
+  } catch(e) {}
+  document.getElementById('login-overlay').classList.add('show');
 })();
 
 // ── App logic ───────────────────────────────────────────────────────────────
