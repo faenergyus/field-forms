@@ -32,14 +32,48 @@
     table.batch tr.unchecked td { background: #fafbfc; color: #9aa0a6; }
     table.batch tr.unchecked td.col-name, table.batch tr.unchecked td.col-due { color: #6b7177; }
 
-    /* Compact pill Y/N toggle */
-    .yn { display: inline-flex; border: 1px solid #d0d4d8; border-radius: 999px; overflow: hidden; background: #fff; line-height: 1; }
-    .yn .opt { padding: 4px 10px; cursor: pointer; user-select: none; font-size: 0.7rem; font-weight: 700; color: #9aa0a6; letter-spacing: 0.02em; }
-    .yn .opt .dot { display: none; }  /* legacy markup: hide the dot span */
-    .yn .opt:hover:not(.sel) { background: #f3f5f7; color: #565c63; }
-    .yn .opt.no.sel  { background: #4a5158; color: #fff; }
-    .yn .opt.yes.sel { background: #a23022; color: #fff; }
-    .yn.individually-set { box-shadow: 0 0 0 2px #f0c84a; }
+    /* Slide-toggle Y/N — single pill, click anywhere to toggle.
+       Track color = selection (red NO, green YES); label sits on the
+       colored side; white knob sits on the opposite end. */
+    .yn {
+      position: relative;
+      display: inline-block;
+      width: 72px; height: 26px;
+      border-radius: 13px;
+      background: #c0392b;
+      cursor: pointer;
+      user-select: none;
+      vertical-align: middle;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.15);
+      transition: background 0.18s ease;
+    }
+    .yn[data-v="Yes"] { background: #2e9b3a; }
+    .yn::before {
+      position: absolute;
+      top: 0; bottom: 0;
+      display: flex; align-items: center;
+      font-size: 0.66rem; font-weight: 800; color: #fff;
+      letter-spacing: 0.04em;
+      pointer-events: none;
+      transition: left 0.18s ease, right 0.18s ease;
+      text-shadow: 0 1px 0 rgba(0,0,0,0.12);
+    }
+    .yn[data-v="No"]::before  { content: 'NO';  right: 12px; }
+    .yn[data-v="Yes"]::before { content: 'YES'; left: 11px; }
+    .yn::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ffffff 35%, #d4d4d4 100%);
+      border: 1px solid #b0b0b0;
+      box-shadow: 0 2px 3px rgba(0,0,0,0.25);
+      transition: left 0.18s ease;
+    }
+    .yn[data-v="No"]::after  { left: 2px; }
+    .yn[data-v="Yes"]::after { left: calc(100% - 24px); }
+    .yn.individually-set { outline: 2px solid #f0c84a; outline-offset: 1px; }
 
     .chk { width: 20px; height: 20px; accent-color: #4a5158; cursor: pointer; vertical-align: middle; }
     .col-chk { width: 36px; text-align: center; }
@@ -235,24 +269,15 @@
           <th class="col-status">Status</th>
           <th class="col-q q-hdr">
             <span class="q-label">Odor</span>
-            <div class="yn" id="masterOdor" data-q="odor">
-              <span class="opt no sel" data-v="No"><span class="dot"></span>No</span>
-              <span class="opt yes"    data-v="Yes"><span class="dot"></span>Yes</span>
-            </div>
+            <div class="yn" id="masterOdor" data-q="odor" data-v="No" role="switch" aria-checked="false" tabindex="0"></div>
           </th>
           <th class="col-q q-hdr">
             <span class="q-label">Leaks</span>
-            <div class="yn" id="masterLeaks" data-q="leaks">
-              <span class="opt no sel" data-v="No"><span class="dot"></span>No</span>
-              <span class="opt yes"    data-v="Yes"><span class="dot"></span>Yes</span>
-            </div>
+            <div class="yn" id="masterLeaks" data-q="leaks" data-v="No" role="switch" aria-checked="false" tabindex="0"></div>
           </th>
           <th class="col-q q-hdr">
             <span class="q-label">Noises</span>
-            <div class="yn" id="masterNoises" data-q="noises">
-              <span class="opt no sel" data-v="No"><span class="dot"></span>No</span>
-              <span class="opt yes"    data-v="Yes"><span class="dot"></span>Yes</span>
-            </div>
+            <div class="yn" id="masterNoises" data-q="noises" data-v="No" role="switch" aria-checked="false" tabindex="0"></div>
           </th>
         </tr>
       </thead>
@@ -423,8 +448,18 @@ function initApp(session) {
   document.getElementById('masterChk').addEventListener('change', onMasterChk);
   QUESTIONS.forEach(q => {
     const m = document.getElementById('master' + q[0].toUpperCase() + q.slice(1));
-    m.querySelectorAll('.opt').forEach(b => {
-      b.addEventListener('click', () => onMasterYn(q, b.dataset.v));
+    // Click anywhere on the pill = toggle between No / Yes
+    m.addEventListener('click', () => {
+      const next = m.dataset.v === 'Yes' ? 'No' : 'Yes';
+      onMasterYn(q, next);
+    });
+    // Keyboard accessibility (Space / Enter)
+    m.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        const next = m.dataset.v === 'Yes' ? 'No' : 'Yes';
+        onMasterYn(q, next);
+      }
     });
   });
   document.getElementById('submitBtn').addEventListener('click', submitBatch);
@@ -540,15 +575,12 @@ function renderRows() {
     function qCell(q, label) {
       const v = s[q];
       const touched = s[q + '_touched'];
-      const showDetail = s[q] === 'Yes';
-      const noSel  = v === 'No'  ? ' sel' : '';
-      const yesSel = v === 'Yes' ? ' sel' : '';
+      const showDetail = v === 'Yes';
       return '<td class="col-q" data-q-label="' + label + '">'
            + '<div class="q-cell">'
-           +   '<div class="yn' + (touched ? ' individually-set' : '') + '" data-row="' + i + '" data-q="' + q + '">'
-           +     '<span class="opt no' + noSel  + '" data-v="No"><span class="dot"></span>No</span>'
-           +     '<span class="opt yes' + yesSel + '" data-v="Yes"><span class="dot"></span>Yes</span>'
-           +   '</div>'
+           +   '<div class="yn' + (touched ? ' individually-set' : '') + '" '
+           +        'data-row="' + i + '" data-q="' + q + '" data-v="' + v + '" '
+           +        'role="switch" aria-checked="' + (v === 'Yes') + '" tabindex="0"></div>'
            +   '<input class="detail-input ' + (showDetail ? '' : 'hidden') + '" '
            +         'placeholder="Describe…" data-row="' + i + '" data-q="' + q + '" '
            +         'value="' + esc(s.detail[q]) + '">'
@@ -616,17 +648,19 @@ function renderRows() {
       updateSubmitButton();
     });
   });
-  // wire row Y/N toggles (round circles)
+  // wire row Y/N slide toggles — click anywhere on the pill toggles state
   tbody.querySelectorAll('.yn[data-row]').forEach(pair => {
-    pair.querySelectorAll('.opt').forEach(b => {
-      b.addEventListener('click', () => {
-        const i = +pair.dataset.row;
-        const q = pair.dataset.q;
-        STATE[i][q] = b.dataset.v;
-        STATE[i][q + '_touched'] = true;
-        renderRows();
-        updateSubmitButton();
-      });
+    const flip = () => {
+      const i = +pair.dataset.row;
+      const q = pair.dataset.q;
+      STATE[i][q] = pair.dataset.v === 'Yes' ? 'No' : 'Yes';
+      STATE[i][q + '_touched'] = true;
+      renderRows();
+      updateSubmitButton();
+    };
+    pair.addEventListener('click', flip);
+    pair.addEventListener('keydown', e => {
+      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flip(); }
     });
   });
   // wire detail inputs (input handler only — no re-render so focus is kept)
@@ -662,11 +696,10 @@ function onMasterChk(e) {
 
 function onMasterYn(q, v) {
   MASTER[q] = v;
-  // update master pair visual (round circles)
+  // update master slide-toggle visual (data-v drives all CSS)
   const m = document.getElementById('master' + q[0].toUpperCase() + q.slice(1));
-  m.querySelectorAll('.opt').forEach(b => {
-    b.classList.toggle('sel', b.dataset.v === v);
-  });
+  m.dataset.v = v;
+  m.setAttribute('aria-checked', v === 'Yes');
   // propagate to non-touched rows
   DUE_ROWS.forEach((_, i) => {
     if (!STATE[i][q + '_touched']) STATE[i][q] = v;
