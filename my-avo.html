@@ -22,44 +22,84 @@
 
     .grid-card { background: #fff; border-radius: 9px; border: 1px solid #d8dadd; border-top: 3px solid #5b626b; overflow: hidden; }
 
+    /* Desktop table layout */
     table.batch { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-    table.batch th { text-align: left; padding: 9px 10px; background: #f3f5f7; border-bottom: 1.5px solid #d8dadd; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; color: #565c63; white-space: nowrap; vertical-align: middle; }
-    table.batch td { padding: 8px 10px; border-bottom: 1px solid #eef2ee; vertical-align: middle; }
+    table.batch th { text-align: left; padding: 8px 8px; background: #f3f5f7; border-bottom: 1.5px solid #d8dadd; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; color: #565c63; white-space: nowrap; vertical-align: top; }
+    table.batch th.q-hdr { text-align: center; padding: 6px 8px; }
+    table.batch th.q-hdr .q-label { display: block; margin-bottom: 4px; }
+    table.batch td { padding: 8px; border-bottom: 1px solid #eef2ee; vertical-align: top; }
+    table.batch td.col-q { text-align: center; }
     table.batch tr.unchecked td { background: #fafbfc; color: #9aa0a6; }
     table.batch tr.unchecked td.col-name, table.batch tr.unchecked td.col-due { color: #6b7177; }
 
-    .yn-pair { display: inline-flex; border: 1px solid #d0d4d8; border-radius: 6px; overflow: hidden; }
-    .yn-pair button { background: #fff; color: #565c63; border: none; padding: 4px 10px; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
-    .yn-pair button.active.no { background: #eef0f2; color: #444a50; }
-    .yn-pair button.active.yes { background: #fde2e4; color: #a23022; }
-    .yn-pair button:not(.active):hover { background: #f6f7f8; }
-    .yn-pair.individually-set { box-shadow: inset 0 0 0 2px #f0c84a; }
+    /* Round-circle Y/N toggle (radio-style) */
+    .yn { display: inline-flex; gap: 8px; align-items: center; }
+    .yn .opt { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px; cursor: pointer; user-select: none; font-size: 0.78rem; font-weight: 600; color: #6b7177; border-radius: 6px; }
+    .yn .opt .dot { width: 16px; height: 16px; border: 2px solid #d0d4d8; border-radius: 50%; background: #fff; box-sizing: border-box; flex-shrink: 0; position: relative; }
+    .yn .opt.no.sel .dot { border-color: #4a5158; background: #4a5158; }
+    .yn .opt.yes.sel .dot { border-color: #a23022; background: #a23022; }
+    .yn .opt.no.sel .dot::after, .yn .opt.yes.sel .dot::after { content: ''; position: absolute; left: 3px; top: 3px; width: 6px; height: 6px; background: #fff; border-radius: 50%; }
+    .yn .opt.sel { color: #2b3036; }
+    .yn .opt:hover:not(.sel) .dot { border-color: #9aa0a6; }
+    .yn.individually-set { box-shadow: 0 0 0 2px #f0c84a; border-radius: 8px; padding: 2px 4px; }
 
-    .chk { width: 18px; height: 18px; accent-color: #4a5158; cursor: pointer; vertical-align: middle; }
-    .col-chk { width: 32px; text-align: center; }
+    .chk { width: 20px; height: 20px; accent-color: #4a5158; cursor: pointer; vertical-align: middle; }
+    .col-chk { width: 36px; text-align: center; }
 
-    .col-name { min-width: 180px; }
-    .col-due  { min-width: 100px; white-space: nowrap; }
-    .col-pumper { min-width: 90px; }
-    .col-status { min-width: 80px; }
-    .col-yn { width: 110px; }
-    .col-detail { min-width: 220px; }
+    .col-name { min-width: 160px; }
+    .col-due  { min-width: 92px; white-space: nowrap; font-size: 0.78rem; }
+    .col-pumper { min-width: 84px; font-size: 0.78rem; }
+    .col-status { min-width: 76px; }
+    .col-q { min-width: 130px; }
 
-    .badge { display: inline-block; padding: 1px 7px; font-size: 0.7rem; border-radius: 9px; font-weight: 600; }
+    .badge { display: inline-block; padding: 1px 7px; font-size: 0.68rem; border-radius: 9px; font-weight: 600; }
     .badge.due { background: #fff3cd; color: #856404; }
     .badge.overdue { background: #fdebec; color: #a23022; }
     .badge.approaching { background: #e2efff; color: #2b4a8a; }
     .badge.ok { background: #e8f3e8; color: #2e6b2e; }
 
-    .detail-input { width: 100%; padding: 5px 8px; font-size: 0.8rem; border: 1.5px solid #d0d4d8; border-radius: 5px; background: #fff; }
+    /* Per-row detail input slides in UNDER the toggle when Yes is selected */
+    .q-cell { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .detail-input { width: 100%; padding: 6px 8px; font-size: 0.8rem; border: 1.5px solid #d0d4d8; border-radius: 5px; background: #fff; }
     .detail-input:focus { outline: none; border-color: #5b626b; }
-    .detail-cell.disabled { opacity: 0.35; pointer-events: none; }
+    .detail-input.hidden { display: none; }
 
-    .submit-row { display: flex; gap: 12px; align-items: center; margin-top: 16px; }
+    .submit-row { display: flex; gap: 12px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
     .submit-btn { padding: 11px 22px; background: #4a5158; color: #fff; border: none; border-radius: 7px; font-size: 0.92rem; font-weight: 600; cursor: pointer; }
     .submit-btn:disabled { background: #9aa0a6; cursor: not-allowed; }
     .submit-btn:active { background: #1c5a1c; }
     .submit-info { font-size: 0.78rem; color: #6b7177; }
+
+    /* Mobile: collapse to single-column cards (≤640px) */
+    @media (max-width: 640px) {
+      .page { padding: 14px 10px 60px; }
+      .toolbar { gap: 8px; }
+      .toolbar .summary { margin-left: 0; width: 100%; order: 99; }
+      table.batch, table.batch thead, table.batch tbody, table.batch tr, table.batch td, table.batch th { display: block; }
+      table.batch thead { position: sticky; top: var(--chrome-hdr-h, 54px); z-index: 5; background: #f3f5f7; }
+      table.batch thead tr { display: grid; grid-template-columns: auto 1fr 1fr 1fr; gap: 6px; padding: 8px 10px; align-items: end; }
+      table.batch thead th { border: 0; background: transparent; padding: 0; }
+      table.batch thead th.col-chk { grid-column: 1; }
+      table.batch thead th.col-name,
+      table.batch thead th.col-due,
+      table.batch thead th.col-pumper,
+      table.batch thead th.col-status { display: none; }
+      table.batch thead th.q-hdr { grid-row: 1; }
+      table.batch tbody tr { border: 1px solid #eef2ee; border-radius: 8px; margin: 8px 10px; padding: 10px; background: #fff; }
+      table.batch tbody tr.unchecked { opacity: 0.55; }
+      table.batch tbody tr.unchecked td { background: transparent; }
+      table.batch td { border: 0; padding: 4px 0; }
+      table.batch td.col-chk { display: inline-block; vertical-align: middle; padding-right: 8px; }
+      table.batch td.col-name { display: inline-block; font-weight: 700; font-size: 0.95rem; }
+      table.batch td.col-due, table.batch td.col-pumper, table.batch td.col-status { display: inline-block; font-size: 0.74rem; color: #6b7177; padding-right: 10px; }
+      table.batch td.col-due::before { content: 'Due '; color: #9aa0a6; }
+      table.batch td.col-pumper::before { content: '· '; color: #9aa0a6; }
+      table.batch td.col-status::before { content: '· '; color: #9aa0a6; }
+      table.batch td.col-q { display: grid; grid-template-columns: 80px 1fr; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid #eef2ee; min-width: 0; text-align: left; }
+      table.batch td.col-q::before { content: attr(data-q-label); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #565c63; letter-spacing: 0.04em; }
+      table.batch td.col-q .q-cell { align-items: stretch; gap: 6px; }
+      table.batch td.col-q .yn { justify-content: flex-start; }
+    }
 
     .state-msg { color: #6b7177; font-size: 0.88rem; padding: 30px; text-align: center; }
     .state-msg.err { color: #c0392b; }
@@ -176,36 +216,36 @@
     <table class="batch" id="batch">
       <thead>
         <tr>
-          <th class="col-chk"><input type="checkbox" id="masterChk" class="chk" title="Check / uncheck all"></th>
+          <th class="col-chk"><input type="checkbox" id="masterChk" class="chk" title="Check / uncheck all" checked></th>
           <th class="col-name">Name</th>
           <th class="col-due">Required Date</th>
           <th class="col-pumper">Pumper</th>
           <th class="col-status">Status</th>
-          <th class="col-yn">Odor
-            <div class="yn-pair" id="masterOdor">
-              <button type="button" data-v="No" class="active no">No</button>
-              <button type="button" data-v="Yes">Yes</button>
+          <th class="col-q q-hdr">
+            <span class="q-label">Odor</span>
+            <div class="yn" id="masterOdor" data-q="odor">
+              <span class="opt no sel" data-v="No"><span class="dot"></span>No</span>
+              <span class="opt yes"    data-v="Yes"><span class="dot"></span>Yes</span>
             </div>
           </th>
-          <th class="col-detail" id="hdrOdorDetail" style="display:none">Odor detail</th>
-          <th class="col-yn">Leaks
-            <div class="yn-pair" id="masterLeaks">
-              <button type="button" data-v="No" class="active no">No</button>
-              <button type="button" data-v="Yes">Yes</button>
+          <th class="col-q q-hdr">
+            <span class="q-label">Leaks</span>
+            <div class="yn" id="masterLeaks" data-q="leaks">
+              <span class="opt no sel" data-v="No"><span class="dot"></span>No</span>
+              <span class="opt yes"    data-v="Yes"><span class="dot"></span>Yes</span>
             </div>
           </th>
-          <th class="col-detail" id="hdrLeaksDetail" style="display:none">Leaks detail</th>
-          <th class="col-yn">Noises
-            <div class="yn-pair" id="masterNoises">
-              <button type="button" data-v="No" class="active no">No</button>
-              <button type="button" data-v="Yes">Yes</button>
+          <th class="col-q q-hdr">
+            <span class="q-label">Noises</span>
+            <div class="yn" id="masterNoises" data-q="noises">
+              <span class="opt no sel" data-v="No"><span class="dot"></span>No</span>
+              <span class="opt yes"    data-v="Yes"><span class="dot"></span>Yes</span>
             </div>
           </th>
-          <th class="col-detail" id="hdrNoisesDetail" style="display:none">Noises detail</th>
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="11" class="state-msg"><span class="spinner"></span>Loading due inspections...</td></tr>
+        <tr><td colspan="8" class="state-msg"><span class="spinner"></span>Loading due inspections...</td></tr>
       </tbody>
     </table>
   </div>
@@ -328,6 +368,9 @@ function esc(s) {
 
 function fmtDate(s) {
   if (!s) return '—';
+  // Avoid the UTC-midnight gotcha: parse YYYY-MM-DD as a local date.
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s));
+  if (m) return `${+m[2]}/${+m[3]}/${m[1].slice(2)}`;
   try {
     const d = new Date(s);
     if (isNaN(d)) return s;
@@ -335,15 +378,35 @@ function fmtDate(s) {
   } catch (e) { return s; }
 }
 
+function isPumperRole(session) {
+  const r = (session && session.role || '').toLowerCase();
+  // Treat anything that's NOT an editor/admin/tech/engineer as a pumper for
+  // the purposes of "show only my rows". Pumpers can never override "Me".
+  return !['engineer', 'admin', 'tech'].includes(r);
+}
+
+function meName(session) {
+  return (session && (session.pbiName || session.displayName) || '').trim();
+}
+
 function initApp(session) {
   currentSession = session;
+
+  // Lock the inspector dropdown for non-editors so a pumper sees only their list.
+  const insp = document.getElementById('inspectorSelect');
+  if (isPumperRole(session)) {
+    insp.innerHTML = '<option value="me">Me</option>';
+    insp.value = 'me';
+    insp.disabled = true;
+  }
+
   document.getElementById('inspectorSelect').addEventListener('change', load);
   document.getElementById('windowSelect').addEventListener('change', load);
   document.getElementById('statusSelect').addEventListener('change', load);
   document.getElementById('masterChk').addEventListener('change', onMasterChk);
   QUESTIONS.forEach(q => {
     const m = document.getElementById('master' + q[0].toUpperCase() + q.slice(1));
-    m.querySelectorAll('button').forEach(b => {
+    m.querySelectorAll('.opt').forEach(b => {
       b.addEventListener('click', () => onMasterYn(q, b.dataset.v));
     });
   });
@@ -353,14 +416,12 @@ function initApp(session) {
 
 async function load() {
   const tbody = document.getElementById('tbody');
-  tbody.innerHTML = '<tr><td colspan="11" class="state-msg"><span class="spinner"></span>Loading due inspections…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8" class="state-msg"><span class="spinner"></span>Loading due inspections…</td></tr>';
 
   const params = new URLSearchParams();
-  const insp = document.getElementById('inspectorSelect').value;
-  if (insp === 'me' && currentSession) {
-    const me = currentSession.pbiName || currentSession.displayName || '';
-    if (me) params.set('inspector', me);
-  }
+  const inspVal = document.getElementById('inspectorSelect').value;
+  const me = meName(currentSession);
+  if (inspVal === 'me' && me) params.set('inspector', me);
   const within = document.getElementById('windowSelect').value;
   if (within) params.set('within_days', within);
   const st = document.getElementById('statusSelect').value;
@@ -372,7 +433,7 @@ async function load() {
       headers: { 'Authorization': 'Bearer ' + tok }
     });
     if (r.status === 404) {
-      tbody.innerHTML = '<tr><td colspan="11" class="state-msg warn">'
+      tbody.innerHTML = '<tr><td colspan="8" class="state-msg warn">'
         + 'GET /avo/due endpoint not yet wired — orchestrator task 373 enqueued. '
         + 'In the meantime, use <a href="avo.html" style="color:#4a5158;text-decoration:underline">single-location AVO form</a>.'
         + '</td></tr>';
@@ -381,8 +442,14 @@ async function load() {
     }
     if (!r.ok) throw new Error('HTTP ' + r.status);
     DUE_ROWS = await r.json();
+    // Client-side safety filter: pumpers see only their own rows even if the
+    // endpoint ignores ?inspector=... or returns extras.
+    if (isPumperRole(currentSession) && me) {
+      const meUp = me.toUpperCase();
+      DUE_ROWS = DUE_ROWS.filter(r => (r.pumper || '').toUpperCase() === meUp);
+    }
   } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="11" class="state-msg err">Error loading due list: ' + esc(err.message || err) + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="state-msg err">Error loading due list: ' + esc(err.message || err) + '</td></tr>';
     DUE_ROWS = []; STATE = {}; updateSubmitButton();
     return;
   }
@@ -409,14 +476,9 @@ async function load() {
 function renderRows() {
   const tbody = document.getElementById('tbody');
   if (!DUE_ROWS.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="state-msg">No inspections currently due in this window. </td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="state-msg">No inspections currently due in this window.</td></tr>';
     return;
   }
-  // Header detail columns: visible iff master OR any-row Yes for that question
-  QUESTIONS.forEach(q => {
-    const anyYes = MASTER[q] === 'Yes' || DUE_ROWS.some((_, i) => STATE[i].checked && STATE[i][q] === 'Yes');
-    document.getElementById('hdr' + q[0].toUpperCase() + q.slice(1) + 'Detail').style.display = anyYes ? '' : 'none';
-  });
 
   tbody.innerHTML = DUE_ROWS.map((r, i) => {
     const s = STATE[i];
@@ -426,23 +488,22 @@ function renderRows() {
                       + esc(r.status || '—') + '</span>';
     const overdueNote = (r.days_overdue && r.days_overdue > 0) ? ' (' + r.days_overdue + 'd)' : '';
 
-    function ynCell(q) {
+    function qCell(q, label) {
       const v = s[q];
       const touched = s[q + '_touched'];
-      return '<div class="yn-pair' + (touched ? ' individually-set' : '') + '" data-row="' + i + '" data-q="' + q + '">'
-           + '<button type="button" data-v="No"'  + (v === 'No'  ? ' class="active no"'  : '') + '>No</button>'
-           + '<button type="button" data-v="Yes"' + (v === 'Yes' ? ' class="active yes"' : '') + '>Yes</button>'
-           + '</div>';
-    }
-
-    function detailCell(q) {
-      const anyYesHdr = MASTER[q] === 'Yes' || DUE_ROWS.some((_, j) => STATE[j].checked && STATE[j][q] === 'Yes');
-      if (!anyYesHdr) return '';
-      const enabled = s.checked && s[q] === 'Yes';
-      return '<td class="detail-cell' + (enabled ? '' : ' disabled') + '">'
-           + '<input class="detail-input" placeholder="Describe…" '
-           + 'data-row="' + i + '" data-q="' + q + '" '
-           + 'value="' + esc(s.detail[q]) + '"' + (enabled ? '' : ' disabled') + '>'
+      const showDetail = s[q] === 'Yes';
+      const noSel  = v === 'No'  ? ' sel' : '';
+      const yesSel = v === 'Yes' ? ' sel' : '';
+      return '<td class="col-q" data-q-label="' + label + '">'
+           + '<div class="q-cell">'
+           +   '<div class="yn' + (touched ? ' individually-set' : '') + '" data-row="' + i + '" data-q="' + q + '">'
+           +     '<span class="opt no' + noSel  + '" data-v="No"><span class="dot"></span>No</span>'
+           +     '<span class="opt yes' + yesSel + '" data-v="Yes"><span class="dot"></span>Yes</span>'
+           +   '</div>'
+           +   '<input class="detail-input ' + (showDetail ? '' : 'hidden') + '" '
+           +         'placeholder="Describe…" data-row="' + i + '" data-q="' + q + '" '
+           +         'value="' + esc(s.detail[q]) + '">'
+           + '</div>'
            + '</td>';
     }
 
@@ -452,12 +513,9 @@ function renderRows() {
       + '<td class="col-due">' + esc(fmtDate(r.next_due_date)) + overdueNote + '</td>'
       + '<td class="col-pumper">' + esc(r.pumper || '—') + '</td>'
       + '<td class="col-status">' + statusBadge + '</td>'
-      + '<td class="col-yn">' + ynCell('odor') + '</td>'
-      + detailCell('odor')
-      + '<td class="col-yn">' + ynCell('leaks') + '</td>'
-      + detailCell('leaks')
-      + '<td class="col-yn">' + ynCell('noises') + '</td>'
-      + detailCell('noises')
+      + qCell('odor',   'Odor')
+      + qCell('leaks',  'Leaks')
+      + qCell('noises', 'Noises')
       + '</tr>';
   }).join('');
 
@@ -471,9 +529,9 @@ function renderRows() {
       updateSubmitButton();
     });
   });
-  // wire row Y/N toggles
-  tbody.querySelectorAll('.yn-pair[data-row]').forEach(pair => {
-    pair.querySelectorAll('button').forEach(b => {
+  // wire row Y/N toggles (round circles)
+  tbody.querySelectorAll('.yn[data-row]').forEach(pair => {
+    pair.querySelectorAll('.opt').forEach(b => {
       b.addEventListener('click', () => {
         const i = +pair.dataset.row;
         const q = pair.dataset.q;
@@ -484,7 +542,7 @@ function renderRows() {
       });
     });
   });
-  // wire detail inputs (re-render would lose focus; instead bind without re-render)
+  // wire detail inputs (input handler only — no re-render so focus is kept)
   tbody.querySelectorAll('.detail-input').forEach(inp => {
     inp.addEventListener('input', () => {
       const i = +inp.dataset.row;
@@ -513,13 +571,10 @@ function onMasterChk(e) {
 
 function onMasterYn(q, v) {
   MASTER[q] = v;
-  // update master pair visual
+  // update master pair visual (round circles)
   const m = document.getElementById('master' + q[0].toUpperCase() + q.slice(1));
-  m.querySelectorAll('button').forEach(b => {
-    b.classList.toggle('active', b.dataset.v === v);
-    b.classList.toggle('no',  b.dataset.v === 'No');
-    b.classList.toggle('yes', b.dataset.v === 'Yes');
-    if (b.dataset.v !== v) { b.classList.remove('no'); b.classList.remove('yes'); }
+  m.querySelectorAll('.opt').forEach(b => {
+    b.classList.toggle('sel', b.dataset.v === v);
   });
   // propagate to non-touched rows
   DUE_ROWS.forEach((_, i) => {
