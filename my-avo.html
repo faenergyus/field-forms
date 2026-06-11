@@ -380,17 +380,6 @@ function showApp(session) {
   initApp(session);
 }
 
-(function () {
-  try {
-    const saved = localStorage.getItem(SESSION_KEY);
-    if (saved) {
-      const s = JSON.parse(saved);
-      if (s.expires > Date.now()) { showApp(s); return; }
-      localStorage.removeItem(SESSION_KEY);
-    }
-  } catch(e) { localStorage.removeItem(SESSION_KEY); }
-})();
-
 // ── App state ───────────────────────────────────────────────────────────────
 let currentSession = null;
 // Inspector scope is enforced SERVER-SIDE by role (admin commit 815aaa2):
@@ -405,6 +394,21 @@ let STATE = {};
 // Master header values
 let MASTER = { odor: 'No', leaks: 'No', noises: 'No' };
 const QUESTIONS = ['odor', 'leaks', 'noises'];
+
+// Resume an existing session — MUST run AFTER the app-state `let`s above are
+// initialized. (It previously ran before `let currentSession`, so showApp ->
+// initApp hit a TDZ "Cannot access 'currentSession' before initialization"
+// ReferenceError that crashed init and left the page stuck on "Loading…".)
+(function () {
+  try {
+    const saved = localStorage.getItem(SESSION_KEY);
+    if (saved) {
+      const s = JSON.parse(saved);
+      if (s.expires > Date.now()) { showApp(s); return; }
+      localStorage.removeItem(SESSION_KEY);
+    }
+  } catch(e) { localStorage.removeItem(SESSION_KEY); }
+})();
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
