@@ -220,7 +220,9 @@
       /* One row per well, tabular. Smaller site + date fonts so the
          25%-bigger toggle still fits. */
       table.batch { font-size: 0.66rem; }
-      th { padding: 5px 4px; font-size: 0.5rem; letter-spacing: 0.04em; }
+      /* Column-title text needs to stay readable on a phone — was 0.5rem
+         (~6.4px) which rendered as blank space behind the sort arrows. */
+      th { padding: 5px 3px; font-size: 0.62rem; letter-spacing: 0.02em; }
       td { padding: 4px 3px; }
       .col-chk { width: 26px; }
       .chk { width: 16px; height: 16px; }
@@ -234,9 +236,12 @@
       .yn[data-v="Yes"]::before { left:  4px; }
       .yn::after { width: 12px; height: 12px; top: 1px; }
       .yn[data-v="Yes"]::after { left: calc(100% - 13px); }
-      /* Stickier header at top of viewport */
-      table.batch thead th { position: sticky; top: var(--chrome-hdr-h, 54px); z-index: 5; background: #f3f5f7; }
-      table.batch thead th.q-hdr .q-label { font-size: 0.56rem; margin-bottom: 2px; }
+      /* Headers stay in normal flow — same sticky-vs-overflow bug as the
+         filter row had on desktop. With .grid-card overflow-x:auto, the
+         browser uses the table (not the viewport) as the sticky container,
+         which on mobile pushed the column-title <th> ~37px below its TR
+         and exposed the grid-card #fff as a white gap above row 1. */
+      table.batch thead th.q-hdr .q-label { font-size: 0.62rem; margin-bottom: 2px; }
       /* Submit row stays full-width even at the top */
       .submit-btn { width: 100%; }
       /* Hide the Pumper column on phone — name + due + 3 toggles already
