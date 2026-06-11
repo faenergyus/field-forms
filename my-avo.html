@@ -329,6 +329,9 @@
         <li>Descriptions should be specific enough for the next inspector to find the same spot — e.g. "Slow drip on 2-inch flange at pump suction, north side of treater" beats "small leak".</li>
         <li>Anything Yes also triggers a follow-up workflow downstream — log it accurately or the wrong crew rolls out.</li>
       </ul>
+
+      <h4>Inspection timestamp</h4>
+      <p><b>Inspection timestamp is auto-generated</b> (random business-hours time within 3 days of the due date, spaced ~10 min apart per pumper). Fill the form out to the best of your knowledge.</p>
     </div>
   </details>
 
@@ -336,7 +339,7 @@
     <button type="button" class="refresh-btn" id="refreshBtn" title="Reload open list">↻ Refresh</button>
     <button type="button" class="submit-btn" id="submitBtn" disabled style="padding:7px 16px;font-size:0.85rem">Submit checked</button>
     <div class="summary" id="summary"></div>
-    <div class="submit-info" id="submitInfo" style="width:100%;font-size:0.75rem;color:#6b7177">No rows selected.</div>
+    <div class="submit-info" id="submitInfo" style="flex:1;font-size:0.75rem;color:#6b7177">No rows selected.</div>
   </div>
 
   <div class="grid-card">
@@ -836,6 +839,7 @@ function updateSubmitButton() {
   const btn = document.getElementById('submitBtn');
   const info = document.getElementById('submitInfo');
   btn.disabled = checked === 0;
+  btn.textContent = checked === 0 ? 'Submit checked' : 'Submit checked (' + checked + ')';
   if (checked === 0) {
     info.textContent = (NAME_FILTER.trim() || PUMPER_FILTER.trim()) ? 'No matching rows selected.' : 'No rows selected.';
   } else {
