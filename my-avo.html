@@ -99,9 +99,13 @@
     .chk { width: 20px; height: 20px; accent-color: #4a5158; cursor: pointer; vertical-align: middle; }
     .col-chk { width: 36px; text-align: center; }
 
-    .col-name { width: 32%; min-width: 180px; white-space: normal; }
-    .col-due  { width: 100px; white-space: nowrap; font-size: 0.82rem; }
-    .col-q    { width: 17%; min-width: 160px; }     /* room for the detail input below the toggle */
+    .col-name { width: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 1px; }
+    .col-due  { width: 90px; white-space: nowrap; font-size: 0.82rem; }
+    .col-q    { width: 70px; text-align: center; }
+    /* Yes-detail no longer appears inline — it's edited via the popup modal. */
+    .yes-detail-flag { display: inline-flex; align-items: center; gap: 4px; font-size: 0.7rem; color: #a23022; cursor: pointer; margin-top: 4px; user-select: none; }
+    .yes-detail-flag:hover { text-decoration: underline; }
+    .yes-detail-flag .ico { width: 12px; height: 12px; display: inline-block; vertical-align: middle; }
 
     .badge { display: inline-block; padding: 1px 7px; font-size: 0.68rem; border-radius: 9px; font-weight: 600; }
     .badge.due { background: #fff3cd; color: #856404; }
@@ -116,12 +120,38 @@
     table.batch tr.site-row .site-meta b { color: #3a3f45; }
     table.batch td.col-name.is-well { padding-left: 18px; }
 
-    /* Per-row detail input slides in UNDER the toggle when Yes is selected */
-    .q-cell { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-    .q-cell .yn { align-self: center; }  /* pill stays natural-width, detail-input below can fill */
-    .detail-input { width: 100%; padding: 6px 8px; font-size: 0.8rem; border: 1.5px solid #d0d4d8; border-radius: 5px; background: #fff; }
-    .detail-input:focus { outline: none; border-color: #5b626b; }
-    .detail-input.hidden { display: none; }
+    /* Q-cell wrapper centers the toggle; the Yes-detail editor is a modal,
+       so no inline input needed. */
+    .q-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .q-cell .yn { align-self: center; }
+    /* Small visual indicator that this Yes has unsaved missing detail */
+    .needs-detail { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #c0392b; vertical-align: middle; margin-left: 4px; }
+    /* Modal: detail + photo for one (row, question) pair */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(43,48,54,0.55); display: none; align-items: center; justify-content: center; z-index: 9100; padding: 16px; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: #fff; border-radius: 12px; max-width: 480px; width: 100%; max-height: calc(100vh - 32px); overflow: auto; box-shadow: 0 10px 36px rgba(0,0,0,0.25); display: flex; flex-direction: column; }
+    .modal-head { padding: 14px 18px 10px; border-bottom: 1px solid #eef0f2; }
+    .modal-head .well { font-weight: 700; color: #2b3036; font-size: 1rem; }
+    .modal-head .qline { font-size: 0.78rem; color: #6b7177; margin-top: 2px; }
+    .modal-head .qline b { color: #a23022; }
+    .modal-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
+    .modal-body label { font-size: 0.78rem; font-weight: 600; color: #565c63; }
+    .modal-body textarea { width: 100%; min-height: 110px; padding: 10px 12px; font-size: 0.95rem; line-height: 1.4; border: 1.5px solid #d0d4d8; border-radius: 7px; resize: vertical; font-family: inherit; background: #fff; }
+    .modal-body textarea:focus { outline: none; border-color: #5b626b; }
+    .photo-row { display: flex; align-items: center; gap: 10px; }
+    .photo-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; background: #f3f5f7; border: 1.5px solid #d0d4d8; border-radius: 8px; color: #2b3036; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+    .photo-btn:hover { background: #eef0f2; border-color: #9aa0a6; }
+    .photo-btn .cam { width: 18px; height: 18px; display: inline-block; }
+    .photo-row .photo-name { font-size: 0.78rem; color: #6b7177; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .modal-foot { padding: 12px 18px 16px; border-top: 1px solid #eef0f2; display: flex; gap: 10px; justify-content: flex-end; }
+    .modal-foot button { padding: 9px 18px; font-size: 0.88rem; font-weight: 600; border-radius: 7px; border: 1.5px solid transparent; cursor: pointer; }
+    .modal-foot .cancel { background: #fff; border-color: #d0d4d8; color: #565c63; }
+    .modal-foot .save   { background: #4a5158; color: #fff; }
+    .modal-foot .save:disabled { background: #9aa0a6; cursor: not-allowed; }
+    @media (max-width: 640px) {
+      .modal { max-height: calc(100vh - 16px); }
+      .modal-head .well { font-size: 0.95rem; }
+    }
 
     .submit-row { display: flex; gap: 12px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
     .submit-btn { padding: 11px 22px; background: #4a5158; color: #fff; border: none; border-radius: 7px; font-size: 0.92rem; font-weight: 600; cursor: pointer; }
@@ -129,45 +159,30 @@
     .submit-btn:active { background: #1c5a1c; }
     .submit-info { font-size: 0.78rem; color: #6b7177; }
 
-    /* Mobile: collapse to single-column cards (≤640px) */
+    /* Mobile: stay tabular (one row per well). Trim chrome, shrink toggle. */
     @media (max-width: 640px) {
-      .page { padding: 10px 8px 60px; }
+      body .page { padding: 8px 4px 60px; }
       .toolbar { gap: 6px; font-size: 0.78rem; }
       .toolbar label { font-size: 0.72rem; }
-      .toolbar select { font-size: 0.78rem; padding: 5px 8px; }
-      .toolbar .summary { margin-left: 0; width: 100%; order: 99; }
-      table.batch, table.batch thead, table.batch tbody, table.batch tr, table.batch td, table.batch th { display: block; }
-      /* Sticky bulk-apply bar at top of viewport on mobile (master toggles) */
-      table.batch thead { position: sticky; top: var(--chrome-hdr-h, 54px); z-index: 5; background: #f3f5f7; border-bottom: 1px solid #d8dadd; }
-      table.batch thead tr { display: grid; grid-template-columns: auto 1fr 1fr 1fr; gap: 4px 6px; padding: 6px 8px; align-items: center; }
-      table.batch thead th { border: 0; background: transparent; padding: 0; }
-      table.batch thead th.col-chk { grid-column: 1; }
-      table.batch thead th.col-name,
-      table.batch thead th.col-due { display: none; }
-      table.batch thead th.q-hdr { padding: 0; font-size: 0.56rem; }
-      table.batch thead th.q-hdr .q-label { margin-bottom: 2px; font-size: 0.56rem; }
-      /* Phone: shrink the toggle further (~38×14) */
-      .yn { width: 38px; height: 14px; border-radius: 7px; }
-      .yn::before { font-size: 0.46rem; }
-      .yn[data-v="No"]::before  { right: 5px; }
-      .yn[data-v="Yes"]::before { left:  5px; }
-      .yn::after { width: 12px; height: 12px; top: 1px; }
-      .yn[data-v="Yes"]::after { left: calc(100% - 13px); }
-      /* Body rows are cards on mobile */
-      table.batch tbody tr { border: 1px solid #eef2ee; border-radius: 8px; margin: 6px 8px; padding: 8px 10px; background: #fff; }
-      table.batch tbody tr.unchecked { opacity: 0.55; }
-      table.batch tbody tr.unchecked td { background: transparent; }
-      table.batch tbody tr.site-row { background: #eef1f4; padding: 6px 10px; margin-top: 12px; margin-bottom: 4px; font-size: 0.84rem; }
-      table.batch td { border: 0; padding: 3px 0; }
-      table.batch td.col-chk { display: inline-block; vertical-align: middle; padding-right: 6px; }
-      table.batch td.col-name { display: inline-block; font-weight: 700; font-size: 0.88rem; }
-      table.batch td.col-due { display: inline-block; font-size: 0.7rem; color: #6b7177; padding-right: 8px; }
-      table.batch td.col-due::before { content: 'Due '; color: #9aa0a6; }
-      table.batch td.col-q { display: grid; grid-template-columns: 60px 1fr; gap: 6px; align-items: center; padding: 4px 0; border-top: 1px solid #eef2ee; min-width: 0; text-align: left; }
-      table.batch td.col-q::before { content: attr(data-q-label); font-size: 0.62rem; font-weight: 700; text-transform: uppercase; color: #565c63; letter-spacing: 0.04em; }
-      table.batch td.col-q .q-cell { align-items: flex-start; gap: 4px; }
-      table.batch td.col-q .yn { align-self: flex-start; justify-content: flex-start; }
-      table.batch td.col-q .detail-input { font-size: 0.78rem; padding: 5px 7px; }
+      /* One row per well, tabular. Trim font + padding so it fits on a phone. */
+      table.batch { font-size: 0.72rem; }
+      th { padding: 5px 4px; font-size: 0.56rem; letter-spacing: 0.04em; }
+      td { padding: 4px 4px; }
+      .col-chk { width: 28px; }
+      .chk { width: 16px; height: 16px; }
+      .col-due { width: 58px; font-size: 0.7rem; }
+      .col-q { width: 44px; }
+      /* Tiny pill: 30×11 — fits 3 across alongside chk + name + due */
+      .yn { width: 30px; height: 11px; border-radius: 6px; }
+      .yn::before { font-size: 0.38rem; }
+      .yn[data-v="No"]::before  { right: 4px; }
+      .yn[data-v="Yes"]::before { left:  3px; }
+      .yn::after { width: 9px; height: 9px; top: 1px; }
+      .yn[data-v="Yes"]::after { left: calc(100% - 10px); }
+      /* Stickier header at top of viewport */
+      table.batch thead th { position: sticky; top: var(--chrome-hdr-h, 54px); z-index: 5; background: #f3f5f7; }
+      table.batch thead th.q-hdr .q-label { font-size: 0.56rem; margin-bottom: 2px; }
+      /* Submit row stays full-width even at the top */
       .submit-btn { width: 100%; }
     }
 
@@ -263,7 +278,9 @@
 
   <div class="toolbar">
     <button type="button" class="refresh-btn" id="refreshBtn" title="Reload open list">↻ Refresh</button>
+    <button type="button" class="submit-btn" id="submitBtn" disabled style="padding:7px 16px;font-size:0.85rem">Submit checked</button>
     <div class="summary" id="summary"></div>
+    <div class="submit-info" id="submitInfo" style="width:100%;font-size:0.75rem;color:#6b7177">No rows selected.</div>
   </div>
 
   <div class="grid-card">
@@ -293,9 +310,32 @@
     </table>
   </div>
 
-  <div class="submit-row">
-    <button type="button" class="submit-btn" id="submitBtn" disabled>Submit checked inspections</button>
-    <div class="submit-info" id="submitInfo">No rows selected.</div>
+</div>
+
+<!-- Yes-detail modal — opens when a row's toggle is flipped to Yes, or when
+     the user clicks the red-dot "needs detail" indicator on a Yes row. -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="detailModalWell">
+    <div class="modal-head">
+      <div class="well" id="detailModalWell">—</div>
+      <div class="qline"><b id="detailModalQ">Odor</b> detected — please describe</div>
+    </div>
+    <div class="modal-body">
+      <label for="detailModalText">Describe what was observed</label>
+      <textarea id="detailModalText" placeholder="Where was it strongest? What did it smell / sound / look like? Source if known."></textarea>
+      <div class="photo-row">
+        <label for="detailModalPhoto" class="photo-btn">
+          <svg class="cam" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" stroke="#2b3036" stroke-width="1.6" fill="#fff"/><circle cx="12" cy="13" r="3.5" stroke="#2b3036" stroke-width="1.6" fill="#fff"/></svg>
+          <span id="detailModalPhotoLabel">Add photo</span>
+        </label>
+        <input type="file" id="detailModalPhoto" accept="image/*" capture="environment" style="display:none">
+        <span class="photo-name" id="detailModalPhotoName"></span>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="cancel" id="detailModalCancel">Cancel</button>
+      <button type="button" class="save" id="detailModalSave">Save</button>
+    </div>
   </div>
 </div>
 
@@ -522,6 +562,7 @@ async function load() {
       noises_touched: false,
       chk_touched:    false,
       detail: { odor: '', leaks: '', noises: '' },
+      photo:  { odor: null, leaks: null, noises: null },  // File objects (not uploaded yet)
     };
   });
   document.getElementById('masterChk').checked = true;
@@ -578,15 +619,13 @@ function renderRows() {
     function qCell(q, label) {
       const v = s[q];
       const touched = s[q + '_touched'];
-      const showDetail = v === 'Yes';
+      const needsDetail = v === 'Yes' && !((s.detail[q] || '').trim() || (s.photo && s.photo[q]));
       return '<td class="col-q" data-q-label="' + label + '">'
            + '<div class="q-cell">'
            +   '<div class="yn' + (touched ? ' individually-set' : '') + '" '
            +        'data-row="' + i + '" data-q="' + q + '" data-v="' + v + '" '
            +        'role="switch" aria-checked="' + (v === 'Yes') + '" tabindex="0"></div>'
-           +   '<input class="detail-input ' + (showDetail ? '' : 'hidden') + '" '
-           +         'placeholder="Describe…" data-row="' + i + '" data-q="' + q + '" '
-           +         'value="' + esc(s.detail[q]) + '">'
+           +   (needsDetail ? '<span class="needs-detail" title="Click Yes again to add detail" data-row="' + i + '" data-q="' + q + '"></span>' : '')
            + '</div>'
            + '</td>';
     }
@@ -613,27 +652,32 @@ function renderRows() {
       updateSubmitButton();
     });
   });
-  // Row Y/N slide toggles — click anywhere on the pill toggles state
+  // Row Y/N slide toggles — click anywhere on the pill toggles state.
+  // Flipping TO Yes opens the detail modal so the user can capture
+  // description + (optional) photo right away. Flipping back to No
+  // just clears the toggle (saved detail stays so flipping Yes→No→Yes
+  // doesn't lose what was typed).
   tbody.querySelectorAll('.yn[data-row]').forEach(pair => {
     const flip = () => {
       const i = +pair.dataset.row;
       const q = pair.dataset.q;
-      STATE[i][q] = pair.dataset.v === 'Yes' ? 'No' : 'Yes';
+      const goingToYes = pair.dataset.v !== 'Yes';
+      STATE[i][q] = goingToYes ? 'Yes' : 'No';
       STATE[i][q + '_touched'] = true;
       renderRows();
       updateSubmitButton();
+      if (goingToYes) openDetailModal(i, q);
     };
     pair.addEventListener('click', flip);
     pair.addEventListener('keydown', e => {
       if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flip(); }
     });
   });
-  // Detail inputs (no re-render on type — focus stays)
-  tbody.querySelectorAll('.detail-input').forEach(inp => {
-    inp.addEventListener('input', () => {
-      const i = +inp.dataset.row;
-      const q = inp.dataset.q;
-      STATE[i].detail[q] = inp.value;
+  // Click the red "needs detail" dot to reopen the modal for that cell.
+  tbody.querySelectorAll('.needs-detail').forEach(d => {
+    d.addEventListener('click', e => {
+      e.stopPropagation();
+      openDetailModal(+d.dataset.row, d.dataset.q);
     });
   });
 
@@ -849,6 +893,72 @@ async function submitBatch() {
     document.getElementById('successOverlay').classList.add('show');
   }
 }
+
+// ── Yes-detail modal ────────────────────────────────────────────────────────
+// Opens on Yes flip OR when the red "needs detail" dot is clicked. Captures
+// the description text + optional photo (held in memory; uploaded with the
+// inspection on submit). Save validates non-empty text.
+let MODAL_CTX = null;  // { row, q }
+
+function openDetailModal(row, q) {
+  MODAL_CTX = { row, q };
+  const r = DUE_ROWS[row];
+  const s = STATE[row];
+  const Q = q[0].toUpperCase() + q.slice(1);
+  document.getElementById('detailModalWell').textContent = rowName(r) || '(unnamed)';
+  document.getElementById('detailModalQ').textContent = Q;
+  document.getElementById('detailModalText').value = s.detail[q] || '';
+  document.getElementById('detailModalPhoto').value = '';  // can't programmatically set file
+  document.getElementById('detailModalPhotoName').textContent = s.photo[q] ? s.photo[q].name : '';
+  document.getElementById('detailModalPhotoLabel').textContent = s.photo[q] ? 'Change photo' : 'Add photo';
+  document.getElementById('detailModal').classList.add('show');
+  // Focus textarea after the modal becomes visible
+  setTimeout(() => document.getElementById('detailModalText').focus(), 30);
+}
+
+function closeDetailModal() {
+  document.getElementById('detailModal').classList.remove('show');
+  MODAL_CTX = null;
+}
+
+function saveDetailModal() {
+  if (!MODAL_CTX) return;
+  const { row, q } = MODAL_CTX;
+  const text = document.getElementById('detailModalText').value.trim();
+  if (!text) {
+    document.getElementById('detailModalText').focus();
+    document.getElementById('detailModalText').style.borderColor = '#c0392b';
+    return;
+  }
+  STATE[row].detail[q] = text;
+  const fileInput = document.getElementById('detailModalPhoto');
+  if (fileInput.files && fileInput.files[0]) {
+    STATE[row].photo[q] = fileInput.files[0];
+  }
+  closeDetailModal();
+  renderRows();
+  updateSubmitButton();
+}
+
+(function wireDetailModal() {
+  const ov = document.getElementById('detailModal');
+  document.getElementById('detailModalCancel').addEventListener('click', closeDetailModal);
+  document.getElementById('detailModalSave').addEventListener('click', saveDetailModal);
+  document.getElementById('detailModalText').addEventListener('input', () => {
+    document.getElementById('detailModalText').style.borderColor = '';
+  });
+  document.getElementById('detailModalPhoto').addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0];
+    document.getElementById('detailModalPhotoName').textContent = f ? f.name : '';
+    document.getElementById('detailModalPhotoLabel').textContent = f ? 'Change photo' : 'Add photo';
+  });
+  // Click outside the modal card = cancel
+  ov.addEventListener('click', e => { if (e.target === ov) closeDetailModal(); });
+  // Esc = cancel
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && ov.classList.contains('show')) closeDetailModal();
+  });
+})();
 </script>
 
 <!-- Shared cross-app header (fae-header.js, owned by admin.40ac.us). Populates .fae-appnav with Analyst / SCADA / Forms / (Admin if role permits).
