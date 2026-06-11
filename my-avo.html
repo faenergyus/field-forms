@@ -100,8 +100,15 @@
     .col-chk { width: 36px; text-align: center; }
 
     .col-name { width: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 1px; }
+    .col-pumper { width: 120px; white-space: nowrap; font-size: 0.82rem; color: #565c63; }
     .col-due  { width: 90px; white-space: nowrap; font-size: 0.82rem; }
     .col-q    { width: 70px; text-align: center; }
+    /* Site name filter — sits in a sticky row right below the header. */
+    table.batch tr.filter-row th { background: #eef1f4; padding: 4px 6px; border-bottom: 1px solid #d8dadd; position: sticky; top: calc(var(--chrome-hdr-h, 54px) + 35px); z-index: 4; }
+    .col-filter { width: 100%; box-sizing: border-box; background: #fff; border: 1px solid #c0cad6; border-radius: 4px; padding: 4px 8px; font-size: 0.78rem; color: #1a1a1a; font-family: inherit; }
+    .col-filter.has-value { background: #fff8d8; border-color: #d6c25a; font-weight: 600; }
+    .col-filter::placeholder { color: #9aa0a6; font-style: italic; font-weight: 400; }
+    .col-filter:focus { outline: none; border-color: #3d68b8; box-shadow: 0 0 0 1px rgba(61,104,184,0.35); }
     /* Yes-detail no longer appears inline — it's edited via the popup modal. */
     .yes-detail-flag { display: inline-flex; align-items: center; gap: 4px; font-size: 0.7rem; color: #a23022; cursor: pointer; margin-top: 4px; user-select: none; }
     .yes-detail-flag:hover { text-decoration: underline; }
@@ -184,6 +191,9 @@
       table.batch thead th.q-hdr .q-label { font-size: 0.56rem; margin-bottom: 2px; }
       /* Submit row stays full-width even at the top */
       .submit-btn { width: 100%; }
+      /* Hide the Pumper column on phone — name + due + 3 toggles already
+         eat the row width. */
+      .desk-only { display: none !important; }
     }
 
     .state-msg { color: #6b7177; font-size: 0.88rem; padding: 30px; text-align: center; }
@@ -288,7 +298,8 @@
       <thead>
         <tr>
           <th class="col-chk"><input type="checkbox" id="masterChk" class="chk" title="Check / uncheck all" checked></th>
-          <th class="col-name sortable" data-sort="site_name">Name <span class="sort-ind"></span></th>
+          <th class="col-name sortable" data-sort="site_name">Site <span class="sort-ind"></span></th>
+          <th class="col-pumper sortable desk-only" data-sort="pumper">Pumper <span class="sort-ind"></span></th>
           <th class="col-due sortable" data-sort="due_date">Due Date <span class="sort-ind"></span></th>
           <th class="col-q q-hdr">
             <span class="q-label">Odor</span>
@@ -303,9 +314,18 @@
             <div class="yn" id="masterNoises" data-q="noises" data-v="No" role="switch" aria-checked="false" tabindex="0"></div>
           </th>
         </tr>
+        <tr class="filter-row">
+          <th></th>
+          <th><input type="search" class="col-filter" id="siteFilter" placeholder="Start typing to filter sites…" autocomplete="off"></th>
+          <th class="desk-only"></th>
+          <th></th>
+          <th></th>
+          <th></th>
+          <th></th>
+        </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="6" class="state-msg"><span class="spinner"></span>Loading open inspections...</td></tr>
+        <tr><td colspan="7" class="state-msg"><span class="spinner"></span>Loading open inspections...</td></tr>
       </tbody>
     </table>
   </div>
@@ -516,19 +536,29 @@ function initApp(session) {
     });
   });
   document.getElementById('submitBtn').addEventListener('click', submitBatch);
+
+  // Site name filter (Gas Sales Analysis style — typeahead substring filter)
+  const filterEl = document.getElementById('siteFilter');
+  filterEl.addEventListener('input', () => {
+    NAME_FILTER = filterEl.value;
+    filterEl.classList.toggle('has-value', !!NAME_FILTER.trim());
+    renderRows();
+    updateSubmitButton();
+  });
+
   load();
 }
 
 async function load() {
   const tbody = document.getElementById('tbody');
-  tbody.innerHTML = '<tr><td colspan="8" class="state-msg"><span class="spinner"></span>Loading due inspections…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7" class="state-msg"><span class="spinner"></span>Loading due inspections…</td></tr>';
 
   try {
     // No params — endpoint returns every open row from dbo.avo_due. Front-end
     // owns sort. Authed via fae-auth (30-day fae1.* session token + auto-401-retry).
     const r = await window.faeAuth.fetchAuthed(API_BASE, API_BASE + '/avo/due');
     if (r.status === 404) {
-      tbody.innerHTML = '<tr><td colspan="6" class="state-msg warn">'
+      tbody.innerHTML = '<tr><td colspan="7" class="state-msg warn">'
         + 'GET /avo/due endpoint not yet wired. In the meantime use the '
         + '<a href="avo.html" style="color:#4a5158;text-decoration:underline">single-location AVO form</a>.'
         + '</td></tr>';
@@ -536,7 +566,7 @@ async function load() {
       return;
     }
     if (r.status === 401 || r.status === 403) {
-      tbody.innerHTML = '<tr><td colspan="6" class="state-msg err">'
+      tbody.innerHTML = '<tr><td colspan="7" class="state-msg err">'
         + 'Could not load inspections (auth/session expired). Reload the page or sign out and back in.</td></tr>';
       DUE_ROWS = []; STATE = {}; updateSubmitButton();
       return;
@@ -544,7 +574,7 @@ async function load() {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     DUE_ROWS = await r.json();
   } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="6" class="state-msg err">'
+    tbody.innerHTML = '<tr><td colspan="7" class="state-msg err">'
       + 'Could not load inspections (' + esc(err.message || err) + '). Try reloading.</td></tr>';
     DUE_ROWS = []; STATE = {}; updateSubmitButton();
     return;
@@ -573,6 +603,11 @@ async function load() {
 // Sort state — clicking a sortable header cycles asc → desc.
 let SORT = { col: 'due_date', dir: 'asc' };
 
+// Site-name typeahead filter — Gas Sales Analysis style. Substring match,
+// case-insensitive. Applies to BOTH the rendered list AND submitBatch
+// (only currently-visible rows are submitted).
+let NAME_FILTER = '';
+
 function rowName(r) { return r.site_name || r.fac_name || r.well_name || ''; }
 function rowDate(r) {
   // dbo.avo_due column is `due_date`; tolerate the older `next_due_date` too.
@@ -588,10 +623,11 @@ function sortedIndices() {
   idxs.sort((a, b) => {
     const ra = DUE_ROWS[a], rb = DUE_ROWS[b];
     let va, vb;
-    if (SORT.col === 'due_date') { va = rowDate(ra); vb = rowDate(rb); }
-    else                         { va = rowName(ra).toUpperCase(); vb = rowName(rb).toUpperCase(); }
+    if (SORT.col === 'due_date')   { va = rowDate(ra); vb = rowDate(rb); }
+    else if (SORT.col === 'pumper'){ va = (ra.pumper || '').toUpperCase(); vb = (rb.pumper || '').toUpperCase(); }
+    else                           { va = rowName(ra).toUpperCase(); vb = rowName(rb).toUpperCase(); }
     if (va == null && vb == null) return 0;
-    if (va == null) return  1;   // missing dates sink to the bottom regardless of dir
+    if (va == null) return  1;   // missing values sink to the bottom regardless of dir
     if (vb == null) return -1;
     if (va < vb) return -1 * dir;
     if (va > vb) return  1 * dir;
@@ -600,10 +636,18 @@ function sortedIndices() {
   return idxs;
 }
 
+// Visible = sorted ∩ matches NAME_FILTER. The single source of truth for both
+// what gets rendered AND what gets submitted.
+function visibleIndices() {
+  const q = NAME_FILTER.trim().toUpperCase();
+  if (!q) return sortedIndices();
+  return sortedIndices().filter(i => rowName(DUE_ROWS[i]).toUpperCase().includes(q));
+}
+
 function renderRows() {
   const tbody = document.getElementById('tbody');
   if (!DUE_ROWS.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="state-msg">No open inspections.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="state-msg">No open inspections.</td></tr>';
     updateSortIndicators();
     updateSummary();
     return;
@@ -633,6 +677,7 @@ function renderRows() {
     return '<tr class="' + cls + '" data-row="' + i + '">'
       + '<td class="col-chk"><input type="checkbox" class="chk row-chk" data-row="' + i + '"' + (s.checked ? ' checked' : '') + '></td>'
       + '<td class="col-name">' + esc(rowName(r) || '—') + '</td>'
+      + '<td class="col-pumper desk-only">' + esc(r.pumper || '—') + '</td>'
       + '<td class="col-due">' + dueCell + '</td>'
       + qCell('odor',   'Odor')
       + qCell('leaks',  'Leaks')
@@ -640,7 +685,7 @@ function renderRows() {
       + '</tr>';
   }
 
-  tbody.innerHTML = sortedIndices().map(rowHtml).join('');
+  tbody.innerHTML = visibleIndices().map(rowHtml).join('');
 
   // Row checkboxes
   tbody.querySelectorAll('.row-chk').forEach(el => {
@@ -726,12 +771,14 @@ function onMasterYn(q, v) {
 }
 
 function updateSubmitButton() {
-  const checked = DUE_ROWS.filter((_, i) => STATE[i].checked).length;
+  // Visible (passes name filter) AND checked = what actually gets submitted.
+  const visible = new Set(visibleIndices());
+  const checked = DUE_ROWS.filter((_, i) => visible.has(i) && STATE[i].checked).length;
   const btn = document.getElementById('submitBtn');
   const info = document.getElementById('submitInfo');
   btn.disabled = checked === 0;
   if (checked === 0) {
-    info.textContent = 'No rows selected.';
+    info.textContent = NAME_FILTER.trim() ? 'No matching rows selected.' : 'No rows selected.';
   } else {
     info.textContent = checked + ' inspection' + (checked === 1 ? '' : 's')
       + ' will be submitted with auto-randomized 8a–4p datetimes within '
@@ -824,9 +871,12 @@ function generateDatetimes(checkedRows) {
 async function submitBatch() {
   const btn = document.getElementById('submitBtn');
   const info = document.getElementById('submitInfo');
+  // Only submit rows that are BOTH visible (passed the name filter) AND
+  // checked. Filtered-out rows are intentionally excluded.
+  const visible = new Set(visibleIndices());
   const checkedRows = DUE_ROWS
     .map((row, i) => ({ row, i }))
-    .filter(x => STATE[x.i].checked);
+    .filter(x => visible.has(x.i) && STATE[x.i].checked);
   if (!checkedRows.length) return;
 
   // Validate: any Yes cell must have a detail value
@@ -849,19 +899,19 @@ async function submitBatch() {
     const s = STATE[i];
     const name = rowName(row);
     const unitType = (row.unit_type || '').toLowerCase();
-    const body = {
+    const fields = {
       // Contract: backend closes dbo.avo_due (status=closed, closed_pumper,
       // closed_date, inspection_entry_id) by due_id, then INSERTs into
       // dbo.avo_inspections.
-      due_id:              row.due_id,
-      unit_key:            row.unit_key,
-      unit_type:           row.unit_type,
+      due_id:              row.due_id != null ? String(row.due_id) : '',
+      unit_key:            row.unit_key || '',
+      unit_type:           row.unit_type || '',
       inspection_datetime: datetimes.get(i),
       weather_conditions:  '',
       item:                name,
       location:            name,
-      facility_id:         row.facility_id,
-      well_api:            row.well_api,
+      facility_id:         row.facility_id != null ? String(row.facility_id) : '',
+      well_api:            row.well_api || '',
       linked_item_type:    unitType === 'facility' ? 'Facilities' : 'Wells',
       odor_detected:       s.odor,
       odor_detail:         s.odor   === 'Yes' ? s.detail.odor   : '',
@@ -870,12 +920,24 @@ async function submitBatch() {
       noises_heard:        s.noises,
       noises_detail:       s.noises === 'Yes' ? s.detail.noises : '',
     };
-    try {
-      const r = await window.faeAuth.fetchAuthed(API_BASE, API_BASE + '/avo/submit', {
+    // Photo: ANY Yes column that has a captured File goes in the multipart
+    // body. Backend resizes to ≤1600px JPEG q85 and stamps photo_filename.
+    const photoFile = QUESTIONS.map(q => s.photo[q]).filter(Boolean)[0] || null;
+    let reqInit;
+    if (photoFile) {
+      const fd = new FormData();
+      Object.entries(fields).forEach(([k, v]) => fd.append(k, v == null ? '' : v));
+      fd.append('photo', photoFile, photoFile.name || 'photo.jpg');
+      reqInit = { method: 'POST', body: fd };
+    } else {
+      reqInit = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+        body: JSON.stringify(fields),
+      };
+    }
+    try {
+      const r = await window.faeAuth.fetchAuthed(API_BASE, API_BASE + '/avo/submit', reqInit);
       if (r.ok) ok++; else fail++;
     } catch (e) { fail++; }
     info.textContent = `Submitted ${ok + fail} / ${checkedRows.length}…`;
