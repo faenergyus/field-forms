@@ -251,17 +251,17 @@ body.sb-open .appchrome-sidebar { transform: translateX(0); }
   text-decoration: none;
 }
 .appchrome-sidebar .nav-i .ic {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   text-align: center;
-  font-size: .95rem;
+  font-size: 1.25rem;
   opacity: .85;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-.appchrome-sidebar .nav-i .ic svg { width: 18px; height: 18px; }
+.appchrome-sidebar .nav-i .ic svg { width: 24px; height: 24px; }
 .appchrome-sidebar .nav-i:hover { background: var(--chrome-tint); }
 .appchrome-sidebar .nav-i.on {
   background: var(--chrome-tint);
