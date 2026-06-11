@@ -706,6 +706,7 @@ async function submitBatch() {
       weather_conditions:  '',
       item:                row.fac_name,
       location:            row.fac_name,
+      facility_id:         row.facility_id,
       linked_item_type:    'Facilities',
       odor_detected:       s.odor,
       odor_detail:         s.odor   === 'Yes' ? s.detail.odor   : '',
