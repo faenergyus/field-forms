@@ -57,6 +57,13 @@
     .badge.overdue { background: #fdebec; color: #a23022; }
     .badge.approaching { background: #e2efff; color: #2b4a8a; }
     .badge.ok { background: #e8f3e8; color: #2e6b2e; }
+    .badge.gap { background: #f4e3d0; color: #8a5418; }
+
+    /* Site (facility) group header row — wells are grouped under their site */
+    table.batch tr.site-row td { background: #eef1f4; border-top: 2px solid #cfd4d9; border-bottom: 1px solid #d8dadd; padding: 7px 8px; font-weight: 700; color: #2b3036; font-size: 0.84rem; }
+    table.batch tr.site-row .site-meta { font-weight: 500; color: #6b7177; font-size: 0.74rem; }
+    table.batch tr.site-row .site-meta b { color: #3a3f45; }
+    table.batch td.col-name.is-well { padding-left: 18px; }
 
     /* Per-row detail input slides in UNDER the toggle when Yes is selected */
     .q-cell { display: flex; flex-direction: column; align-items: center; gap: 6px; }
@@ -201,9 +208,10 @@
     </select>
     <label>Status:</label>
     <select id="statusSelect">
-      <option value="">Due + Overdue + Approaching</option>
+      <option value="">All (due, overdue &amp; gaps)</option>
       <option value="Overdue">Overdue only</option>
-      <option value="Due">Due only</option>
+      <option value="Never AVO">Never AVO</option>
+      <option value="No inspection link">No inspection link</option>
     </select>
     <div class="summary" id="summary"></div>
   </div>
@@ -474,6 +482,38 @@ async function load() {
   updateSubmitButton();
 }
 
+// Stable per-facility grouping key (facility_id, or fac_name when id is null).
+function facKey(r) { return r.facility_id != null ? 'F' + r.facility_id : 'N' + (r.fac_name || ''); }
+
+// Build contiguous facility groups in DUE_ROWS order (the endpoint already
+// orders wells by facility, soonest-due site first).
+function buildGroups() {
+  const groups = [];
+  const byKey = {};
+  DUE_ROWS.forEach((r, i) => {
+    const k = facKey(r);
+    if (!(k in byKey)) {
+      byKey[k] = groups.length;
+      groups.push({ key: k, fac_name: r.fac_name, company: r.company,
+                    pumper: r.pumper, frequency: r.avo_frequency,
+                    site_gas: r.site_gas_mcfd, idxs: [] });
+    }
+    groups[byKey[k]].idxs.push(i);
+  });
+  return groups;
+}
+
+function statusBadgeHtml(status) {
+  const s = (status || '').toLowerCase();
+  let cls = 'ok';
+  if (s === 'overdue' || s === 'never avo') cls = 'overdue';
+  else if (s === 'no inspection link') cls = 'gap';
+  else if (s === 'ok') cls = 'ok';
+  else if (s === 'approaching') cls = 'approaching';
+  else cls = 'due';
+  return '<span class="badge ' + cls + '">' + esc(status || '—') + '</span>';
+}
+
 function renderRows() {
   const tbody = document.getElementById('tbody');
   if (!DUE_ROWS.length) {
@@ -481,12 +521,12 @@ function renderRows() {
     return;
   }
 
-  tbody.innerHTML = DUE_ROWS.map((r, i) => {
+  const groups = buildGroups();
+
+  function wellRow(i) {
+    const r = DUE_ROWS[i];
     const s = STATE[i];
     const cls = s.checked ? '' : 'unchecked';
-    const statusCls = (r.status || '').toLowerCase();
-    const statusBadge = '<span class="badge ' + (statusCls === 'overdue' ? 'overdue' : statusCls === 'approaching' ? 'approaching' : statusCls === 'due' ? 'due' : 'ok') + '">'
-                      + esc(r.status || '—') + '</span>';
     const overdueNote = (r.days_overdue && r.days_overdue > 0) ? ' (' + r.days_overdue + 'd)' : '';
 
     function qCell(q, label) {
@@ -510,15 +550,53 @@ function renderRows() {
 
     return '<tr class="' + cls + '" data-row="' + i + '">'
       + '<td class="col-chk"><input type="checkbox" class="chk row-chk" data-row="' + i + '"' + (s.checked ? ' checked' : '') + '></td>'
-      + '<td class="col-name">' + esc(r.fac_name || '—') + '</td>'
+      + '<td class="col-name is-well">' + esc(r.well_name || r.fac_name || '—') + '</td>'
       + '<td class="col-due">' + esc(fmtDate(r.next_due_date)) + overdueNote + '</td>'
       + '<td class="col-pumper">' + esc(r.pumper || '—') + '</td>'
-      + '<td class="col-status">' + statusBadge + '</td>'
+      + '<td class="col-status">' + statusBadgeHtml(r.status) + '</td>'
       + qCell('odor',   'Odor')
       + qCell('leaks',  'Leaks')
       + qCell('noises', 'Noises')
       + '</tr>';
-  }).join('');
+  }
+
+  function siteHeader(g) {
+    const all  = g.idxs.every(i => STATE[i].checked);
+    const n    = g.idxs.length;
+    const gas  = (g.site_gas != null && !isNaN(g.site_gas))
+               ? (Math.round(g.site_gas * 10) / 10) + ' Mcf/d' : '';
+    return '<tr class="site-row" data-fac="' + esc(g.key) + '">'
+      + '<td class="col-chk"><input type="checkbox" class="chk site-chk" data-fac="' + esc(g.key) + '"' + (all ? ' checked' : '') + ' title="Check / uncheck all wells at this site"></td>'
+      + '<td colspan="7">' + esc(g.fac_name || '(unnamed site)')
+      +   ' <span class="site-meta">· ' + n + ' well' + (n === 1 ? '' : 's')
+      +     (g.company  ? ' · ' + esc(g.company) : '')
+      +     (g.pumper   ? ' · ' + esc(g.pumper)  : '')
+      +     (g.frequency ? ' · <b>' + esc(g.frequency) + '</b>' : '')
+      +     (gas        ? ' · ' + esc(gas) : '')
+      +   '</span></td>'
+      + '</tr>';
+  }
+
+  tbody.innerHTML = groups.map(g =>
+    siteHeader(g) + g.idxs.map(wellRow).join('')
+  ).join('');
+
+  // wire site (facility) checkboxes — toggle every well under the site
+  tbody.querySelectorAll('.site-chk').forEach(el => {
+    const g = groups.find(x => x.key === el.dataset.fac);
+    if (g) {
+      const all  = g.idxs.every(i => STATE[i].checked);
+      const some = g.idxs.some(i => STATE[i].checked);
+      el.indeterminate = some && !all;
+    }
+    el.addEventListener('change', () => {
+      const g2 = groups.find(x => x.key === el.dataset.fac);
+      if (!g2) return;
+      g2.idxs.forEach(i => { STATE[i].checked = el.checked; STATE[i].chk_touched = true; });
+      renderRows();
+      updateSubmitButton();
+    });
+  });
 
   // wire row checkboxes
   tbody.querySelectorAll('.row-chk').forEach(el => {
@@ -554,11 +632,15 @@ function renderRows() {
 
   // summary
   const total = DUE_ROWS.length;
+  const sites = groups.length;
   const checked = DUE_ROWS.filter((_, i) => STATE[i].checked).length;
   const overdue = DUE_ROWS.filter(r => (r.status || '').toLowerCase() === 'overdue').length;
+  const nolink  = DUE_ROWS.filter(r => (r.status || '').toLowerCase() === 'no inspection link').length;
   document.getElementById('summary').innerHTML =
-    '<b>' + total + '</b> due · <b>' + checked + '</b> selected'
-    + (overdue ? ' · <b>' + overdue + '</b> overdue' : '');
+    '<b>' + total + '</b> well' + (total === 1 ? '' : 's') + ' at <b>' + sites + '</b> site' + (sites === 1 ? '' : 's')
+    + ' · <b>' + checked + '</b> selected'
+    + (overdue ? ' · <b>' + overdue + '</b> overdue' : '')
+    + (nolink ? ' · <b>' + nolink + '</b> never AVO-ed' : '');
 }
 
 function onMasterChk(e) {
@@ -704,10 +786,11 @@ async function submitBatch() {
     const body = {
       inspection_datetime: datetimes.get(i),
       weather_conditions:  '',
-      item:                row.fac_name,
-      location:            row.fac_name,
+      item:                row.well_name || row.fac_name,
+      location:            row.well_name || row.fac_name,
       facility_id:         row.facility_id,
-      linked_item_type:    'Facilities',
+      well_api:            row.well_api,
+      linked_item_type:    'Wells',
       odor_detected:       s.odor,
       odor_detail:         s.odor   === 'Yes' ? s.detail.odor   : '',
       leaks_observed:      s.leaks,
