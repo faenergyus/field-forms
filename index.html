@@ -28,9 +28,12 @@
     body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
       background:var(--bg);color:var(--ink);height:100vh;overflow:hidden}
 
-    /* Login overlay (matches SCADA/Analyst) */
+    /* Login overlay — hidden by default. Only shown when localStorage has no
+       session at all. Was display:flex which made expired-Google-JWT sessions
+       flash the Google sign-in screen on every page open. */
     #login-overlay{position:fixed;inset:0;z-index:9999;background:#f5f4f1;
-      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem}
+      display:none;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem}
+    #login-overlay.show{display:flex}
     .login-logo-img{height:60px;display:block}
     .login-tagline{color:#5a6066;font-size:.95rem}
     .login-tagline em{color:#5b626b;font-style:normal;font-weight:600}
@@ -1131,7 +1134,9 @@ function renderTasks() {
 }
 
 function showPortal(session) {
-  document.getElementById('login-overlay').style.display = 'none';
+  const ov = document.getElementById('login-overlay');
+  ov.classList.remove('show');
+  ov.style.display = 'none';
   document.getElementById('user-badge').style.display    = 'flex';
   document.getElementById('user-name').textContent       = 'Welcome, ' + session.displayName;
   const av = document.getElementById('user-avatar');
@@ -1180,16 +1185,23 @@ function signOut() {
   location.reload();
 }
 
-// Resume session on page load if not expired
+// Lenient session resume — accept any session blob (credential / token /
+// faeToken / email). fae-auth.js handles freshness + 401 retry. We do NOT
+// nuke localStorage on a stale Google-JWT timestamp anymore; that was
+// causing every authed page to flash the Google sign-in screen after the
+// first hour even though the 30-day faeToken was still valid.
 (function () {
   try {
-    const saved = localStorage.getItem(SESSION_KEY);
-    if (saved) {
-      const session = JSON.parse(saved);
-      if (session.expires > Date.now()) { showPortal(session); return; }
-      localStorage.removeItem(SESSION_KEY);
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s && (s.faeToken || s.credential || s.token || s.email)) {
+        showPortal(s);
+        return;
+      }
     }
-  } catch(e) { localStorage.removeItem(SESSION_KEY); }
+  } catch(e) {}
+  document.getElementById('login-overlay').classList.add('show');
 })();
 </script>
   <!-- Shared cross-app header (fae-header.js, owned by admin.40ac.us). Replaces the hand-rolled Analyst/SCADA/Forms trio.

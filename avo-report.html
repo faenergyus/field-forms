@@ -63,7 +63,12 @@
     .spinner { display:inline-block; width:14px; height:14px; border:2px solid #4a5158; border-top-color:transparent; border-radius:50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
     @keyframes spin { to { transform: rotate(360deg); } }
     /* Login overlay */
-    #login-overlay { position: fixed; inset: 0; z-index: 9999; background: #0d260d; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+    /* Hidden by default — only shown if every session-resume path failed
+       (localStorage empty, fae-auth.js can't bootstrap). The bug this fixes:
+       a long-lived faeToken session would get nuked when its companion
+       Google-JWT `expires` aged past 1h, then the overlay flashed up. */
+    #login-overlay { position: fixed; inset: 0; z-index: 9999; background: #0d260d; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+    #login-overlay.show { display: flex; }
     #login-overlay .login-logo { font-size: 2.8rem; font-weight: 900; letter-spacing: -1px; color: #5b626b; }
     #login-overlay .login-logo span { color: #fff; font-weight: 300; }
     #login-overlay .login-tagline { color: #90bc90; font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase; margin-top: -16px; }
@@ -241,19 +246,30 @@ async function handleCredentialResponse(response) {
 }
 
 function showApp(session) {
-  document.getElementById('login-overlay').style.display = 'none';
+  const ov = document.getElementById('login-overlay');
+  ov.classList.remove('show');
+  ov.style.display = 'none';
   initApp(session);
 }
 
+// Lenient resume: any session shape (credential / token / faeToken / email)
+// is enough. fae-auth.js handles token freshness + 401 retry via fetchAuthed.
+// Only show the login overlay when localStorage is completely empty —
+// otherwise the page should attempt to load and let the API failure path
+// surface a clear error instead of nuking the session and flashing the
+// Google sign-in screen.
 (function () {
   try {
-    const saved = localStorage.getItem(SESSION_KEY);
-    if (saved) {
-      const s = JSON.parse(saved);
-      if (s.expires > Date.now()) { showApp(s); return; }
-      localStorage.removeItem(SESSION_KEY);
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s && (s.faeToken || s.credential || s.token || s.email)) {
+        showApp(s);
+        return;
+      }
     }
-  } catch(e) { localStorage.removeItem(SESSION_KEY); }
+  } catch(e) {}
+  document.getElementById('login-overlay').classList.add('show');
 })();
 
 let currentSession = null;
