@@ -393,10 +393,10 @@ function showApp(session) {
 
 // ── App state ───────────────────────────────────────────────────────────────
 let currentSession = null;
-// Role-based-auto inspector scope (Ryan #421): pumpers see only their own
-// inspections; engineer/admin/tech/ops see all. Resolved in initApp from
-// /wbd/whoami. Defaults to true (restrictive) until role is known.
-let IS_PUMPER = true;
+// Inspector scope is enforced SERVER-SIDE by role (admin commit 815aaa2):
+// /avo/due hard-codes pumper -> own wells, engineer/admin/tech/ops -> all.
+// The page is a dumb renderer — it sends no inspector param and does no
+// client-side role filtering (Ryan #421 / task #426).
 let DUE_ROWS = [];   // raw rows from /avo/due
 // Per-row local state: { checked, odor: 'No'|'Yes', leaks, noises,
 //                        odor_touched, leaks_touched, noises_touched,
@@ -422,33 +422,8 @@ function fmtDate(s) {
   } catch (e) { return s; }
 }
 
-function roleIsPumper(role) {
-  const r = (role || '').toLowerCase();
-  // Engineer / Admin / Tech / Ops see ALL inspections (Ryan #421); everyone
-  // else — pumper or unknown role — is scoped to their own rows only.
-  return !['engineer', 'admin', 'tech', 'ops'].includes(r);
-}
-
-function meName(session) {
-  return (session && (session.pbiName || session.displayName) || '').trim();
-}
-
-async function initApp(session) {
+function initApp(session) {
   currentSession = session;
-
-  // Inspector scope is AUTOMATIC and role-based — there is no user-facing
-  // control (Ryan #421). Resolve the viewer's role from /wbd/whoami via the
-  // canonical fae-auth helper; fall back to the role on the signed-in session
-  // (Accounts sheet) if whoami is unavailable. Pumpers -> own rows only;
-  // engineer/admin/tech/ops -> all rows.
-  let role = null;
-  try {
-    if (window.faeAuth && window.faeAuth.ensureUserRole) {
-      role = await window.faeAuth.ensureUserRole();
-    }
-  } catch (e) { /* fall through to session role */ }
-  if (!role) role = (session && session.role) || '';
-  IS_PUMPER = roleIsPumper(role);
 
   document.getElementById('windowSelect').addEventListener('change', load);
   document.getElementById('statusSelect').addEventListener('change', load);
@@ -478,9 +453,7 @@ async function load() {
   tbody.innerHTML = '<tr><td colspan="8" class="state-msg"><span class="spinner"></span>Loading due inspections…</td></tr>';
 
   const params = new URLSearchParams();
-  const me = meName(currentSession);
-  // Role-based scope: pumpers are restricted to their own inspections.
-  if (IS_PUMPER && me) params.set('inspector', me);
+  // No inspector param — /avo/due enforces role-based visibility server-side.
   const within = document.getElementById('windowSelect').value;
   if (within) params.set('within_days', within);
   const st = document.getElementById('statusSelect').value;
@@ -509,12 +482,6 @@ async function load() {
     }
     if (!r.ok) throw new Error('HTTP ' + r.status);
     DUE_ROWS = await r.json();
-    // Client-side safety filter: pumpers see only their own rows even if the
-    // endpoint ignores ?inspector=... or returns extras.
-    if (IS_PUMPER && me) {
-      const meUp = me.toUpperCase();
-      DUE_ROWS = DUE_ROWS.filter(r => (r.pumper || '').toUpperCase() === meUp);
-    }
   } catch (err) {
     tbody.innerHTML = '<tr><td colspan="8" class="state-msg err">'
       + 'Could not load inspections (' + esc(err.message || err) + '). Try reloading.</td></tr>';
