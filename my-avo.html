@@ -165,7 +165,9 @@
     .q-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; }
     .q-cell .yn { align-self: center; }
     /* Small visual indicator that this Yes has unsaved missing detail */
-    .needs-detail { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #c0392b; vertical-align: middle; margin-left: 4px; }
+    /* Indicator dot: a Yes was set but no description was saved. NOT
+       clickable — the only way to open the popup is via the Yes toggle. */
+    .needs-detail { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #c0392b; vertical-align: middle; margin-left: 4px; pointer-events: none; }
     /* Modal: detail + photo for one (row, question) pair */
     .modal-overlay { position: fixed; inset: 0; background: rgba(43,48,54,0.55); display: none; align-items: center; justify-content: center; z-index: 9100; padding: 16px; }
     .modal-overlay.show { display: flex; }
@@ -204,21 +206,23 @@
       body .page { padding: 8px 4px 60px; }
       .toolbar { gap: 6px; font-size: 0.78rem; }
       .toolbar label { font-size: 0.72rem; }
-      /* One row per well, tabular. Trim font + padding so it fits on a phone. */
-      table.batch { font-size: 0.72rem; }
-      th { padding: 5px 4px; font-size: 0.56rem; letter-spacing: 0.04em; }
-      td { padding: 4px 4px; }
-      .col-chk { width: 28px; }
+      /* One row per well, tabular. Smaller site + date fonts so the
+         25%-bigger toggle still fits. */
+      table.batch { font-size: 0.66rem; }
+      th { padding: 5px 4px; font-size: 0.5rem; letter-spacing: 0.04em; }
+      td { padding: 4px 3px; }
+      .col-chk { width: 26px; }
       .chk { width: 16px; height: 16px; }
-      .col-due { width: 58px; font-size: 0.7rem; }
-      .col-q { width: 44px; }
-      /* Tiny pill: 30×11 — fits 3 across alongside chk + name + due */
-      .yn { width: 30px; height: 11px; border-radius: 6px; }
-      .yn::before { font-size: 0.38rem; }
-      .yn[data-v="No"]::before  { right: 4px; }
-      .yn[data-v="Yes"]::before { left:  3px; }
-      .yn::after { width: 9px; height: 9px; top: 1px; }
-      .yn[data-v="Yes"]::after { left: calc(100% - 10px); }
+      .col-name { font-size: 0.66rem; }
+      .col-due { width: 48px; font-size: 0.62rem; }
+      .col-q { width: 50px; }
+      /* Toggle pill +25% (was 30×11, now 38×14). Knob + label tuned to match. */
+      .yn { width: 38px; height: 14px; border-radius: 7px; }
+      .yn::before { font-size: 0.46rem; }
+      .yn[data-v="No"]::before  { right: 5px; }
+      .yn[data-v="Yes"]::before { left:  4px; }
+      .yn::after { width: 12px; height: 12px; top: 1px; }
+      .yn[data-v="Yes"]::after { left: calc(100% - 13px); }
       /* Stickier header at top of viewport */
       table.batch thead th { position: sticky; top: var(--chrome-hdr-h, 54px); z-index: 5; background: #f3f5f7; }
       table.batch thead th.q-hdr .q-label { font-size: 0.56rem; margin-bottom: 2px; }
@@ -744,7 +748,7 @@ function renderRows() {
            +   '<div class="yn' + (touched ? ' individually-set' : '') + '" '
            +        'data-row="' + i + '" data-q="' + q + '" data-v="' + v + '" '
            +        'role="switch" aria-checked="' + (v === 'Yes') + '" tabindex="0"></div>'
-           +   (needsDetail ? '<span class="needs-detail" title="Click Yes again to add detail" data-row="' + i + '" data-q="' + q + '"></span>' : '')
+           +   (needsDetail ? '<span class="needs-detail" title="Flip the toggle back to Yes to add detail"></span>' : '')
            + '</div>'
            + '</td>';
     }
@@ -793,13 +797,11 @@ function renderRows() {
       if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flip(); }
     });
   });
-  // Click the red "needs detail" dot to reopen the modal for that cell.
-  tbody.querySelectorAll('.needs-detail').forEach(d => {
-    d.addEventListener('click', e => {
-      e.stopPropagation();
-      openDetailModal(+d.dataset.row, d.dataset.q);
-    });
-  });
+  // Note: the red "needs detail" dot is intentionally NOT clickable. Per
+  // Ryan: the only way to open the popup is by switching the toggle to Yes.
+  // Clicking the pill area itself just flips Y/N. If a Yes row was saved
+  // without detail (e.g. modal cancelled), the user must flip it No→Yes
+  // to bring the popup back.
 
   updateSortIndicators();
   updateSummary();
@@ -1001,9 +1003,15 @@ async function submitBatch() {
       noises_heard:        s.noises,
       noises_detail:       s.noises === 'Yes' ? s.detail.noises : '',
     };
-    // Photo: ANY Yes column that has a captured File goes in the multipart
-    // body. Backend resizes to ≤1600px JPEG q85 and stamps photo_filename.
-    const photoFile = QUESTIONS.map(q => s.photo[q]).filter(Boolean)[0] || null;
+    // Photo: only send the first File attached to a column whose CURRENT
+    // answer is Yes. Per Ryan: if the final answer is No at submit time,
+    // don't write any details to the DB even if something was typed/attached
+    // while it was Yes. Text detail above already enforces this; same rule
+    // for the photo here.
+    const photoFile = QUESTIONS
+      .filter(q => s[q] === 'Yes')
+      .map(q => s.photo[q])
+      .filter(Boolean)[0] || null;
     let reqInit;
     if (photoFile) {
       const fd = new FormData();
