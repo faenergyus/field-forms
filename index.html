@@ -8,6 +8,10 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="favicon-180.png?v=3">
 <title>FAE Field Operations Portal</title>
+  <!-- Canonical shared auth helper (exchanges the ~1h Google JWT for a 30-day
+       fae1.* session token, provides window.faeAuth userRole/ensureUserRole for
+       the shared header). Replaces the old bespoke window.faeAuth shim. -->
+  <script src="https://admin.40ac.us/fae-auth.js?v=1"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
@@ -1022,8 +1026,14 @@ async function handleCredentialResponse(response) {
       return;
     }
 
+    // Keep the Google credential on the session: it is what fae-auth.js
+    // exchanges (POST /auth/session) for the long-lived 30-day fae1.* token,
+    // and it is what the shared .40ac.us SSO cookie must carry so admin/
+    // analyst can do the exchange too. Omitting it wrote a token-less session
+    // into the cookie -> hourly re-login on mobile + degraded admin SSO.
     const session = { email, displayName: match.displayName, pbiName: match.pbiName,
-                      role: match.role, picture, expires: Date.now() + SESSION_HRS * 3600000 };
+                      role: match.role, picture, credential: response.credential,
+                      expires: Date.now() + SESSION_HRS * 3600000 };
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
     // Fire-and-forget — update Last Signin + Signin Count in the Sheet
     fetch(TRACKER_URL, { method:'POST', body: JSON.stringify({ email }) }).catch(() => {});
@@ -1185,14 +1195,8 @@ function signOut() {
   } catch(e) { localStorage.removeItem(SESSION_KEY); }
 })();
 </script>
-  <!-- Shared cross-app header (fae-header.js, owned by admin.40ac.us). Replaces the hand-rolled Analyst/SCADA/Forms trio. -->
-  <script>
-    // Minimal shared-auth shim so fae-header.js can gate the Admin link on role.
-    window.faeAuth = window.faeAuth || (function () {
-      function role() { try { return (JSON.parse(localStorage.getItem("fae_user") || "{}").role || "").toLowerCase(); } catch (e) { return ""; } }
-      return { userRole: role, ensureUserRole: function () { return Promise.resolve(role()); } };
-    })();
-  </script>
+  <!-- Shared cross-app header (fae-header.js, owned by admin.40ac.us). Replaces the hand-rolled Analyst/SCADA/Forms trio.
+       window.faeAuth (userRole/ensureUserRole) is provided by the canonical fae-auth.js loaded in <head>. -->
   <script src="https://admin.40ac.us/fae-header.js?v=2"></script>
   </body>
 </html>
