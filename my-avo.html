@@ -43,7 +43,12 @@
 
     /* Desktop table layout */
     table.batch { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-    table.batch th { text-align: left; padding: 8px 8px; background: #f3f5f7; border-bottom: 1.5px solid #d8dadd; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; color: #565c63; white-space: nowrap; vertical-align: top; }
+    table.batch th { text-align: left; padding: 8px 8px; background: #f3f5f7; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; color: #565c63; white-space: nowrap; vertical-align: top; }
+    /* Border lives on the filter row's TOP (not the column-title row's
+       BOTTOM) so the sticky filter row carries it in its own paint layer.
+       Otherwise position:sticky + border-collapse orphans the 1.5px
+       border and the .grid-card #fff bleeds through as a white sliver. */
+    table.batch thead tr:first-child + tr.filter-row th { border-top: 1px solid #d8dadd; }
     table.batch th.q-hdr { text-align: center; padding: 6px 8px; }
     table.batch th.q-hdr .q-label { display: block; margin-bottom: 4px; }
     table.batch td { padding: 8px; border-bottom: 1px solid #eef2ee; vertical-align: top; }
@@ -131,8 +136,14 @@
     .col-pumper { width: 120px; white-space: nowrap; font-size: 0.82rem; color: #565c63; }
     .col-due  { width: 90px; white-space: nowrap; font-size: 0.82rem; }
     .col-q    { width: 70px; text-align: center; }
-    /* Site name filter — sits in a sticky row right below the header. */
-    table.batch tr.filter-row th { background: #eef1f4; padding: 4px 6px; border-bottom: 1px solid #d8dadd; position: sticky; top: calc(var(--chrome-hdr-h, 54px) + 35px); z-index: 4; }
+    /* Filter row sits in normal flow right below the column headers.
+       Was `position: sticky; top: calc(54 + 35)` but sticky inside a
+       table whose ancestor has overflow-x:auto offsets the TH ~37px
+       below its TR (the browser uses the table — not the viewport —
+       as the containing block), exposing the .grid-card #fff
+       background as a white sliver between the two rows. Static
+       positioning fixes it. */
+    table.batch tr.filter-row th { background: #eef1f4; padding: 4px 6px; border-bottom: 1px solid #d8dadd; }
     .col-filter { width: 100%; box-sizing: border-box; background: #fff; border: 1px solid #c0cad6; border-radius: 4px; padding: 4px 8px; font-size: 0.78rem; color: #1a1a1a; font-family: inherit; }
     /* Site name column flexes wide; its filter input takes 50% of that so it
        doesn't look bloated next to the narrow Pumper filter. Phone is still
