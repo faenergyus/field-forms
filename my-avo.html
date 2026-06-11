@@ -392,12 +392,17 @@ function meName(session) {
 function initApp(session) {
   currentSession = session;
 
-  // Lock the inspector dropdown for non-editors so a pumper sees only their list.
+  // Inspector dropdown behavior depends on role:
+  //   - Pumper: locked to "Me" (their own due list only)
+  //   - Engineer/Admin/Tech: defaults to "All" (every required inspection)
+  //     but can switch to "Me" to see just their own.
   const insp = document.getElementById('inspectorSelect');
   if (isPumperRole(session)) {
     insp.innerHTML = '<option value="me">Me</option>';
     insp.value = 'me';
     insp.disabled = true;
+  } else {
+    insp.value = '';  // "All" by default for editors
   }
 
   document.getElementById('inspectorSelect').addEventListener('change', load);
