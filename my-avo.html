@@ -17,7 +17,10 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f4f1; color: #1a1a1a; min-height: 100vh; }
-    .page { max-width: 1320px; margin: 0 auto; padding: 18px 18px 60px; }
+    /* Override the 720px shared .page width from chrome.css — the bulk-entry
+       table needs ~780px just for the toggles. Higher-specificity selector
+       (body .page) wins regardless of stylesheet order. */
+    body .page { max-width: 1320px; margin: 0 auto; padding: 18px 18px 60px; }
 
     .toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
     .toolbar label { font-size: 0.78rem; font-weight: 600; color: #565c63; }
@@ -25,7 +28,7 @@
     .toolbar .summary { margin-left: auto; font-size: 0.78rem; color: #6b7177; }
     .toolbar .summary b { color: #2b3036; }
 
-    .grid-card { background: #fff; border-radius: 9px; border: 1px solid #d8dadd; border-top: 3px solid #5b626b; overflow: hidden; }
+    .grid-card { background: #fff; border-radius: 9px; border: 1px solid #d8dadd; border-top: 3px solid #5b626b; overflow-x: auto; }
 
     /* Desktop table layout */
     table.batch { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
