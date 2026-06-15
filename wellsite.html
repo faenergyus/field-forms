@@ -19,6 +19,9 @@
     .section-title { color: #565c63; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 12px; }
     label { display: block; color: #444a50; font-size: 0.85rem; margin-bottom: 4px; font-weight: 500; }
     .required::after { content: " *"; color: #c0392b; }
+    .avo-reveal { display: none; }
+    .avo-reveal.show { display: block; }
+    .radio-group.invalid > .radio-btn label { border-color: #c0392b; }
     input[type="text"], input[type="date"], select, textarea {
       width: 100%; padding: 9px 12px; background: #fff; border: 1.5px solid #d0d4d8;
       border-radius: 6px; color: #1a1a1a; font-size: 16px; margin-bottom: 12px;
@@ -239,6 +242,44 @@
         <textarea id="envConcerns" placeholder="Describe any environmental concerns observed..."></textarea>
       </div>
 
+      <!-- AVO Inspection -->
+      <div class="section avo-section">
+        <div class="section-title">AVO Inspection</div>
+
+        <label class="required">Odor detected?</label>
+        <div class="radio-group" data-required="avoOdor">
+          <div class="radio-btn"><input type="radio" name="avoOdor" id="avo_odor_yes" value="Yes"><label for="avo_odor_yes">Yes</label></div>
+          <div class="radio-btn"><input type="radio" name="avoOdor" id="avo_odor_no" value="No"><label for="avo_odor_no">No</label></div>
+        </div>
+        <div class="avo-reveal" id="odorDetailWrap">
+          <label>Describe the odor and its source</label>
+          <textarea id="avoOdorDetail" placeholder="What did it smell like? Where was it strongest?"></textarea>
+        </div>
+
+        <label class="required">Visible leaks observed?</label>
+        <div class="radio-group" data-required="avoLeaks">
+          <div class="radio-btn"><input type="radio" name="avoLeaks" id="avo_leaks_yes" value="Yes"><label for="avo_leaks_yes">Yes</label></div>
+          <div class="radio-btn"><input type="radio" name="avoLeaks" id="avo_leaks_no" value="No"><label for="avo_leaks_no">No</label></div>
+        </div>
+        <div class="avo-reveal" id="leaksDetailWrap">
+          <label>Specify location and equipment</label>
+          <textarea id="avoLeaksDetail" placeholder="What's leaking? Where on the unit?"></textarea>
+        </div>
+
+        <label class="required">Unusual noises heard from equipment?</label>
+        <div class="radio-group" data-required="avoNoises">
+          <div class="radio-btn"><input type="radio" name="avoNoises" id="avo_noises_yes" value="Yes"><label for="avo_noises_yes">Yes</label></div>
+          <div class="radio-btn"><input type="radio" name="avoNoises" id="avo_noises_no" value="No"><label for="avo_noises_no">No</label></div>
+        </div>
+        <div class="avo-reveal" id="noisesDetailWrap">
+          <label>Describe the noise and its source</label>
+          <textarea id="avoNoisesDetail" placeholder="Knocking, squealing, grinding...?"></textarea>
+        </div>
+
+        <label>Notes</label>
+        <textarea id="avoNotes" placeholder="Any additional AVO observations..."></textarea>
+      </div>
+
       <div class="section">
         <div class="section-title">Well</div>
 
@@ -386,6 +427,15 @@ function validateNums() {
 }
 
 // Form submission
+// Reveal-on-Yes for the AVO Inspection detail textareas.
+[['avoOdor','odorDetailWrap'],['avoLeaks','leaksDetailWrap'],['avoNoises','noisesDetailWrap']].forEach(([name, wrapId]) => {
+  document.querySelectorAll('input[name="' + name + '"]').forEach(r => {
+    r.addEventListener('change', () => {
+      document.getElementById(wrapId).classList.toggle('show', r.value === 'Yes' && r.checked);
+    });
+  });
+});
+
 document.getElementById('wsi-form').addEventListener('submit', async function(e) {
   e.preventDefault();
   if (!selectedWell) { wellInput.focus(); wellInput.style.borderColor = '#c0392b'; return; }
@@ -411,8 +461,33 @@ document.getElementById('wsi-form').addEventListener('submit', async function(e)
     wellheadParts:   document.getElementById('wellheadParts').value,
     injectionScreen: getRadio('injectionScreen'),
     comment:         document.getElementById('comment').value,
-    envConcerns:     document.getElementById('envConcerns').value
+    envConcerns:     document.getElementById('envConcerns').value,
+    // AVO Inspection
+    avoOdor:         getRadio('avoOdor'),
+    avoLeaks:        getRadio('avoLeaks'),
+    avoNoises:       getRadio('avoNoises'),
+    avoOdorDetail:   getRadio('avoOdor')   === 'Yes' ? document.getElementById('avoOdorDetail').value   : '',
+    avoLeaksDetail:  getRadio('avoLeaks')  === 'Yes' ? document.getElementById('avoLeaksDetail').value  : '',
+    avoNoisesDetail: getRadio('avoNoises') === 'Yes' ? document.getElementById('avoNoisesDetail').value : '',
+    avoNotes:        document.getElementById('avoNotes').value
   };
+
+  // Validation: required AVO radios
+  const missing = [];
+  ['avoOdor','avoLeaks','avoNoises'].forEach(n => {
+    const grp = document.querySelector('.radio-group[data-required="' + n + '"]');
+    if (grp) {
+      const ok = !!grp.querySelector('input:checked');
+      grp.classList.toggle('invalid', !ok);
+      if (!ok) missing.push(n);
+    }
+  });
+  if (missing.length) {
+    btn.disabled = false;
+    btn.textContent = 'Submit Inspection';
+    document.querySelector('.invalid').scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
 
   const photos = [];
   if (photoFiles.length > 0) {
