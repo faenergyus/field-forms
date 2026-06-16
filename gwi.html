@@ -308,6 +308,14 @@
           <div class="checkbox-btn"><input type="checkbox" id="im_none" value="None"><label for="im_none">None</label></div>
         </div>
 
+        <label>Weather</label>
+        <select id="weather">
+          <option value="">--</option>
+          <option>Clear</option>
+          <option>Overcast</option>
+          <option>Rain</option>
+        </select>
+
         <label class="required">Odor detected?</label>
         <div class="radio-group" data-required="avoOdor">
           <div class="radio-btn"><input type="radio" name="avoOdor" id="avo_odor_yes" value="Yes"><label for="avo_odor_yes">Yes</label></div>
@@ -684,6 +692,7 @@ document.getElementById('gwi-form').addEventListener('submit', async function(e)
   fields.avoLeaksDetail  = fields.leaks     === 'Yes' ? document.getElementById('avoLeaksDetail').value  : '';
   fields.avoNoisesDetail = fields.avoNoises === 'Yes' ? document.getElementById('avoNoisesDetail').value : '';
   fields.avoNotes        = document.getElementById('avoNotes').value;
+  fields.weather         = document.getElementById('weather').value;
 
   // Validation: required AVO radios + Inspection Method
   const missing = [];

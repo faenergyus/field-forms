@@ -309,6 +309,14 @@
           <div class="radio-btn"><input type="radio" name="leakMethod" id="lm_none" value="None"><label for="lm_none">None</label></div>
         </div>
 
+        <label>Weather</label>
+        <select id="weather">
+          <option value="">--</option>
+          <option>Clear</option>
+          <option>Overcast</option>
+          <option>Rain</option>
+        </select>
+
         <label class="required">Odor detected?</label>
         <div class="radio-group" data-required="avoOdor">
           <div class="radio-btn"><input type="radio" name="avoOdor" id="avo_odor_yes" value="Yes"><label for="avo_odor_yes">Yes</label></div>
@@ -533,6 +541,7 @@ document.getElementById('fac-form').addEventListener('submit', async function(e)
     leaksFound:       getRadio('leaksFound'),
     avoNoises:        getRadio('avoNoises'),
     leakMethod:       getRadio('leakMethod'),
+    weather:          document.getElementById('weather').value,
     leaksFixed1:      getRadio('leaksFixed1'),
     avoOdorDetail:    getRadio('avoOdor')   === 'Yes' ? document.getElementById('avoOdorDetail').value   : '',
     avoLeaksDetail:   getRadio('leaksFound')=== 'Yes' ? document.getElementById('avoLeaksDetail').value  : '',

@@ -253,6 +253,14 @@
           <div class="radio-btn"><input type="radio" name="leakMethod" id="lm_none" value="None"><label for="lm_none">None</label></div>
         </div>
 
+        <label>Weather</label>
+        <select id="weather">
+          <option value="">--</option>
+          <option>Clear</option>
+          <option>Overcast</option>
+          <option>Rain</option>
+        </select>
+
         <label class="required">Odor detected?</label>
         <div class="radio-group" data-required="avoOdor">
           <div class="radio-btn"><input type="radio" name="avoOdor" id="avo_odor_yes" value="Yes"><label for="avo_odor_yes">Yes</label></div>
@@ -471,6 +479,7 @@ document.getElementById('wsi-form').addEventListener('submit', async function(e)
     envConcerns:     document.getElementById('envConcerns').value,
     // AVO Inspection
     leakMethod:      getRadio('leakMethod'),
+    weather:         document.getElementById('weather').value,
     avoOdor:         getRadio('avoOdor'),
     avoLeaks:        getRadio('avoLeaks'),
     avoNoises:       getRadio('avoNoises'),
