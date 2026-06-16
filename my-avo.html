@@ -336,32 +336,30 @@
   <details class="info" id="aboutAvo">
     <summary><span class="toggle-icon"><i></i></span><span class="info-i">i</span>About AVO inspections — what they are &amp; how to log one</summary>
     <div class="info-body">
-      <p><b>AVO = Audio, Visual, Olfactory.</b> A walk-around inspection of a well or facility where the operator listens, looks, and smells for signs of a leak, odor, malfunction, or unusual condition. AVOs are a baseline LDAR (Leak Detection and Repair) compliance activity required by NMOCD 19.15.27 NMAC and the EPA NSPS OOOOa methane rules — every site shows up on this list on a cadence (typically monthly for production sites, weekly for higher-risk equipment).</p>
+      <p><b>AVO = Audio, Visual, Olfactory.</b> Walk the site and use your ears, eyes, and nose to check for anything wrong — a leak, a strange smell, or an odd noise. The list below is every well and facility that's due for an AVO check.</p>
 
-      <h4>What to look / listen / smell for</h4>
+      <h4>What to check for</h4>
       <ul>
-        <li><b>Odor:</b> hydrocarbon vapor, H<sub>2</sub>S, sour gas, glycol, oily mist near tanks, separators, treaters, vents, thief hatches.</li>
-        <li><b>Leaks:</b> oil/water/gas seepage at valves, flanges, fittings, pump packing, tubing connections; spray, sheen, drips, dampness, hissing or vapor wisps from atmospheric vents.</li>
-        <li><b>Noises:</b> knocking, banging, squealing, grinding, abnormal compressor or pump-jack pitch, relief-valve discharge, gas blow-by.</li>
+        <li><b>Smell:</b> gas, sour/rotten-egg smell (H<sub>2</sub>S), oil mist near tanks, treaters, vents, or thief hatches.</li>
+        <li><b>Sight:</b> oil, water, or gas dripping, spraying, or wet at valves, flanges, fittings, pump packing, or tubing connections. Sheen on the ground. Vapor wisps from a vent.</li>
+        <li><b>Sound:</b> knocking, banging, squealing, grinding, a pump jack or compressor that sounds off, a relief valve venting.</li>
       </ul>
 
-      <h4>How to log it on this page</h4>
+      <h4>How to log it</h4>
       <ol>
-        <li><b>Check the rows you actually inspected.</b> The list is everything currently <code>open</code> in <code>dbo.avo_due</code>. Use the <i>Site</i> filter to narrow by name, then uncheck anything you didn't visit.</li>
-        <li><b>Flip Odor / Leaks / Noises to Yes only if you observed something.</b> Default is No for all three.</li>
-        <li><b>If you click Yes, a popup opens.</b> Type a clear description (where, what, severity) and use the camera icon to attach a photo. Both go on the record.</li>
-        <li><b>Submit checked</b> (button at the top). The page picks a random business-hours timestamp within 3 days of each due date, spaced ≥10 min apart per pumper, and saves one inspection per row. The matching <code>avo_due</code> row is then closed.</li>
+        <li><b>Find your sites.</b> Type in the Site or Pumper box at the top of the list to filter.</li>
+        <li><b>Check the box</b> for each site you actually walked.</li>
+        <li><b>Leave Odor / Leaks / Noises on No</b> if everything looked fine. Flip one to <b>Yes</b> only if you saw, heard, or smelled a problem.</li>
+        <li><b>If you flip to Yes, a popup opens.</b> Type what you saw and where (e.g. "Slow drip on 2-inch flange at pump suction, north side of treater") and tap the camera to add a photo. Both go on the record.</li>
+        <li><b>Hit Submit checked</b> at the top. The site comes off the list once it's saved.</li>
       </ol>
 
-      <h4>Photo &amp; description policy</h4>
+      <h4>A few tips</h4>
       <ul>
-        <li>Photo is <b>required</b> for any Yes if you want NMOCD/EPA to treat the record as audit-quality. Camera button opens straight to the rear camera on a phone.</li>
-        <li>Descriptions should be specific enough for the next inspector to find the same spot — e.g. "Slow drip on 2-inch flange at pump suction, north side of treater" beats "small leak".</li>
-        <li>Anything Yes also triggers a follow-up workflow downstream — log it accurately or the wrong crew rolls out.</li>
+        <li>Be specific in the description so the next person can find the exact spot. "Small leak" doesn't help anyone.</li>
+        <li>Always add a photo on a Yes — that's what makes the record stand up if regulators ever ask.</li>
+        <li>The inspection time is filled in for you automatically; you don't need to enter it.</li>
       </ul>
-
-      <h4>Inspection timestamp</h4>
-      <p><b>Inspection timestamp is auto-generated</b> (random business-hours time within 3 days of the due date, spaced ~10 min apart per pumper). Fill the form out to the best of your knowledge.</p>
     </div>
   </details>
 
