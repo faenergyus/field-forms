@@ -301,6 +301,13 @@
       <div class="section avo-section">
         <div class="section-title">AVO Inspection</div>
 
+        <label class="required">Inspection Method</label>
+        <div class="checkbox-group" data-required="inspectionMethod">
+          <div class="checkbox-btn"><input type="checkbox" id="im_avo" value="AVO Only"><label for="im_avo">AVO Only</label></div>
+          <div class="checkbox-btn"><input type="checkbox" id="im_sonic" value="AVO w/ Sonic Camera"><label for="im_sonic">AVO w/ Sonic Camera</label></div>
+          <div class="checkbox-btn"><input type="checkbox" id="im_none" value="None"><label for="im_none">None</label></div>
+        </div>
+
         <label class="required">Odor detected?</label>
         <div class="radio-group" data-required="avoOdor">
           <div class="radio-btn"><input type="radio" name="avoOdor" id="avo_odor_yes" value="Yes"><label for="avo_odor_yes">Yes</label></div>
@@ -329,13 +336,6 @@
         <div class="avo-reveal" id="noisesDetailWrap">
           <label>Describe the noise and its source</label>
           <textarea id="avoNoisesDetail" placeholder="Knocking, squealing, grinding...?"></textarea>
-        </div>
-
-        <label class="required">Inspection Method</label>
-        <div class="checkbox-group" data-required="inspectionMethod">
-          <div class="checkbox-btn"><input type="checkbox" id="im_avo" value="AVO Only"><label for="im_avo">AVO Only</label></div>
-          <div class="checkbox-btn"><input type="checkbox" id="im_sonic" value="AVO w/ Sonic Camera"><label for="im_sonic">AVO w/ Sonic Camera</label></div>
-          <div class="checkbox-btn"><input type="checkbox" id="im_none" value="None"><label for="im_none">None</label></div>
         </div>
 
         <label class="required">Leaks fixed?</label>

@@ -246,6 +246,13 @@
       <div class="section avo-section">
         <div class="section-title">AVO Inspection</div>
 
+        <label class="required">Inspection Method</label>
+        <div class="radio-group" data-required="leakMethod">
+          <div class="radio-btn"><input type="radio" name="leakMethod" id="lm_avo" value="AVO Only"><label for="lm_avo">AVO Only</label></div>
+          <div class="radio-btn"><input type="radio" name="leakMethod" id="lm_sonic" value="AVO w/ Sonic Camera"><label for="lm_sonic">AVO w/ Sonic</label></div>
+          <div class="radio-btn"><input type="radio" name="leakMethod" id="lm_none" value="None"><label for="lm_none">None</label></div>
+        </div>
+
         <label class="required">Odor detected?</label>
         <div class="radio-group" data-required="avoOdor">
           <div class="radio-btn"><input type="radio" name="avoOdor" id="avo_odor_yes" value="Yes"><label for="avo_odor_yes">Yes</label></div>
@@ -463,6 +470,7 @@ document.getElementById('wsi-form').addEventListener('submit', async function(e)
     comment:         document.getElementById('comment').value,
     envConcerns:     document.getElementById('envConcerns').value,
     // AVO Inspection
+    leakMethod:      getRadio('leakMethod'),
     avoOdor:         getRadio('avoOdor'),
     avoLeaks:        getRadio('avoLeaks'),
     avoNoises:       getRadio('avoNoises'),
@@ -474,7 +482,7 @@ document.getElementById('wsi-form').addEventListener('submit', async function(e)
 
   // Validation: required AVO radios
   const missing = [];
-  ['avoOdor','avoLeaks','avoNoises'].forEach(n => {
+  ['leakMethod','avoOdor','avoLeaks','avoNoises'].forEach(n => {
     const grp = document.querySelector('.radio-group[data-required="' + n + '"]');
     if (grp) {
       const ok = !!grp.querySelector('input:checked');
