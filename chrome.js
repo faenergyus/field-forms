@@ -2,7 +2,7 @@
    - Mirrors SSO cookie ↔ localStorage so a login on portal/scada/analyst
      carries over to form pages.
    - Hydrates the user badge.
-   - Polls prices.json (15 min) to keep WTI/Waha ticker fresh.
+   - Polls api.40ac.us/prices (5 min) to keep WTI/Waha ticker fresh.
    - Auto-injects burger into the header.
    - Auto-injects the shared sidebar (FORMS + REPORTS) into every page
      that has <header class="appchrome">, with the current page marked active. */
@@ -53,7 +53,7 @@
   }
   function refreshPrices() {
     try {
-      fetch('prices.json', { cache: 'no-cache' })
+      fetch('https://api.40ac.us/prices', { cache: 'no-cache' })
         .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
         .then(function (p) {
           if (!p) return;
@@ -177,5 +177,5 @@
   } else {
     init();
   }
-  setInterval(refreshPrices, 15 * 60 * 1000);
+  setInterval(refreshPrices, 5 * 60 * 1000);
 })();

@@ -1164,13 +1164,14 @@ function showPrices() {
       document.getElementById('waha-date').textContent = p.waha.date || '';
     }
   }
-  // Shared price source for all three 40ac.us landing pages.
-  fetch('prices.json', {cache: 'no-cache'})
+  // Shared price source for all three 40ac.us landing pages (live, 5-min cache).
+  fetch('https://api.40ac.us/prices', {cache: 'no-cache'})
     .then(r => r.ok ? r.json() : Promise.reject())
     .then(render)
     .catch(() => render(typeof PRICES !== 'undefined' ? PRICES : null));
 }
 showPrices();
+setInterval(showPrices, 300000);  // refresh ticker every 5 min
 
 function signOut() {
   localStorage.removeItem(SESSION_KEY);
