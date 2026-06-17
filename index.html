@@ -1050,7 +1050,7 @@ async function handleCredentialResponse(response) {
 function renderTasks() {
   const panel = document.getElementById('tasks-panel');
   const role  = (CURRENT_USER && CURRENT_USER.role || '').toLowerCase();
-  const isEng = role === 'engineer' || role === 'admin' || role === 'ops' || role === 'tech';
+  const isEng = role === 'engineer' || role === 'admin' || role === 'ops' || role === 'tech' || role === 'geo';
   if (!CURRENT_USER || (!isEng && role !== 'pumper') || !PUMPER_TASKS) {
     panel.style.display = 'none';
     return;
