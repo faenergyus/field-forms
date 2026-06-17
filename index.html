@@ -63,6 +63,7 @@
     .pl{font-size:.56rem;font-weight:700;letter-spacing:.1em;color:#2e2e2e;text-transform:uppercase;display:block}
     .pv{font-size:.92rem;font-weight:700;color:#111}
     .pd,.price-date{font-size:.54rem;color:#555;display:block}
+    #wti-date{font-size:.48rem}
     .price-chg{font-size:.62rem;font-weight:600;margin-left:4px}
     .price-up{color:#155f15}
     .price-down{color:#a32020}
@@ -1177,7 +1178,7 @@ function showPrices() {
     if (p.wti) {
       document.getElementById('wti-val').textContent = fmt(p.wti.price);
       document.getElementById('wti-chg').outerHTML = chgHtml(p.wti.chg);
-      document.getElementById('wti-date').textContent = p.wti.date || '';
+      document.getElementById('wti-date').textContent = (p.wti.date || '') + (p.wti.time ? ' ' + p.wti.time : '');
     }
     if (p.waha) {
       document.getElementById('waha-val').textContent = fmt(p.waha.price);

@@ -59,7 +59,7 @@
           if (!p) return;
           if (p.wti) { setText('wti-val', fmtPrice(p.wti.price));
                       setChg('wti-chg', p.wti.chg);
-                      setText('wti-date', p.wti.date || ''); }
+                      setText('wti-date', (p.wti.date || '') + (p.wti.time ? ' ' + p.wti.time : '')); }
           if (p.waha) { setText('waha-val', fmtPrice(p.waha.price));
                        setChg('waha-chg', p.waha.chg);
                        setText('waha-date', p.waha.date || ''); }

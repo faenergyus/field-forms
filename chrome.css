@@ -110,6 +110,7 @@ body {
   color: #555;
   display: block;
 }
+.appchrome #wti-date { font-size: .48rem; }
 .appchrome .price-chg {
   font-size: .62rem;
   font-weight: 600;
