@@ -40,7 +40,7 @@
     .login-title{color:#2b3036;font-size:1.1rem;margin-bottom:.5rem}
     .login-error{display:none;margin-top:.5rem;font-size:.85rem}
 
-    .app{display:flex;flex-direction:column;height:100vh}
+    .app{display:flex;flex-direction:column;height:100vh;height:100dvh}
 
     /* Header */
     header{background:var(--header);display:flex;align-items:center;gap:12px;
@@ -79,7 +79,7 @@
       display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;
       transition:width .15s ease}
     body:not(.sb-open) .sidebar{width:0;border-right-color:transparent}
-    nav.snav{padding:8px 0;flex:1;overflow:auto}
+    nav.snav{padding:8px 0;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden}
     /* Main-menu (sidebar) text reduced to 75% of original (task #568): section
        labels .58→.44rem, links .86→.65rem, icon glyph .95→.71rem, icon box 24→18px.
        Shared top header (.appnav/.wordmark/.price) intentionally untouched. */
@@ -235,6 +235,20 @@
     @media (max-width:580px){
       .kpis{grid-template-columns:repeat(3,1fr)}
       .chart-wrap{height:280px}
+    }
+    /* Low-resolution laptops (e.g. 1366×768, or 1080p @150% scaling ≈ 720 CSS px):
+       the nav already scrolls (nav.snav overflow-y:auto), but tighten the menu a
+       notch further at low VIEWPORT HEIGHT so the full list fits without scrolling.
+       Stacks on top of the −25% from task #568 — do not undo that. */
+    @media (max-height:800px){
+      .nav-sec{font-size:.4rem;padding:9px 18px 4px}
+      .nav-i{font-size:.6rem;padding:6px 18px}
+      .nav-i .ic{font-size:.66rem;width:16px;height:16px}
+      nav.snav{padding:4px 0}
+    }
+    @media (max-height:650px){
+      .nav-sec{font-size:.38rem;padding:6px 18px 3px}
+      .nav-i{font-size:.56rem;padding:4px 18px;gap:9px}
     }
   </style>
   <script>
