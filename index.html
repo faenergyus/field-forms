@@ -1018,11 +1018,15 @@ async function handleCredentialResponse(response) {
   errorEl.textContent   = 'Checking access…';
 
   try {
-    const csv   = await fetch(ACCOUNTS_CSV).then(r => r.text());
-    const rows  = parseAccountsCSV(csv);
-    const match = rows.find(r => r.email.toLowerCase() === email && r.email !== 'x');
+    // Authorization is decided SERVER-SIDE against ops_admin.dbo.users (SQL)
+    // via /wbd/whoami — NOT the Google Accounts sheet. Allow sign-in iff the
+    // server returns a non-empty role. pbi_name scopes a pumper to their wells.
+    const who = await fetch('https://api.40ac.us/wbd/whoami', {
+      headers: { 'Authorization': 'Bearer ' + response.credential }
+    }).then(r => r.ok ? r.json() : null).catch(() => null);
+    const role = (who && who.role) ? String(who.role).toLowerCase() : '';
 
-    if (!match) {
+    if (!role) {
       errorEl.style.color = '#ff8080';
       errorEl.textContent = `Access denied for ${email}. Contact Ryan Swift to request access.`;
       return;
@@ -1033,8 +1037,8 @@ async function handleCredentialResponse(response) {
     // and it is what the shared .40ac.us SSO cookie must carry so admin/
     // analyst can do the exchange too. Omitting it wrote a token-less session
     // into the cookie -> hourly re-login on mobile + degraded admin SSO.
-    const session = { email, displayName: match.displayName, pbiName: match.pbiName,
-                      role: match.role, picture, credential: response.credential,
+    const session = { email, displayName: (payload.name || email), pbiName: (who.pbi_name || ''),
+                      role, picture, credential: response.credential,
                       expires: Date.now() + SESSION_HRS * 3600000 };
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
     // Fire-and-forget — update Last Signin + Signin Count in the Sheet

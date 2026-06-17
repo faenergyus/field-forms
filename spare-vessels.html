@@ -333,16 +333,19 @@ async function handleCredentialResponse(response) {
   errorEl.style.cssText = 'display:block;color:#90bc90';
   errorEl.textContent   = 'Checking access…';
   try {
-    const csv   = await fetch(ACCOUNTS_CSV).then(r => r.text());
-    const rows  = parseAccountsCSV(csv);
-    const match = rows.find(r => r.email.toLowerCase() === email && r.email !== 'x');
-    if (!match) {
+    // Authorization is decided SERVER-SIDE against ops_admin.dbo.users (SQL)
+    // via /wbd/whoami — NOT the Google Accounts sheet. Allow iff role non-empty.
+    const who = await fetch('https://api.40ac.us/wbd/whoami', {
+      headers: { 'Authorization': 'Bearer ' + response.credential }
+    }).then(r => r.ok ? r.json() : null).catch(() => null);
+    const role = (who && who.role) ? String(who.role).toLowerCase() : '';
+    if (!role) {
       errorEl.style.color = '#ff8080';
       errorEl.textContent = `Access denied for ${email}. Contact Ryan Swift to request access.`;
       return;
     }
-    const session = { email, displayName: match.displayName, pbiName: match.pbiName,
-                      role: match.role, picture, expires: Date.now() + SESSION_HRS * 3600000 };
+    const session = { email, displayName: (payload.name || email), pbiName: (who.pbi_name || ''),
+                      role, picture, expires: Date.now() + SESSION_HRS * 3600000 };
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
     fetch(TRACKER_URL, { method:'POST', body: JSON.stringify({ email }) }).catch(() => {});
     showPortal(session);

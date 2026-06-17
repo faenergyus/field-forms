@@ -263,16 +263,20 @@ async function handleCredentialResponse(response) {
   errorEl.style.cssText = 'display:block;color:#90bc90';
   errorEl.textContent   = 'Checking access…';
   try {
-    const rows  = parseAccountsCSV(await fetch(ACCOUNTS_CSV).then(r => r.text()));
-    const match = rows.find(r => r.email.toLowerCase() === email && r.email !== 'x');
-    if (!match) {
+    // Authorization is decided SERVER-SIDE against ops_admin.dbo.users (SQL)
+    // via /wbd/whoami — NOT the Google Accounts sheet. Allow iff role non-empty.
+    const who = await fetch('https://api.40ac.us/wbd/whoami', {
+      headers: { 'Authorization': 'Bearer ' + response.credential }
+    }).then(r => r.ok ? r.json() : null).catch(() => null);
+    const role = (who && who.role) ? String(who.role).toLowerCase() : '';
+    if (!role) {
       errorEl.style.color = '#ff8080';
       errorEl.textContent = `Access denied for ${email}. Contact Ryan Swift to request access.`;
       return;
     }
     const session = {
-      email, displayName: match.displayName, pbiName: match.pbiName,
-      role: match.role, picture: payload.picture,
+      email, displayName: (payload.name || email), pbiName: (who.pbi_name || ''),
+      role, picture: payload.picture,
       credential: response.credential,
       expires: Date.now() + SESSION_HRS * 3600000
     };
