@@ -80,14 +80,17 @@
       transition:width .15s ease}
     body:not(.sb-open) .sidebar{width:0;border-right-color:transparent}
     nav.snav{padding:8px 0;flex:1;overflow:auto}
-    .nav-sec{font-size:.58rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    /* Main-menu (sidebar) text reduced to 75% of original (task #568): section
+       labels .58→.44rem, links .86→.65rem, icon glyph .95→.71rem, icon box 24→18px.
+       Shared top header (.appnav/.wordmark/.price) intentionally untouched. */
+    .nav-sec{font-size:.44rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
       color:#9aa0a6;padding:13px 18px 5px;white-space:nowrap}
     .nav-i{display:flex;align-items:center;gap:11px;padding:9px 18px;white-space:nowrap;
-      font-size:.86rem;color:#444a50;cursor:pointer;border-left:3px solid transparent;
+      font-size:.65rem;color:#444a50;cursor:pointer;border-left:3px solid transparent;
       text-decoration:none}
-    .nav-i .ic{width:24px;height:24px;text-align:center;font-size:.95rem;opacity:.85;flex-shrink:0;
+    .nav-i .ic{width:18px;height:18px;text-align:center;font-size:.71rem;opacity:.85;flex-shrink:0;
       display:inline-flex;align-items:center;justify-content:center}
-    .nav-i .ic svg{width:24px;height:24px}
+    .nav-i .ic svg{width:18px;height:18px}
     .nav-i:hover{background:var(--tint)}
     .scrim{display:none}
 
