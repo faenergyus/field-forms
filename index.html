@@ -454,7 +454,7 @@
 
       <footer>
         Forty Acres Energy &nbsp;&middot;&nbsp; Field Operations &nbsp;&middot;&nbsp; Internal Use Only
-        <div class="data-note">Dashboard data from Google Sheets Ãƒâ€šÃ‚Â· Updated 2026-06-22 08:05</div>
+        <div class="data-note">Dashboard data from Google Sheets Ãƒâ€šÃ‚Â· Updated 2026-06-22 09:05</div>
       </footer>
 
     </main>
@@ -488,7 +488,7 @@ const CHART_DEFS = [
 
 const ZERO = () => ({ total: 0, byPumper: {}, wellsByPumper: {}, entries: [] });
 
-const DATA = {  // auto-refreshed 2026-06-22 08:05
+const DATA = {  // auto-refreshed 2026-06-22 09:05
   pastweek: {
     avo      : { total: 26, byPumper: { 'Armando': 16, 'Waldo': 9, 'Raul': 1 }, wellsByPumper: { 'Armando': ["STATE A A/C 1 #062", "STATE A A/C 1 #063", "STATE A A/C 1 #064", "STATE A A/C 1 #065", "STATE A A/C 1 #066", "STATE A A/C 1 #067", "STATE A A/C 1 #069", "STATE A A/C 1 #071", "STATE A A/C 1 #072", "STATE A A/C 1 #073", "STATE A A/C 1 #074", "STATE A A/C 1 #075", "STATE A A/C 1 #076", "STATE A A/C 1 #077", "STATE A A/C 1 #078", "STATE A A/C 1 #079"], 'Waldo': ["ETZ #004", "MUNN HARRISON B #001", "Munn Harrison #1 CRP", "RFU 96 CRP", "RHODES FEDERAL UNIT #261", "RHODES FEDERAL UNIT #263", "RHODES FEDERAL UNIT #264", "RHODES FEDERAL UNIT #266", "Sholes B Tank Battery"], 'Raul': ["ADELE SOWELL #002"] }, entries: [["Armando", "STATE A A/C 1 #066", "6/15/2026"], ["Armando", "STATE A A/C 1 #077", "6/15/2026"], ["Waldo", "Sholes B Tank Battery", "6/15/2026"], ["Armando", "STATE A A/C 1 #079", "6/15/2026"], ["Waldo", "RHODES FEDERAL UNIT #263", "6/15/2026"], ["Armando", "STATE A A/C 1 #073", "6/15/2026"], ["Waldo", "ETZ #004", "6/15/2026"], ["Armando", "STATE A A/C 1 #069", "6/15/2026"], ["Armando", "STATE A A/C 1 #064", "6/15/2026"], ["Armando", "STATE A A/C 1 #075", "6/15/2026"], ["Armando", "STATE A A/C 1 #076", "6/15/2026"], ["Armando", "STATE A A/C 1 #067", "6/15/2026"], ["Waldo", "RHODES FEDERAL UNIT #264", "6/15/2026"], ["Armando", "STATE A A/C 1 #078", "6/15/2026"], ["Armando", "STATE A A/C 1 #065", "6/15/2026"], ["Waldo", "Munn Harrison #1 CRP", "6/15/2026"], ["Armando", "STATE A A/C 1 #072", "6/15/2026"], ["Waldo", "RHODES FEDERAL UNIT #261", "6/15/2026"], ["Waldo", "RFU 96 CRP", "6/15/2026"], ["Waldo", "MUNN HARRISON B #001", "6/15/2026"], ["Armando", "STATE A A/C 1 #063", "6/15/2026"], ["Armando", "STATE A A/C 1 #062", "6/15/2026"], ["Armando", "STATE A A/C 1 #071", "6/15/2026"], ["Waldo", "RHODES FEDERAL UNIT #266", "6/15/2026"], ["Armando", "STATE A A/C 1 #074", "6/15/2026"], ["Raul", "ADELE SOWELL #002", "6/16/2026"]] },
     gwi      : { total: 9, byPumper: { 'Wynn': 9 }, wellsByPumper: { 'Wynn': ["LANKFORD #002", "LYNN A #004", "LYNN A #006", "LYNN B 1 #001", "LYNN B 1 #003", "LYNN B 1 #007", "LYNN B 1 #017", "R W COWDEN C #004", "SHELL STATE #003"] }, entries: [["Wynn", "LYNN B 1 #001", "6/16/2026"], ["Wynn", "LYNN B 1 #017", "6/16/2026"], ["Wynn", "LYNN B 1 #003", "6/16/2026"], ["Wynn", "LYNN B 1 #007", "6/16/2026"], ["Wynn", "LYNN A #004", "6/16/2026"], ["Wynn", "LYNN A #006", "6/16/2026"], ["Wynn", "SHELL STATE #003", "6/16/2026"], ["Wynn", "R W COWDEN C #004", "6/16/2026"], ["Wynn", "LANKFORD #002", "6/16/2026"]] },
@@ -532,9 +532,9 @@ const DATA = {  // auto-refreshed 2026-06-22 08:05
 };
 
 // <<PUMPER_TASKS_START>>
-const PUMPER_TASKS = {  // auto-refreshed 2026-06-22 08:05
+const PUMPER_TASKS = {  // auto-refreshed 2026-06-22 09:05
   currentWeek: {
-    date: "6/15/2026",
+    date: "6/22/2026",
     tasks: {
       "Raul": {
         "Gas Well Surveillance": "Myers B Federal #031",
@@ -574,7 +574,7 @@ const PUMPER_TASKS = {  // auto-refreshed 2026-06-22 08:05
     }
   },
   lastWeek: {
-    date: "5/18/2026",
+    date: "6/15/2026",
     tasks: {
       "Raul": {
         "Gas Well Surveillance": "Myers B Federal #031",
@@ -583,13 +583,13 @@ const PUMPER_TASKS = {  // auto-refreshed 2026-06-22 08:05
       },
       "Waldo": {
         "Gas Well Surveillance": "State O #004\nState O #003\nState O #005\nState O #006",
-        "Well Test": "AR: # 20, 10",
-        "Fluid Level": "Cagle C #005",
+        "Well Test": "AR: # 9, 6",
+        "Fluid Level": "Cagle C #005\nAR: #6, #8, 12",
       },
       "Mando": {
         "Gas Well Surveillance": "State 157 F #004",
-        "Well Test": "BBN BATT 1: AC 2 # 30\nBBN BATT 5: AC 2 # 24, 26\nBBS BATT 7:  AC 1 #48, 81\nBBS BATT 11:  AC 1 #61",
-        "Fluid Level": "BBN: A/C 2 # 24, 61, 30, 4, 23, 29, 31, 25, 26, 54\nBBS: A/C 1 # 43, 46, 48, 61, 64, 69; A/C 3 # 9, COM # 4",
+        "Well Test": "BBN BATT 1: AC 2 # 30, 23\nBBN BATT 5: AC 2 # 24, 26, 25 (testing not currently available)\nBBS BATT 7:  AC 1 # 48, 81 (testing not currently available)\nBBS BATT 11:  AC 1 # 43, 61, 64 (testing not currently available)",
+        "Fluid Level": "BBN: A/C 2 # 24, 61, 30, 4, 23, 29, 31, 25, 26, 54\nBBS: A/C 1 # 43, 46, 48, 61, 64, 69, 81; A/C 3 # 9, COM # 4",
       },
       "Jason": {
         "Gas Well Surveillance": "State D #005\nState D #007",
@@ -608,8 +608,8 @@ const PUMPER_TASKS = {  // auto-refreshed 2026-06-22 08:05
       },
       "Henry": {
         "Gas Well Surveillance": "WEU 302",
-        "Well Test": "P1 BATT 417: 215, 417\nP1 BATT GM State: 220, 217\nP1 BATT Lea 407: no well testing\nP1 BATT LW WHITE COM: no well testing\nP2 BATT BAY FED: 512, 510\nP2 BATT FED D:  no well testing\nP2 BATT FOPEANO: no well testing\nP3 BATT GULF State: 102, 104",
-        "Fluid Level": "P1: 217, 402, 215, 220, 417\nP2: 515, 510, 511, 512, 513\nP3: 202, 130, 131, 102, 104, 106",
+        "Well Test": "P1 BATT 417: 215, 417\nP1 BATT GM State: 217, 209\nP1 BATT Lea 407: no well testing\nP1 BATT LW WHITE COM: no well testing\nP2 BATT BAY FED: 511, 513\nP2 BATT FED D:  no well testing\nP2 BATT FOPEANO: no well testing\nP3 BATT GULF State: 102",
+        "Fluid Level": "P1: 217, 402, 210, 204, 209, 215, 216, 417\nP2: 510, 511, 513, 514, 516\nP3: 202, 130, 106, 131, 102, 104",
       },
     }
   }
@@ -617,8 +617,8 @@ const PUMPER_TASKS = {  // auto-refreshed 2026-06-22 08:05
 // <<PUMPER_TASKS_END>>
 
 // <<PRICES_START>>
-const PRICES = {  // auto-refreshed 2026-06-22 08:05
-  wti:  {price:74.61, chg:-1.24, date:"6/22/2026"},
+const PRICES = {  // auto-refreshed 2026-06-22 09:05
+  wti:  {price:73.8, chg:-2.05, date:"6/22/2026"},
   waha: {price:1.81, chg:0.87, date:"6/18/2026"}
 };
 // <<PRICES_END>>
