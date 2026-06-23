@@ -731,7 +731,7 @@ function sortedIndices() {
     const ra = DUE_ROWS[a], rb = DUE_ROWS[b];
     let va, vb;
     if (SORT.col === 'due_date')   { va = rowDate(ra); vb = rowDate(rb); }
-    else if (SORT.col === 'pumper'){ va = (ra.pumper || '').toUpperCase(); vb = (rb.pumper || '').toUpperCase(); }
+    else if (SORT.col === 'pumper'){ va = (ra.pumper_name || ra.pumper || '').toUpperCase(); vb = (rb.pumper_name || rb.pumper || '').toUpperCase(); }
     else                           { va = rowName(ra).toUpperCase(); vb = rowName(rb).toUpperCase(); }
     if (va == null && vb == null) return 0;
     if (va == null) return  1;   // missing values sink to the bottom regardless of dir
@@ -750,7 +750,7 @@ function visibleIndices() {
   const qPumper = PUMPER_FILTER.trim().toUpperCase();
   let idxs = sortedIndices();
   if (qName)   idxs = idxs.filter(i => rowName(DUE_ROWS[i]).toUpperCase().includes(qName));
-  if (qPumper) idxs = idxs.filter(i => (DUE_ROWS[i].pumper || '').toUpperCase().includes(qPumper));
+  if (qPumper) idxs = idxs.filter(i => (DUE_ROWS[i].pumper_name || DUE_ROWS[i].pumper || '').toUpperCase().includes(qPumper));
   return idxs;
 }
 
@@ -787,7 +787,7 @@ function renderRows() {
     return '<tr class="' + cls + '" data-row="' + i + '">'
       + '<td class="col-chk"><input type="checkbox" class="chk row-chk" data-row="' + i + '"' + (s.checked ? ' checked' : '') + '></td>'
       + '<td class="col-name">' + esc(rowName(r) || '—') + '</td>'
-      + '<td class="col-pumper desk-only">' + esc(r.pumper || '—') + '</td>'
+      + '<td class="col-pumper desk-only">' + esc(r.pumper_name || r.pumper || '—') + '</td>'
       + '<td class="col-due">' + dueCell + '</td>'
       + qCell('odor',   'Odor')
       + qCell('leaks',  'Leaks')
@@ -927,7 +927,7 @@ function generateDatetimes(checkedRows) {
       // No due date on file — anchor on today.
       d = new Date(); d.setHours(0, 0, 0, 0);
     }
-    result.set(i, { date: d, pumper: (row.pumper || '_').toUpperCase() });
+    result.set(i, { date: d, pumper: (row.pumper_name || row.pumper || '_').toUpperCase() });
   });
 
   // Group
