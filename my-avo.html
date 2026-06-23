@@ -555,12 +555,25 @@ const QUESTIONS = ['odor', 'leaks', 'noises'];
 // used to wipe long-lived faeToken sessions just because the original
 // Google JWT had aged past its 1h expiry, which made my-avo look broken
 // for everyone whose last sign-in was more than an hour ago.)
-(function () {
+(async function () {
   try {
     const saved = localStorage.getItem(SESSION_KEY);
     if (saved) {
       const s = JSON.parse(saved);
       if (s && (s.faeToken || s.credential || s.token || s.email)) {
+        if (window.faeAuth && (!s.role || !s.displayName)) {
+          try {
+            const _API = window.faeAuth.API_BASE || 'https://api.40ac.us';
+            const _r = await window.faeAuth.fetchAuthed(_API, _API + '/wbd/whoami');
+            if (_r.ok) {
+              const _w = await _r.json();
+              if (_w.role)     s.role        = _w.role;
+              if (_w.pbi_name) s.pbiName     = _w.pbi_name;
+              if (!s.displayName && _w.pbi_name) s.displayName = _w.pbi_name;
+              localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+            }
+          } catch(e) {}
+        }
         showApp(s);
         return;
       }

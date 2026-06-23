@@ -262,12 +262,25 @@ function showApp(session) {
 // otherwise the page should attempt to load and let the API failure path
 // surface a clear error instead of nuking the session and flashing the
 // Google sign-in screen.
-(function () {
+(async function () {
   try {
     const raw = localStorage.getItem(SESSION_KEY);
     if (raw) {
       const s = JSON.parse(raw);
       if (s && (s.faeToken || s.credential || s.token || s.email)) {
+        if (window.faeAuth && (!s.role || !s.displayName)) {
+          try {
+            const _API = window.faeAuth.API_BASE || 'https://api.40ac.us';
+            const _r = await window.faeAuth.fetchAuthed(_API, _API + '/wbd/whoami');
+            if (_r.ok) {
+              const _w = await _r.json();
+              if (_w.role)     s.role        = _w.role;
+              if (_w.pbi_name) s.pbiName     = _w.pbi_name;
+              if (!s.displayName && _w.pbi_name) s.displayName = _w.pbi_name;
+              localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+            }
+          } catch(e) {}
+        }
         showApp(s);
         return;
       }

@@ -1205,12 +1205,30 @@ function signOut() {
 // nuke localStorage on a stale Google-JWT timestamp anymore; that was
 // causing every authed page to flash the Google sign-in screen after the
 // first hour even though the 30-day faeToken was still valid.
-(function () {
+(async function () {
   try {
     const raw = localStorage.getItem(SESSION_KEY);
     if (raw) {
       const s = JSON.parse(raw);
       if (s && (s.faeToken || s.credential || s.token || s.email)) {
+        // Cached session may pre-date the role/displayName fields, or those
+        // fields can be empty for users whose initial sign-in skipped the
+        // whoami round-trip. Backfill from /wbd/whoami before painting the
+        // UI so role-gated widgets (Weekly Work Assignments) don't render
+        // against role=''.
+        if (window.faeAuth && (!s.role || !s.displayName)) {
+          try {
+            const API_BASE = window.faeAuth.API_BASE || 'https://api.40ac.us';
+            const r = await window.faeAuth.fetchAuthed(API_BASE, API_BASE + '/wbd/whoami');
+            if (r.ok) {
+              const w = await r.json();
+              if (w.role)     s.role        = w.role;
+              if (w.pbi_name) s.pbiName     = w.pbi_name;
+              if (!s.displayName && w.pbi_name) s.displayName = w.pbi_name;
+              localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+            }
+          } catch(e) {}
+        }
         showPortal(s);
         return;
       }

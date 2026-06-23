@@ -478,12 +478,25 @@ function renderTable(body, well) {
 // Lenient session resume — fae-auth.js handles token freshness via
 // /auth/session. Accept any session shape (faeToken / credential / token /
 // email); do not destroy localStorage on a stale Google-JWT timestamp.
-(function () {
+(async function () {
   try {
     var raw = localStorage.getItem(SESSION_KEY);
     if (raw) {
       var s = JSON.parse(raw);
       if (s && (s.faeToken || s.credential || s.token || s.email)) {
+        if (window.faeAuth && (!s.role || !s.displayName)) {
+          try {
+            var _API = window.faeAuth.API_BASE || 'https://api.40ac.us';
+            var _r = await window.faeAuth.fetchAuthed(_API, _API + '/wbd/whoami');
+            if (_r.ok) {
+              var _w = await _r.json();
+              if (_w.role)     s.role        = _w.role;
+              if (_w.pbi_name) s.pbiName     = _w.pbi_name;
+              if (!s.displayName && _w.pbi_name) s.displayName = _w.pbi_name;
+              localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+            }
+          } catch(e) {}
+        }
         showApp(s);
         return;
       }
